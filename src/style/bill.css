@@ -1,0 +1,108 @@
+.space{
+    padding: 0 30px ;
+    padding-top: 80px;
+
+    flex-direction: column;
+
+
+}
+.top_head{
+    display: flex;
+    width: 100%;
+    align-items: center;
+    /*margin: 0 auto;*/
+    justify-content: space-between;
+}
+.top_head p{
+    color: #0B666A;
+    font-family: Inter;
+    font-size: 3rem;
+    font-style: normal;
+
+    font-weight: 700;
+    line-height: normal;
+}
+.bill_head{
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+    color: #35A29F;
+    margin: 20px 0 ;
+    font-family: Inter, serif;
+    font-size: 1.4rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+}
+.bill_head input{
+
+    padding: 10px 20px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    border: none;
+    background: #FFF;
+    color: rgba(11, 102, 106, 0.50);
+    font-family: Inter, serif;
+    font-size: 18px;
+    /*padding-left: 20px;*/
+
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+}
+.bill_head select{
+    width: 17%;
+    padding: 10px 20px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    border: none;
+    background: #FFF;
+    color: rgba(11, 102, 106, 0.50);
+    font-family: Inter, serif;
+    font-size: 18px;
+    /*padding-left: 20px;*/
+    text-align: center;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+}
+
+.header-button svg{
+    margin-right: 3px;
+}
+.header-button{
+    justify-content: right;
+}
+.total{
+
+    justify-content: right;
+    display: flex;
+    & .table{
+        width: 40%;
+    }
+}
+.companys_table_raper{
+    overflow: scroll;
+}
+.add_limits{
+}
+@media (max-width: 700px) {
+    .bill_head{
+        flex-direction: column;
+        align-items: start;
+        gap: 10px;
+        & select {
+            width: 100%;
+        }
+        & input{
+            width: 100%
+        }
+    }
+    .header-button{
+        justify-content: space-between;
+    }
+    .pop-up-box_buttons{
+        margin-top: 1rem;
+    }
+}

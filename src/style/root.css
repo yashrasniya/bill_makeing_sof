@@ -1,0 +1,95 @@
+@import url("https://fonts.googleapis.com/css2?family=Urbanist&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap');
+
+:root{
+    background: linear-gradient(111deg, #75FFE8 0%, #35A29F 74.64%);
+    --primary-color-6:    linear-gradient(111deg, #a7fdf0 0%, #55c2bf);
+    --primary-color-1: #0B666A;
+    --primary-color-2: #35A29F;
+    --primary-color-3: #97FEED;
+    --primary-color-4: #071952;
+    --primary-color-5: #ffffff;
+
+}
+
+body{
+    margin: 0px;
+    padding: 0px;
+    /*background-color: var(--primary-color-3);*/
+    background: radial-gradient(198.82% 131.95% at 0.94% 12.84%, #C5FCF3 0%, #91FEEC 100%);    position: relative;
+}
+html {
+    box-sizing: border-box;
+}
+html, body {
+    overflow-x: hidden;
+    height: 100%;
+}
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+.root{
+    margin: 0;
+    padding: 0;
+}
+img{
+    margin: 0;
+    padding: 0;
+}
+p ,h1, h2, h3, h4, h5, h6 {
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
+    margin: 0;
+
+}
+.button{
+    background-color: #071952;
+    color: white;
+    border-radius: 0.8vw;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    padding: 0.8rem 1rem;
+    display: flex;
+    cursor: pointer;
+
+}
+.button-line{
+    border: 2pt solid #071952;
+    background-color: rgb(0,0,0,0);
+    border-radius: 0.5vw;
+    font-size: 1.1vw;
+
+    padding: 1vh 1vw;
+
+    color: #071952;
+    cursor: pointer;
+
+}
+.check-box{
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border: 2px solid #FFF;
+    background-color: red;
+    color: blue;
+}
+.companys_table_raper{
+    margin-top: 20px;
+}
+
+@media (max-width: 700px) {
+    .button {
+        font-size: 0.9rem;
+        border-radius: 1.2vw;
+        text-align: center;
+    }
+
+
+
+}
+input::placeholder{
+    color: #d6fff7;
+}

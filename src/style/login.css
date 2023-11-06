@@ -1,0 +1,131 @@
+
+body{
+
+
+
+}
+.container{
+   display: flex;
+    overflow: hidden;
+    height: 100vh;
+    width:  100vw;
+}
+
+.login_box{
+    width: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.left{
+    background-color: var(--primary-color-1);
+}
+.right{
+/*padding-top: 40px;*/
+
+    justify-content: center;
+}
+.logo_css{
+
+    height:20%;
+    width: auto;
+    justify-content: center;
+    text-align: center;
+    margin-top: 30%;
+}
+.heading{
+    display: none;
+}
+img{
+    height: 100%;
+    width: auto;
+    margin: 0;
+    padding: 0;
+}
+
+.login-heading{
+    text-align: center;
+    text-transform: capitalize;
+    font-size: 2rem;
+    color: var(--primary-color-1);
+}
+
+.raper{
+    /*background-color: var(--primary-color-6);*/
+    margin: 0 auto 0 auto;
+    padding: 10px 40px 30px 40px;
+    border-radius: 15px;
+    /*box-shadow: rgb(0,0,0,0.40) 0 0 25px 11px;*/
+    max-width: 100%;
+    min-width: 60%;
+    justify-content: center;
+
+}
+
+.input-raper p{
+    font-size: 1.2rem;
+    height: 100%;
+    margin: 15px 0 10px 0;
+    color: var(--primary-color-1);
+
+}
+
+.input-raper input{
+    font-size: 1rem;
+    height: 2.3rem;
+    width: 100%;
+    border-radius: .25rem;
+    padding: 7px;
+    color: var(--primary-color-4);
+    border: 0;
+}
+.raper button{
+    color: var(--primary-color-5);
+    background-color: var(--primary-color-4);
+    height: 2.5rem;
+    width: 100%;
+    border: 0;
+    border-radius: .25rem;
+
+    font-size: 1rem;
+    margin: 15px auto 0 auto ;
+    cursor: pointer;
+}
+
+.SignUp-text{
+    text-align: right;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 3px 0 0px 0;
+    color: var(--primary-color-1);
+}
+.delete{
+    background-color: #9A0000;
+}
+@media (max-width: 700px) {
+    .left {
+        display: none;
+        width: 0;
+    }
+
+    .right {
+        width: 100%;
+        /*max-height: 100%;*/
+        height: 60%;
+
+    }
+
+    .heading{
+        display: block;
+        height: 50px;
+        margin-top: 10px;
+    }
+    .raper{
+        /*padding: 0;*/
+        margin: 0;
+    }
+    .container{
+        height: 100%;
+    }
+
+}

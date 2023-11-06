@@ -1,0 +1,145 @@
+
+
+.boxes_raper{
+    width: 100%;
+    display: flex;
+    /*margin-top: 60px;*/
+    padding: 85px 25px 25px 25px;
+
+    justify-content: space-evenly;
+}
+.card{
+    width: 42%;
+    border-radius: 3vw;
+    /*background: #35A29F;*/
+    /*box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);*/
+
+
+
+}
+.inner_card{
+    /*--margin:0.8vw;*/
+    /*margin-top:var(--margin);*/
+    /*margin-left:var(--margin);*/
+
+    width: 42%;
+    height: 35vh;
+    flex-shrink: 0;
+    border-radius: 1vw;
+    color: #071952;
+    /*background: #0B666A;*/
+    box-shadow: 0px 0px 10px 5px rgba(0, 0, 0, 0.25);
+    background: linear-gradient(111deg, #a7fdf0 0%, #55c2bf);
+
+    /*text*/
+    font-family: Inter;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+
+
+    padding: 3vh 2vw;
+
+    font-size: 1.1vw;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+
+}
+.card_content{
+    display: flex;
+    flex-direction: row;
+
+    flex-basis: 60%;
+    flex-wrap: wrap;
+
+}
+.card-two{
+    flex-basis: 50%;
+}
+.card_content p{
+
+    flex-basis: 100%;
+}
+.two{
+    flex-basis: 40%;
+    /*text-align: right;*/
+    justify-content: center;
+}
+.inner_card .f1{
+    font-size: 2vw;
+}
+.inner_card .f2{
+    font-size: 6vw;
+
+}
+.inner_card .f3{
+    font-size: 4.5vw;
+
+}
+.progress_bar_wrapper{
+    flex-basis: 100%;
+
+
+}
+.amount_div{
+    justify-content: right;
+    text-align: right   ;
+
+}
+
+.card_content .button{
+
+    margin-top: 2.8rem;
+
+}
+.card_content li{
+    padding-top: 1vh;
+}
+
+.gray{
+    width: 100%;
+    height: 1vw;
+    background-color: #FFF;
+    border-radius: 20px;
+
+}
+.blue{
+    width: 40%;
+    height:100%;
+    background-color: #071952;
+    border-radius: 20px;
+}
+@media (max-width: 700px) {
+    .boxes_raper{
+        overflow-x:scroll;
+        width: 100vw;
+        justify-content: normal;
+        gap:40px;
+    }
+    .inner_card{
+        width: 100%;
+        height: 15vh;
+        font-size: 1.8vw;
+        padding: 2vh 3vw;
+    }
+
+    .inner_card .f1{
+        font-size: 4vw;
+    }
+    .inner_card .f2{
+        font-size: 10vw;
+
+    }
+    .inner_card .f3{
+        font-size: 4.5vw;
+
+    }
+    .card_content .button{
+
+        margin-top: 0.5rem;
+        padding: .6rem 0.3rem;
+
+    }
+}
+
