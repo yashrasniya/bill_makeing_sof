@@ -23,7 +23,7 @@ function CompanysHead(){
                     Delete </div>
             </div>
             <div className={'pop-up-box'} id={'new_company_box'}>
-                <a className={'close'} onClick={()=>{
+                <a className={'close'}  href={'/#'} onClick={()=>{
                     document.getElementById('new_company_box').style.display='none'
                 }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" fill="none">
