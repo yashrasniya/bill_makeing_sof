@@ -95,7 +95,7 @@ function NewBillBody(){
             </div>
             <div className={'bill_head'}>
                 <div className={'pop-up-box'} id={'new_company_box'} style={{display:Pop_up_properties}}>
-                    <a className={'close'} href={''} onClick={()=>{
+                    <a className={'close'} href={'/#'} onClick={()=>{
                         setPop_up_properties('none')
                         return ''
                     }}>

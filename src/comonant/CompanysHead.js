@@ -1,7 +1,7 @@
 import '../style/Companys.css';
 
 
-function Companys_head(){
+function CompanysHead(){
     return(
         <div className={'companys_header_raper'}>
             <div className={'title-div'}>
@@ -46,5 +46,5 @@ function Companys_head(){
     )
 }
 
-export default Companys_head;
+export default CompanysHead;
 

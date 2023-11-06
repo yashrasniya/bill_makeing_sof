@@ -17,7 +17,7 @@ const table_content=[
     {Name:'ACC', GST_Number:'4578123JDSFH',State:'GOA',},
 ]
 
-function Companys_table(){
+function CompanysTable(){
     return(
         <div className={'companys_table_raper'}>
            <table className={'table'}>
@@ -47,5 +47,5 @@ function Companys_table(){
     )
 }
 
-export default Companys_table;
+export default CompanysTable;
 

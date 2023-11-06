@@ -1,4 +1,4 @@
-import style from '../style/box.css';
+import  '../style/box.css';
 
 
 function Boxes(){

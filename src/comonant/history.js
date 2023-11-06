@@ -1,6 +1,6 @@
 import '../style/history.css';
 import {useNavigate} from "react-router-dom";
-const Pdf_icon = () => {
+const PdfIcon = () => {
   return(                    <svg fill="#0B666A" height="20px" width="20px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 318.188 318.188">
           <g>
               <g>
@@ -54,7 +54,7 @@ const Row=()=>{
     return( <tr>
         <td className={'td-with-icon'}>
 
-            <Pdf_icon/>Invoice_2023_12_05.pdf</td>
+            <PdfIcon/>Invoice_2023_12_05.pdf</td>
 
         <td>05/12/2023</td>
         <td>Yash</td>
