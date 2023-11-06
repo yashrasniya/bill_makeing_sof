@@ -1,14 +1,14 @@
 import Navbar from "../comonant/navbar.js";
-import {New_bill_body} from "../comonant/new_bill_body";
+import {NewBillBody} from "../comonant/new_bill_body";
 
 
-function New_bill(){
+function NewBill(){
     return(
         <>
             <Navbar/>
-            <New_bill_body></New_bill_body>
+            <NewBillBody></NewBillBody>
         </>
     )
 }
 
-export {New_bill};
+export {NewBill};

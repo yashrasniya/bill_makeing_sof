@@ -20,7 +20,7 @@ const bill_body_items=[
     {input_title:'Disc',size:'16%',show:false,calculable:true,formula:{variable:'-',}},
     {input_title:'GST',size:'16%',show:true,calculable:false},
 ]
-function New_bill_body(){
+function NewBillBody(){
     let [new_product,setNewProduct]=useState({})
     let [table_content,setTable_content]=useState([])
     let [Pop_up_properties,setPop_up_properties]=useState('none')
@@ -40,6 +40,7 @@ function New_bill_body(){
                 isNum=isNum+' '+obj.input_title
             }
             temp_opj[obj.input_title] = ''
+            return ''
         })
         if (isNum===''){
             setTable_content([...table_content,new_product])
@@ -79,6 +80,7 @@ function New_bill_body(){
                 count++
 
             }
+            return ''
         })
 
         console.log(array,check_list)
@@ -93,8 +95,9 @@ function New_bill_body(){
             </div>
             <div className={'bill_head'}>
                 <div className={'pop-up-box'} id={'new_company_box'} style={{display:Pop_up_properties}}>
-                    <a className={'close'} onClick={()=>{
+                    <a className={'close'} href={''} onClick={()=>{
                         setPop_up_properties('none')
+                        return ''
                     }}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" fill="none">
                             <path d="M24.585 22L32.4683 14.135C32.8136 13.7898 33.0075 13.3216 33.0075 12.8333C33.0075 12.3451 32.8136 11.8769 32.4683 11.5317C32.1231 11.1864 31.6549 10.9925 31.1667 10.9925C30.6785 10.9925 30.2102 11.1864 29.865 11.5317L22 19.415L14.135 11.5317C13.7898 11.1864 13.3216 10.9925 12.8333 10.9925C12.3451 10.9925 11.8769 11.1864 11.5317 11.5317C11.1865 11.8769 10.9925 12.3451 10.9925 12.8333C10.9925 13.3216 11.1865 13.7898 11.5317 14.135L19.415 22L11.5317 29.865C11.3598 30.0354 11.2235 30.2382 11.1304 30.4616C11.0373 30.685 10.9894 30.9246 10.9894 31.1667C10.9894 31.4087 11.0373 31.6483 11.1304 31.8717C11.2235 32.0951 11.3598 32.2979 11.5317 32.4683C11.7021 32.6402 11.9049 32.7766 12.1283 32.8696C12.3517 32.9627 12.5913 33.0106 12.8333 33.0106C13.0754 33.0106 13.315 32.9627 13.5384 32.8696C13.7618 32.7766 13.9646 32.6402 14.135 32.4683L22 24.585L29.865 32.4683C30.0354 32.6402 30.2382 32.7766 30.4616 32.8696C30.685 32.9627 30.9247 33.0106 31.1667 33.0106C31.4087 33.0106 31.6483 32.9627 31.8717 32.8696C32.0951 32.7766 32.2979 32.6402 32.4683 32.4683C32.6402 32.2979 32.7766 32.0951 32.8696 31.8717C32.9627 31.6483 33.0106 31.4087 33.0106 31.1667C33.0106 30.9246 32.9627 30.685 32.8696 30.4616C32.7766 30.2382 32.6402 30.0354 32.4683 29.865L24.585 22Z" fill="#071952"/>
@@ -231,4 +234,4 @@ function New_bill_body(){
     )
 }
 
-export {New_bill_body};
+export {NewBillBody};
