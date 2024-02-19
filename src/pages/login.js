@@ -1,20 +1,56 @@
 import "../style/login.css"
-import logo from "../assets/logo.png"
-import { useNavigate } from "react-router-dom";
+import axios from "axios";
+// import logo from "../assets/logo.png"
+import logo from "../assets/bill_ninja_logo.png_white.png"
+import logo_background from "../assets/bill_ninja_logo.png"
 
+import { useNavigate } from "react-router-dom";
+import {useEffect, useState} from "react";
+const client = axios.create({
+    baseURL: process.env.REACT_APP_URL,
+    headers:{
+        'Content-Type': 'application/json'
+    },
+});
 
 function Login(){
     const navigate = useNavigate();
+    const [username,set_username]=useState('')
+    const [password,set_password]=useState('')
+
+
+    const handelLogin = (e) => {
+        client.post('login/',{
+            username:username,
+            password:password,
+        }).then((response)=>{
+            if(response.status===200){
+                window.localStorage.setItem('token',response.data.token)
+                navigate('/home')
+            }
+
+        }).catch((error)=>{
+            alert('error')
+            console.log(error)
+            }
+
+        )
+    }
 
     return(
         <div className="container" >
         <div className="login_box left">
-            <div className="logo_css"><img src={logo} alt={'logo'} ></img></div>
+            <div className="logo_css">
+                <img src={logo} alt={'logo'} ></img>
+
+            </div>
         </div>
             <div className="login_box right">
 
 
-                <div className="logo_css heading"><img src={logo} alt={'logo'} ></img></div>
+                <div className="logo_css heading"><img src={logo} alt={'logo'} id={'logo_first'} ></img>
+                    <img src={logo_background} id={'logo_two'} alt={'logo'} ></img>
+                </div>
 
 
 
@@ -22,13 +58,24 @@ function Login(){
                 <h3 className="login-heading">Login</h3>
                 <div className="input-raper">
                     <p>User Name</p>
-                    <input type="text" name="username" />
+                    <input type="text" name="username"
+                           value={username}
+                           onChange={(e)=>set_username(e.target.value)}/>
                 </div>
                 <div className="input-raper">
                     <p>Password</p>
-                    <input type="password" name="password"/>
+                    <input type="password" name="password"
+                           value={password}
+                           onChange={(e)=>set_password(e.target.value)}
+                           onKeyDown={(event)=>{
+                               if (event.key === 'Enter') {
+                                   // 👇 Get input value
+                                   handelLogin();
+                               }
+                           }}
+                    />
                 </div>
-                <button onClick={()=>{ navigate("/home");}}>Login</button>
+                <button onClick={handelLogin}>Login</button>
                 <button >
                     <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 32 32" fill="none">
                         <g >

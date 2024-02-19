@@ -1,5 +1,7 @@
 import '../style/history.css';
 import {useNavigate} from "react-router-dom";
+import {useEffect, useState} from "react";
+import {clientToken} from "../axios";
 const PdfIcon = () => {
   return(                    <svg fill="#0B666A" height="20px" width="20px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 318.188 318.188">
           <g>
@@ -50,24 +52,38 @@ const PdfIcon = () => {
   )
 }
 const array=[1,2,3,4,5,1,2,3,4,5]
-const Row=()=>{
-    return( <tr>
-        <td className={'td-with-icon'}>
 
-            <PdfIcon/>Invoice_2023_12_05.pdf</td>
 
-        <td>05/12/2023</td>
-        <td>Yash</td>
-        <td>2000/-</td>
-        <td style={{width:'10%'}}>
-            <div className={'button button-line'}>Paid</div>
-        </td>
-    </tr>)
-}
 
 function History(){
+    const [invoice_data,setInvoiceData]=useState([])
     let navigate =useNavigate()
+    useEffect(() => {
+        clientToken.get('invoice/').then((response)=>{
+            if (response.status===200){
+                setInvoiceData(response.data.results)
+            }
+        }).catch((error)=>{
+            console.log(error)
+            alert(`error ${error.request.status}`)
+        })
+    }, []);
+    const Row=(obj)=>{
 
+        return( <tr className={'table-row'}
+            onClick={()=>navigate(`/bill/${obj.id}`)}>
+            <td className={'td-with-icon'}>
+
+                <PdfIcon/>{obj.invoice_number}-{obj.date}.pdf</td>
+
+            <td>{obj.date}</td>
+            <td>{obj.user}</td>
+            <td>{obj.total_final_amount}</td>
+            <td style={{width:'10%'}}>
+                <div className={'button button-line'}>Paid</div>
+            </td>
+        </tr>)
+    }
     return(
       <div className={'history_container'}>
         <div className={'header'}>
@@ -109,7 +125,7 @@ function History(){
 
 
             <tbody>
-            {array.map(Row)}
+            {invoice_data.map(Row)}
             </tbody>
         </table>
           </div>

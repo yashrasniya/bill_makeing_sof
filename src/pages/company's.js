@@ -7,7 +7,6 @@ function Companys(){
     return(
         <>
             <Navbar/>
-            <CompanysHead></CompanysHead>
             <CompanysTable></CompanysTable>
 
         </>

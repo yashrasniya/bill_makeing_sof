@@ -102,7 +102,19 @@ img{
 .delete{
     background-color: #9A0000;
 }
+#logo_two{
+    display: none;
+}
+#logo_first{
+    display: inline;
+}
 @media (max-width: 700px) {
+    #logo_two{
+        display: inline;
+    }
+    #logo_first{
+        display: none;
+    }
     .left {
         display: none;
         width: 0;
@@ -117,8 +129,8 @@ img{
 
     .heading{
         display: block;
-        height: 50px;
-        margin-top: 10px;
+        height: 100px;
+        margin-top: 50px;
     }
     .raper{
         /*padding: 0;*/

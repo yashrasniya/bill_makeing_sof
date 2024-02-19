@@ -48,7 +48,7 @@
      line-height: normal;
 }
 .companys_table_raper input::placeholder{
-      color: rgba(11, 102, 106, 0.50);
+      color: rgba(147, 147, 147, 0.5);
       font-family: Inter;
       font-size: 18px;
       font-style: normal;
@@ -125,6 +125,22 @@ position:absolute;
 .pop-up-box_buttons .button{
     padding: .5rem 1.5rem;
     margin-left: 10px;
+}
+.paging{
+    display: flex;
+    justify-content: space-evenly;
+    gap: 5px;
+    margin-bottom:7px ;
+    padding-top: 10px;
+    &&
+    div{
+        background-color: var(--primary-color-1);
+        color: var(--primary-color-5);
+        border-radius: 2px;
+        cursor: pointer;
+        padding: 4px;
+    }
+
 }
 @media (max-width: 700px) {
     .companys_header_raper{

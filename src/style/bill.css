@@ -87,6 +87,20 @@
 }
 .add_limits{
 }
+.table-row:hover{
+    background-color: #35A29F;
+    color: white;
+    fill: white;
+    &&
+    svg{
+        fill: white;
+    }
+    &&
+    .button-line{
+        color: white !important;
+        border-color: white;
+    }
+}
 @media (max-width: 700px) {
     .bill_head{
         flex-direction: column;

@@ -1,11 +1,14 @@
 import "../style/navbar.css"
-import logo from "../assets/logo.png"
+// import logo from "../assets/logo.png"
+import logo from "../assets/bill_ninja_logo.png"
+
 import profle from "../assets/profle.webp"
 import { useNavigate } from "react-router-dom";
 const navItems=[
     {title:'Home',icon:'' ,link:'/home'},
     {title:'Company’s',icon:'',link:'/companys'},
     {title:'Our Detail’s',icon:'',link:'/home'},
+    {title:'logout',icon:'',link:'/logout'},
 ]
 
 function Navbar(){
