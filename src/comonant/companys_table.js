@@ -167,7 +167,7 @@ function CompanysTable(){
                 </div>
                 <div className={'pop-up-box_buttons'}>
                     {update?<div className={'button delete'} onClick={()=>handelDelete(company_data.id)}>Delete</div>:''}
-                    {update?<div className={'button'} onClick={handelUpdate}>Update</div>:<div className={'button'} onClick={handelsave}>Save</div>}
+                    {update?<div className={'button'} onClick={handelUpdate}>Update</div>:<div className={'button'} onClick={()=>handelsave()}>Save</div>}
                 </div>
             </div>
         </div>

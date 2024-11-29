@@ -83,7 +83,7 @@
     }
 }
 .companys_table_raper{
-    overflow: scroll;
+    overflow: auto;
 }
 .add_limits{
 }
@@ -91,6 +91,7 @@
     background-color: #35A29F;
     color: white;
     fill: white;
+    cursor: pointer;
     &&
     svg{
         fill: white;

@@ -26,7 +26,7 @@ function NewBillBody({id}){
     const [InvoiceData,setInvoiceData]=useState({})
     const [url,setUrl]=useState(id?`invoice/${id}/update/`:'invoice/')
     const [refresh,setRefresh]=useState(false)
-    console.log(id)
+    const [newDataFormat,setNewDataFormat]=useState({})
     let navigate =useNavigate()
 
 
@@ -34,7 +34,7 @@ function NewBillBody({id}){
     var grandTotal=0
     var grandGstTotal=0
     useEffect(() => {
-        clientToken.get('companies/').then((response)=>{
+        clientToken.get('companies/?page_size=999').then((response)=>{
             if (response.status===200){
                 setCompany_name(response.data.results)
             }
@@ -48,6 +48,10 @@ function NewBillBody({id}){
         clientToken.get('new/product/in/frontend/').then((response)=>{
             if (response.status===200){
                 setBill_body_items(response.data)
+                let d=[]
+                response.data.map((item)=>{d.push({new_product_in_frontend:item,value:''})})
+                setNewDataFormat({product_properties:d})
+                setNewProduct({...new_product,product_properties:JSON.parse(JSON.stringify(d))})
             }
         }).catch((error)=>{
             console.log(error)
@@ -56,7 +60,7 @@ function NewBillBody({id}){
     }, []);
     useEffect(() => {
 
-        console.log(InvoiceData,id,'jjjjjjjjjj')
+        // console.log(InvoiceData,id,'jjjjjjjjjj')
 
 
             let form =new FormData()
@@ -93,14 +97,13 @@ function NewBillBody({id}){
         var temp_opj={product_properties:[]}
         console.log(table_content)
             if(update_data){
-                // table_content[new_product?.key]=new_product
-                // setTable_content(table_content)
                 new_product.product_properties.map((obj)=>{
                     const form=new FormData()
                     form.append('value',obj.value)
                     clientToken.post(`product/properties/${obj.id}/update/`,form).then((response)=>{
                         if (response.status===200){
-                            setNewProduct(temp_opj)
+                            setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
+
                             setPop_up_properties('none')
                         }
                     }).catch((error)=> {
@@ -120,41 +123,48 @@ function NewBillBody({id}){
                 clientToken.post('product/',form).then((response)=>{
                     if (response.status===200){
                         id=response.data.id
-                        clientToken.post(`invoice/${InvoiceData.id}/product/add/`,{product_id:response.data.id}).then((response)=>{
-                            if (response.status===200){
-                                new_product.product_properties.map((obj)=> {
-                                    const productPropertiesForm=new FormData()
-                                    productPropertiesForm.append('new_product_in_frontend',obj.new_product_in_frontend.id)
-                                    productPropertiesForm.append('value',obj.value)
-                                    clientToken.post('product/properties/',productPropertiesForm).then((response)=>{
-                                        if (response.status===200){
-                                            const productUpdateForm=new FormData()
-                                            productUpdateForm.append('product_properties',response.data.id)
-                                            productUpdateForm.append('gst_amount',0)
-                                            productUpdateForm.append('total_amount',0)
-                                            clientToken.post(`product/${id}/update/`,productUpdateForm).then((response)=>{
-                                                if (response.status===200){
-                                                    console.log(response.data)
-                                                    setRefresh(!refresh)
-                                                }
-                                            }).catch((error)=> {
-                                                console.log(error)
-                                                alert(`error ${error?.request.status}`)
-                                            })
-                                        }
-                                    }).catch((error)=> {
-                                        console.log(error)
-                                        alert(`error ${error?.request.status}`)
-                                    })
-                                })
+                        if(new_product.product_properties.length>0){
 
-                                setNewProduct(temp_opj)
-                                setPop_up_properties('none')
-                            }
-                        }).catch((error)=> {
-                            console.log(error)
-                            alert(`error ${error?.request.status}`)
-                        })
+                            clientToken.post(`invoice/${InvoiceData.id}/product/add/`,{product_id:response.data.id}).then((response)=>{
+                                if (response.status===200){
+                                    console.log(new_product)
+                                    new_product.product_properties.map((obj)=> {
+                                        const productPropertiesForm=new FormData()
+                                        productPropertiesForm.append('new_product_in_frontend',obj.new_product_in_frontend.id)
+                                        productPropertiesForm.append('value',obj.value)
+                                        clientToken.post('product/properties/',productPropertiesForm).then((response)=>{
+                                            if (response.status===200){
+                                                const productUpdateForm=new FormData()
+                                                productUpdateForm.append('product_properties',response.data.id)
+                                                productUpdateForm.append('gst_amount',0)
+                                                productUpdateForm.append('total_amount',0)
+                                                clientToken.post(`product/${id}/update/`,productUpdateForm).then((response)=>{
+                                                    if (response.status===200){
+                                                        console.log(response.data)
+                                                        setRefresh(!refresh)
+                                                    }
+                                                }).catch((error)=> {
+                                                    console.log(error)
+                                                    alert(`error ${error?.request.status}`)
+                                                })
+                                            }
+                                        }).catch((error)=> {
+                                            console.log(error)
+                                            alert(`error ${error?.request.status}`)
+                                        })
+                                    })
+
+                                    setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
+                                    console.log(new_product,newDataFormat)
+                                    setPop_up_properties('none')
+                                }
+                            }).catch((error)=> {
+                                console.log(error)
+                                alert(`error ${error?.request.status}`)
+                            })
+                        }else {
+                            alert(`Fill details`)
+                        }
                     }
                 }).catch((error)=> {
                     console.log(error)
@@ -172,6 +182,7 @@ function NewBillBody({id}){
             return ''
         }else {
             index!==-1?array[index]={...array[index],value:obj.target.value}:array.push({value:obj.target.value,new_product_in_frontend: {id:obj.target.id}})
+            console.log(array,new_product)
             setNewProduct({...new_product,product_properties:array})
         }
 
@@ -214,21 +225,42 @@ function NewBillBody({id}){
     }
     const handelOpen = (key) => {
         set_update(true)
-        console.log(table_content,key.target.parentElement.id)
+        // console.log(table_content,key.target.parentElement.id)
         setNewProduct(table_content.find((obj)=>obj.id===+key.target.parentElement.id))
         setPop_up_properties('flex')
+    }
+    const handelExport = (id) => {
+
+clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is important for binary data
+  .then((response) => {
+    // Create a Blob from the PDF data
+    const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+
+    // Create a download link
+    const downloadLink = document.createElement('a');
+    downloadLink.href = URL.createObjectURL(pdfBlob);
+    downloadLink.download = 'document.pdf'; // Name for the downloaded file
+
+    // Append the link, trigger the download, and then remove the link
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  })
+  .catch((error) => {
+    console.error('Error downloading the PDF:', error);
+  });
     }
     return(
         <div className={'container space'}>
             <div className={'top_head'}>
                 <p>Bill</p>
-                <div className={'button'}>Export</div>
+                <div className={'button'} onClick={()=>handelExport(InvoiceData?.id)}>Export</div>
             </div>
             <div className={'bill_head'}>
                 <div className={'pop-up-box'} id={'new_company_box'} style={{display:Pop_up_properties}}>
                     <a className={'close'}  onClick={()=>{
                         setPop_up_properties('none')
-                        setNewProduct({product_properties:[]})
+                        setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
                     }}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" fill="none">
                             <path d="M24.585 22L32.4683 14.135C32.8136 13.7898 33.0075 13.3216 33.0075 12.8333C33.0075 12.3451 32.8136 11.8769 32.4683 11.5317C32.1231 11.1864 31.6549 10.9925 31.1667 10.9925C30.6785 10.9925 30.2102 11.1864 29.865 11.5317L22 19.415L14.135 11.5317C13.7898 11.1864 13.3216 10.9925 12.8333 10.9925C12.3451 10.9925 11.8769 11.1864 11.5317 11.5317C11.1865 11.8769 10.9925 12.3451 10.9925 12.8333C10.9925 13.3216 11.1865 13.7898 11.5317 14.135L19.415 22L11.5317 29.865C11.3598 30.0354 11.2235 30.2382 11.1304 30.4616C11.0373 30.685 10.9894 30.9246 10.9894 31.1667C10.9894 31.4087 11.0373 31.6483 11.1304 31.8717C11.2235 32.0951 11.3598 32.2979 11.5317 32.4683C11.7021 32.6402 11.9049 32.7766 12.1283 32.8696C12.3517 32.9627 12.5913 33.0106 12.8333 33.0106C13.0754 33.0106 13.315 32.9627 13.5384 32.8696C13.7618 32.7766 13.9646 32.6402 14.135 32.4683L22 24.585L29.865 32.4683C30.0354 32.6402 30.2382 32.7766 30.4616 32.8696C30.685 32.9627 30.9247 33.0106 31.1667 33.0106C31.4087 33.0106 31.6483 32.9627 31.8717 32.8696C32.0951 32.7766 32.2979 32.6402 32.4683 32.4683C32.6402 32.2979 32.7766 32.0951 32.8696 31.8717C32.9627 31.6483 33.0106 31.4087 33.0106 31.1667C33.0106 30.9246 32.9627 30.685 32.8696 30.4616C32.7766 30.2382 32.6402 30.0354 32.4683 29.865L24.585 22Z" fill="#071952"/>
@@ -239,9 +271,9 @@ function NewBillBody({id}){
                             let value=new_product?.product_properties.find((obj_2) => +obj_2.new_product_in_frontend.id === +obj.id)
                             // console.log(new_product.product_properties,value)
                             value=value?value.value:''
-
+                            console.log(obj.size)
                             return (<div className={'form_box'} id={obj.input_title}
-                                 style={{flexBasis: obj.size}}>{obj.input_title}
+                                 style={{flexBasis: `${+obj.size*10}%`}}>{obj.input_title}
                                 <input id={obj.id} onChange={handelInput} value={value}/></div>)
                         })}
                     </div>
@@ -252,21 +284,24 @@ function NewBillBody({id}){
                 </div>
                 {/* Header */}
                 <p>Invoice No.</p>
-                <input placeholder={'0001'} id={'invoice_number'} value={InvoiceData?.invoice_number}
+                <input placeholder={''} id={'invoice_number'}  type="number" value={InvoiceData?.invoice_number}
                        onChange={(e)=> setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})}
                         onSelect={()=>setRefresh(!refresh)}
                     />
                 <p>Receiver</p>
                 <select  id={'receiver'} onChange={(event)=> {
-                    setInvoiceData({...InvoiceData, [event.target.id]: event.target.value})
-                    console.log(InvoiceData)
-                    setRefresh(!refresh)
+                    if(event.target.value) {
+                        console.log("dsfasdf")
+                        setInvoiceData({...InvoiceData, [event.target.id]: event.target.value})
+                        console.log(InvoiceData)
+                        setRefresh(!refresh)
+                    }
                 }}>
-                    <option selected={InvoiceData?.receiver===null} value={'none'}>---</option>
+                    <option selected={InvoiceData?.receiver===null} value={null}>---</option>
                     {company_name.map((obj)=><option value={obj.id} selected={obj.id === InvoiceData?.receiver}>{obj.name}</option>)}
                 </select>
                 <p>Invoice Date</p>
-                <input type={'date'} id={'date'} value={InvoiceData?.date} onChange={(e)=> {
+                <input type={'date'} id={'date'} value={InvoiceData?.date??new Date().toISOString().split('T')[0]} onChange={(e)=> {
                     setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})
                     console.log(e.target.value)
                     setRefresh(!refresh)
@@ -324,6 +359,7 @@ function NewBillBody({id}){
                                             else if(item.formula.variable==='/'){
                                                 total=total/abc.value
                                             }
+
                                             // total=total*obj[item.input_title]*item.formula.variable
                                             else {
                                                 total='error'
@@ -338,19 +374,19 @@ function NewBillBody({id}){
                                 }
                             obj.product_properties.filter(calculate)
 
-                                if (bill_body_items.map((o)=>o.input_title).indexOf('GST')!==-1){
-                                    var gst_amount=total*(obj.GST/100)
+                                if (obj.product_properties.length>0 && bill_body_items.map((o)=>o.input_title).indexOf('GST')!==-1){
+                                    let gst =obj.product_properties[bill_body_items.map((o)=>o.input_title).indexOf('GST')]?.value
+                                    var gst_amount=gst?total*(gst/100):0
                                 }
                                 else{
                                     var gst_amount=0
                                 }
 
-                            console.log(extra_cal)
                             grandTotal=grandTotal+total+gst_amount+extra_cal
                             grandGstTotal=grandGstTotal+gst_amount
 
                             if (checkbox[key]===undefined){
-                                console.log('hi how r u',checkbox[key])
+                                // console.log('hi how r u',checkbox[key])
                                 setCheckBox({...checkbox,[key]:false})
                             }
                                 // console.log(obj.product_properties.sort((a,b)=>a.new_product_in_frontend-b.new_product_in_frontend))
@@ -362,17 +398,14 @@ function NewBillBody({id}){
                                                    onChange={handelCheckBox}  /></td>
 
                                         {obj.product_properties.sort((a,b)=>a.new_product_in_frontend.id-b.new_product_in_frontend.id).map((head_obj,key_2)=> {
-
-
-                                            // console.log(total,head_obj)
                                             return(head_obj.new_product_in_frontend.is_show ? <td onClick={handelOpen}>{head_obj.value}</td> : '')
                                         })}
-                                    <td>{parseFloat(gst_amount).toFixed(2)}</td>
-                                        {extra_cal!==0?<td>{
+                                    <td onClick={handelOpen}>{parseFloat(gst_amount).toFixed(2)}</td>
+                                        {extra_cal!==0?<td onClick={handelOpen}>{
                                             parseFloat(total+gst_amount).toFixed(2)
                                         } +({extra_cal})={
                                             parseFloat(total+gst_amount+extra_cal).toFixed(2)
-                                        }</td>:<td>{parseFloat(total+gst_amount).toFixed(2)}</td>}
+                                        }</td>:<td onClick={handelOpen}>{parseFloat(total+gst_amount).toFixed(2)}</td>}
 
                                     </tr>
                                 )

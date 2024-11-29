@@ -74,11 +74,11 @@ function History(){
             onClick={()=>navigate(`/bill/${obj.id}`)}>
             <td className={'td-with-icon'}>
 
-                <PdfIcon/>{obj.invoice_number}-{obj.date}.pdf</td>
+                <PdfIcon/>{obj.invoice_number??"No invoice Number"}-{obj.date}.pdf</td>
 
-            <td>{obj.date}</td>
+            <td>{obj.date!==null?obj.date:"_"}</td>
             <td>{obj.user}</td>
-            <td>{obj.total_final_amount}</td>
+            <td>{obj.total_final_amount??0}</td>
             <td style={{width:'10%'}}>
                 <div className={'button button-line'}>Paid</div>
             </td>
@@ -128,6 +128,7 @@ function History(){
             {invoice_data.map(Row)}
             </tbody>
         </table>
+              <p>All Bills</p>
           </div>
       </div>
     )

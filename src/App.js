@@ -7,7 +7,6 @@ import {Companys} from "./pages/company's";
 import {NewBill} from "./pages/new_bill";
 import {useEffect, useState} from "react";
 import axios from "axios";
-import PDF from "./pages/js";
 
 const LogOut = () => {
   window.localStorage.clear()
@@ -47,7 +46,7 @@ const LoginCheck = () => {
                     console.log(error.request.status)
                     if (error.request.status===401){
                         console.log(error)
-
+                        window.localStorage.clear()
                         window.location.href=window.location.href.split('//')[0]+window.location.href.split('//')[1].split('/')[0]
                     }
                     else {
@@ -87,7 +86,7 @@ function App() {
           <Route path='/newbill' element={<NewBill/>}></Route>
           <Route path='/bill/:invoice_id' element={<NewBill/>}></Route>
           <Route path='/logout' element={<LogOut/>}></Route>
-          <Route path='/pdf' element={<PDF/>}></Route>
+          <Route path='/logout' element={<LogOut/>}></Route>
         </Routes>
       </BrowserRouter>
       </>
