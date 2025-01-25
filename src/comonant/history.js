@@ -65,9 +65,9 @@ function History(){
             }
         }).catch((error)=>{
             console.log(error)
-            alert(`error ${error.request.status}`)
         })
     }, []);
+
     const Row=(obj)=>{
 
         return( <tr className={'table-row'}

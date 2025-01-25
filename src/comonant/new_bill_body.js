@@ -42,7 +42,7 @@ function NewBillBody({id}){
             console.log(error)
             alert(`error ${error.request.status}`)
         })
-    }, []);
+    }, [refresh]);
 
     useEffect(() => {
         clientToken.get('new/product/in/frontend/').then((response)=>{
@@ -57,10 +57,10 @@ function NewBillBody({id}){
             console.log(error)
             alert(`error ${error?.request.status}`)
         })
-    }, []);
+    }, [refresh]);
     useEffect(() => {
 
-        // console.log(InvoiceData,id,'jjjjjjjjjj')
+
 
 
             let form =new FormData()
@@ -230,21 +230,32 @@ function NewBillBody({id}){
         setPop_up_properties('flex')
     }
     const handelExport = (id) => {
-
 clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is important for binary data
   .then((response) => {
     // Create a Blob from the PDF data
     const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
-
+    const pdfURL = URL.createObjectURL(pdfBlob);
     // Create a download link
     const downloadLink = document.createElement('a');
     downloadLink.href = URL.createObjectURL(pdfBlob);
-    downloadLink.download = 'document.pdf'; // Name for the downloaded file
+    if (!InvoiceData["receiver"]?.name){
+        let obj=company_name.find((e)=>e.id===InvoiceData["receiver"])
+        InvoiceData["receiver"]=obj
+        console.log(obj)
+    }
+    downloadLink.download = `${InvoiceData["receiver"]?.name}_${new Date().getDate()}-${new Date().getMonth()+1}-${new Date().getFullYear()}.pdf`; // Name for the downloaded file
 
     // Append the link, trigger the download, and then remove the link
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
+    // document.body.appendChild(downloadLink);
+    // downloadLink.click();
+    // document.body.removeChild(downloadLink);
+      const newWindow = window.open(pdfURL, '_blank');
+      if (newWindow) {
+      // Optionally set the file name in the new tab
+      newWindow.document.title = `${InvoiceData["receiver"]?.name}_${new Date().getDate()}-${new Date().getMonth() + 1}-${new Date().getFullYear()}.pdf`;
+    } else {
+      console.error('Failed to open a new tab. Please allow popups for this site.');
+    }
   })
   .catch((error) => {
     console.error('Error downloading the PDF:', error);
@@ -254,7 +265,7 @@ clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is importan
         <div className={'container space'}>
             <div className={'top_head'}>
                 <p>Bill</p>
-                <div className={'button'} onClick={()=>handelExport(InvoiceData?.id)}>Export</div>
+                <div className={'button'} onClick={()=>InvoiceData["receiver"]?handelExport(InvoiceData?.id):alert("Receiver is not set")}>Export</div>
             </div>
             <div className={'bill_head'}>
                 <div className={'pop-up-box'} id={'new_company_box'} style={{display:Pop_up_properties}}>
@@ -291,7 +302,6 @@ clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is importan
                 <p>Receiver</p>
                 <select  id={'receiver'} onChange={(event)=> {
                     if(event.target.value) {
-                        console.log("dsfasdf")
                         setInvoiceData({...InvoiceData, [event.target.id]: event.target.value})
                         console.log(InvoiceData)
                         setRefresh(!refresh)
@@ -303,7 +313,6 @@ clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is importan
                 <p>Invoice Date</p>
                 <input type={'date'} id={'date'} value={InvoiceData?.date??new Date().toISOString().split('T')[0]} onChange={(e)=> {
                     setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})
-                    console.log(e.target.value)
                     setRefresh(!refresh)
                 }}/>
             </div>
@@ -343,7 +352,6 @@ clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is importan
                     {table_content.map(
                         (obj,key)=>{
                             key=obj.id
-                            // console.log(obj.id,'hghghg')
                                 var total=1
                             var extra_cal=0
                                 function calculate(abc){
@@ -366,7 +374,10 @@ clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is importan
                                             }
                                         }
                                         else {
-                                            total=total*abc.value
+                                            if(abc.value && abc.new_product_in_frontend.input_title!=="GST"){
+                                                total=total*abc.value
+                                            }
+
                                         }
 
 

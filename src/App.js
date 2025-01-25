@@ -1,96 +1,89 @@
 import './App.css';
 import './style/root.css';
-import {Login,SignUp} from './pages/login.js';
+import {Login, SignUp} from './pages/login.js';
 import {Home} from './pages/home.js';
-import {BrowserRouter, Routes, Route, useNavigate} from "react-router-dom";
+import {BrowserRouter, Routes, Route, useNavigate, useLocation} from "react-router-dom";
 import {Companys} from "./pages/company's";
 import {NewBill} from "./pages/new_bill";
-import {useEffect, useState} from "react";
-import axios from "axios";
-
-const LogOut = () => {
-  window.localStorage.clear()
-    window.location.href=window.location.href.split('//')[0]+'//'+window.location.href.split('//')[1].split('/')[0]
+import {useEffect, useState, Suspense} from "react";
+import YAMLEditor from "./pages/ymal_edit";
+import {clientToken} from "./axios";
+import Loader from './Loader';
 
 
-}
-const client = axios.create({
-    baseURL: process.env.REACT_APP_URL,
-    headers:{
-        'Content-Type': 'application/json'
-    },
-});
+function App() {
+    const location_path = useLocation()
+    const navigate = useNavigate();
+    const [isLogin, setIsLogin] = useState(false);
+    const [loading, setLoading] = useState(true); // State to track loading
 
-const LoginCheck = () => {
-    const [is_login,set_login]=useState(false)
 
-    // const navigate = useNavigate();
+    const LogOut = () => {
+        const navigate = useNavigate();
+
+        useEffect(() => {
+            clientToken.get('log_out/').then((r) => {
+                navigate('/')
+                setIsLogin(false)
+            }).catch((e) => {
+                navigate('/')
+                setIsLogin(false)
+            })
+
+
+        }, []);
+
+
+    }
+
 
     useEffect(() => {
 
-            if(window.localStorage.getItem('token')){
-                // if (is_login){
-                client.get('profile/',{headers:{
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer '+window.localStorage.getItem('token')
-                    }}).then((response)=>{
-                    if(response.status===200){
-                        set_login(true)
-                        if(window.location.href.split('//')[1].split('/')[1]===''){
-                            // navigate('/home')
-                            window.location.href=window.location.href+'home'
-                        }
-
-                    }
-                }).catch((error)=> {
-                    console.log(error.request.status)
-                    if (error.request.status===401){
-                        console.log(error)
-                        window.localStorage.clear()
-                        window.location.href=window.location.href.split('//')[0]+window.location.href.split('//')[1].split('/')[0]
-                    }
-                    else {
-                        console.log(error)
-                        alert(`error ${error.request.status}`)
-                    }
-
-
-                })
-                }
-            // }
-            else {
-                set_login(false)
-                // debugger;
-                console.log(window.location.href.split('//')[1].split('/')[1]==='',window.location.href.split('//')[0]+window.location.href.split('//')[1].split('/')[0])
-                if(!(window.location.href.split('//')[1].split('/')[1]==='')){
-                    // navigate('/home')
-                    console.log('sdf')
-                    window.location.href=window.location.href.split('//')[0]+'//'+window.location.href.split('//')[1].split('/')[0]
+        clientToken.get('profile/',).then((response) => {
+            if (response.status === 200) {
+                setIsLogin(true);
+                if (window.location.href.split('//')[1].split('/')[1] === '') {
+                    setLoading(true)
+                    navigate('/home')
                 }
 
             }
+        }).catch((error) => {
+            console.log(error.request.status)
+            if (error.request.status === 401) {
+                // window.location.href=window.location.href.split('//')[0]+window.location.href.split('//')[1].split('/')[0]
+            } else {
+                console.log(error)
+                alert(`error ${error.request.status}`)
+            }
 
 
-    }, []);
-}
-function App() {
+        })
 
-  return (<>
-      <LoginCheck></LoginCheck>
-      <BrowserRouter>
-        <Routes>
-          <Route path='/' element={<Login/>}></Route>
-          <Route path='/SignUp' element={<SignUp/>}></Route>
-          <Route path='/home' element={<Home/>}></Route>
-          <Route path='/companys' element={<Companys/>}></Route>
-          <Route path='/newbill' element={<NewBill/>}></Route>
-          <Route path='/bill/:invoice_id' element={<NewBill/>}></Route>
-          <Route path='/logout' element={<LogOut/>}></Route>
-          <Route path='/logout' element={<LogOut/>}></Route>
-        </Routes>
-      </BrowserRouter>
-      </>
-  );
+
+    }, [location_path]);
+    useEffect(() => {
+        // Simulate async operation (e.g., checking login status or fetching data)
+        setTimeout(() => {
+            setLoading(false); // Once data is loaded, set loading to false
+        }, 2000); // Simulating a delay of 2 seconds for loading
+    }, [isLogin]);
+    return (<>
+            <Loader loading={loading} />
+                <Routes>
+
+                    <Route path='/' element={isLogin ? <Home/> : <Login setLoading={setLoading}/>}></Route>
+                    <Route path='/SignUp' element={<SignUp/>}></Route>
+                    <Route path='/home' element={<Home/>}></Route>
+                    <Route path='/companys' element={<Companys/>}></Route>
+                    <Route path='/newbill' element={<NewBill/>}></Route>
+                    <Route path='/bill/:invoice_id' element={<NewBill/>}></Route>
+                    <Route path='/logout' element={<LogOut/>}></Route>
+                    <Route path='/yaml' element={<YAMLEditor/>}></Route>
+                </Routes>
+
+        </>
+    );
 }
 
 export default App;
