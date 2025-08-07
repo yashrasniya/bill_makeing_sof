@@ -9,65 +9,55 @@ import {useEffect, useState, Suspense} from "react";
 import YAMLEditor from "./pages/ymal_edit";
 import {clientToken} from "./axios";
 import Loader from './Loader';
+import ThanksPage from "./pages/thanks_page";
 
 
 function App() {
-    const location_path = useLocation()
+    const location = useLocation();
     const navigate = useNavigate();
+
     const [isLogin, setIsLogin] = useState(false);
-    const [loading, setLoading] = useState(true); // State to track loading
+    const [loading, setLoading] = useState(true);
 
-
+    // Logout handler
     const LogOut = () => {
-        const navigate = useNavigate();
-
-        useEffect(() => {
-            clientToken.get('log_out/').then((r) => {
-                navigate('/')
-                setIsLogin(false)
-            }).catch((e) => {
-                navigate('/')
-                setIsLogin(false)
+        clientToken.get('log_out/')
+            .then(() => {
+                setIsLogin(false);
+                navigate('/');
             })
+            .catch(() => {
+                setIsLogin(false);
+                navigate('/');
+            });
+    };
 
-
-        }, []);
-
-
-    }
-
-
+    // Check profile and redirect if logged in
     useEffect(() => {
+        clientToken.get('profile/')
+            .then((response) => {
+                if (response.status === 200) {
+                    setIsLogin(true);
 
-        clientToken.get('profile/',).then((response) => {
-            if (response.status === 200) {
-                setIsLogin(true);
-                if (window.location.href.split('//')[1].split('/')[1] === '') {
-                    setLoading(true)
-                    navigate('/home')
+                    // Redirect to /home if at base path
+                    const currentPath = window.location.pathname;
+                    if (currentPath === '/') {
+                        navigate('/home');
+                    }
                 }
-
-            }
-        }).catch((error) => {
-            console.log(error.request.status)
-            if (error.request.status === 401) {
-                // window.location.href=window.location.href.split('//')[0]+window.location.href.split('//')[1].split('/')[0]
-            } else {
-                console.log(error)
-                alert(`error ${error.request.status}`)
-            }
-
-
-        })
-
-
-    }, [location_path]);
-    useEffect(() => {
-        // Simulate async operation (e.g., checking login status or fetching data)
-        setTimeout(() => {
-            setLoading(false); // Once data is loaded, set loading to false
-        }, 2000); // Simulating a delay of 2 seconds for loading
-    }, [isLogin]);
+            })
+            .catch((error) => {
+                if (error?.request?.status === 401) {
+                    console.log('Unauthorized');
+                } else {
+                    console.error(error);
+                    alert(`Error ${error?.request?.status}`);
+                }
+            })
+            .finally(() => {
+                setLoading(false); // Stop loading regardless of outcome
+            });
+    }, [location]);
     return (<>
             <Loader loading={loading} />
                 <Routes>
@@ -80,6 +70,7 @@ function App() {
                     <Route path='/bill/:invoice_id' element={<NewBill/>}></Route>
                     <Route path='/logout' element={<LogOut/>}></Route>
                     <Route path='/yaml' element={<YAMLEditor/>}></Route>
+                    <Route path='/thanks-page' element={<ThanksPage/>}></Route>
                 </Routes>
 
         </>
