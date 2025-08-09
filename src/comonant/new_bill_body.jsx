@@ -85,9 +85,13 @@ function NewBillBody({id}){
 
                     setTable_content(response.data.products)
                 }
+
             }).catch((error)=> {
                 console.log(error)
                 alert(`error ${error?.request.status}`)
+            if(error.response.status ===404){
+                    navigate('/')
+                }
             })
 
 
