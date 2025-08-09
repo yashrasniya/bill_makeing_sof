@@ -35,7 +35,7 @@ function Boxes() {
 
                 </div>
                 <div className={'progress_bar_wrapper pt-8'}>
-                    <GrowthBar percentageChange={userInfo.percentage_change}/>
+                    <GrowthBar percentageChange={userInfo.percentage_change} invoices_this_month_count={'This Month Bill Count ' + userInfo.invoices_this_month_count}/>
 
                 </div>
             </div>
@@ -66,7 +66,7 @@ function Boxes() {
 
                 </div>
                 <div className={'progress_bar_wrapper pt-8'}>
-                    <GrowthBar percentageChange={userInfo.percentage_gst_amount}/>
+                    <GrowthBar percentageChange={userInfo.percentage_gst_amount} invoices_this_month_count={'Prv Month Bill Count ' + userInfo.invoices_prv_month_count}/>
 
                 </div>
             </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function GrowthBar({ percentageChange }) {
+export default function GrowthBar({ percentageChange,invoices_this_month_count }) {
     const [width, setWidth] = useState("0%");
 
     useEffect(() => {
@@ -14,7 +14,7 @@ export default function GrowthBar({ percentageChange }) {
     return (
         <div className="w-full max-w-xl p-4">
             <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium text-slate-700">Growth</div>
+                <div className="text-sm font-medium text-slate-700">{invoices_this_month_count}</div>
                 <div
                     className={`text-sm font-semibold ${
                         isPositive ? "text-button_blue" : isNegative ? "text-rose-600" : "to-[#071952]"
