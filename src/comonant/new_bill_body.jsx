@@ -23,7 +23,7 @@ function NewBillBody({id}){
     let [company_name,setCompany_name]=useState([])
     let [bill_body_items,setBill_body_items]=useState([])
     const [update,set_update]=useState(false)
-    const [InvoiceData,setInvoiceData]=useState({date:new Date().toISOString().split('T')[0]})
+    const [InvoiceData,setInvoiceData]=useState({})
     const [url,setUrl]=useState(id?`invoice/${id}/update/`:'invoice/')
     const [refresh,setRefresh]=useState(false)
     const [newDataFormat,setNewDataFormat]=useState({})
@@ -317,7 +317,7 @@ clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is importan
                     {company_name.map((obj)=><option value={obj.id} selected={obj.id === InvoiceData?.receiver}>{obj.name}</option>)}
                 </select>
                 <p>Invoice Date</p>
-                <input type={'date'} id={'date'} value={InvoiceData?.date} onChange={(e)=> {
+                <input type={'date'} id={'date'} value={InvoiceData?.date??new Date().toISOString().split('T')[0]} onChange={(e)=> {
                     setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})
                     setRefresh(!refresh)
                 }}/>
