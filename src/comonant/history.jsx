@@ -51,33 +51,42 @@ const PdfIcon = () => {
       </svg>
   )
 }
-const array=[1,2,3,4,5,1,2,3,4,5]
 
 
-
-function History(){
+function History({setLoading}){
     const [invoice_data,setInvoiceData]=useState([])
+    const [page, setPage] = useState(0)
+    const [current_page, setCurrentPage] = useState(2)
     let navigate =useNavigate()
     useEffect(() => {
-        clientToken.get('invoice/').then((response)=>{
+        let url = 'invoice/'
+        if(page!==0){
+            url+=`?page=${page}`
+        }
+        console.log(setLoading)
+        clientToken.get(url).then((response)=>{
+
             if (response.status===200){
                 setInvoiceData(response.data.results)
+                setCurrentPage(parseInt(response.data.next.split('=')[1]))
             }
+            setLoading(false)
         }).catch((error)=>{
+            setLoading(false)
             console.log(error)
         })
-    }, []);
+    }, [page]);
 
     const Row=(obj)=>{
 
         return( <tr className={'table-row'}
-            onClick={()=>navigate(`/bill/${obj.id}`)}>
+            onClick={()=>window.open(`/bill/${obj.id}`, '_blank', 'noopener,noreferrer')}>
             <td className={'td-with-icon'}>
 
-                <PdfIcon/>{obj.invoice_number??"No invoice Number"}-{obj.date}.pdf</td>
+                {obj?.invoice_number??"No-number"}-{obj.date}</td>
 
-            <td>{obj.date!==null?obj.date:"_"}</td>
-            <td>{obj.user}</td>
+            <td>{obj.receiver_name}</td>
+            {/*<td>{obj.date!==null?obj.date:"_"}</td>*/}
             <td>{obj.total_final_amount??0}</td>
             <td style={{width:'10%'}}>
                 <div className={'button button-line'}>Paid</div>
@@ -98,13 +107,13 @@ function History(){
                    </svg>
                    Create Bill</div>
 
-                <div className={'button'}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 48 48" fill="none">
-                        <path d="M15.1523 38C12.8856 38 10.9602 37.1891 9.37614 35.5672C7.79205 33.9454 7 31.9742 7 29.6535C7 27.5701 7.65038 25.7571 8.95114 24.2144C10.2519 22.6717 11.8811 21.7421 13.8386 21.4256C14.225 19.2104 15.2811 17.2524 17.0068 15.5514C18.7326 13.8505 20.6902 13 22.8795 13C23.4977 13 24.0386 13.178 24.5023 13.534C24.9659 13.89 25.1977 14.3713 25.1977 14.9778V26.6076L28.4045 23.3244L30.0659 25.0253L24.0386 31.1962L18.0114 25.0253L19.6727 23.3244L22.8795 26.6076V15.1756C20.6644 15.4657 18.9258 16.4612 17.6636 18.1622C16.4015 19.8631 15.7705 21.7025 15.7705 23.6804H15.0364C13.4652 23.6804 12.1193 24.2474 10.9989 25.3813C9.87841 26.5153 9.31818 27.9393 9.31818 29.6535C9.31818 31.3676 9.89773 32.7917 11.0568 33.9256C12.2159 35.0596 13.5811 35.6266 15.1523 35.6266H34.4705C35.6295 35.6266 36.6212 35.2046 37.4455 34.3608C38.2697 33.5169 38.6818 32.5016 38.6818 31.3149C38.6818 30.1282 38.2697 29.1129 37.4455 28.269C36.6212 27.4251 35.6295 27.0032 34.4705 27.0032H32.0364V23.6804C32.0364 21.8871 31.6114 20.3378 30.7614 19.0324C29.9114 17.7271 28.8167 16.692 27.4773 15.9272V13.356C29.5636 14.1208 31.2314 15.4525 32.4807 17.3513C33.7299 19.25 34.3545 21.3597 34.3545 23.6804V24.6297C36.2091 24.577 37.7803 25.1835 39.0682 26.4494C40.3561 27.7152 41 29.337 41 31.3149C41 33.1345 40.3561 34.7036 39.0682 36.0222C37.7803 37.3407 36.2477 38 34.4705 38H15.1523Z" fill="white"/>
-                    </svg>
-                    Download all
+                {/*<div className={'button'}>*/}
+                {/*    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 48 48" fill="none">*/}
+                {/*        <path d="M15.1523 38C12.8856 38 10.9602 37.1891 9.37614 35.5672C7.79205 33.9454 7 31.9742 7 29.6535C7 27.5701 7.65038 25.7571 8.95114 24.2144C10.2519 22.6717 11.8811 21.7421 13.8386 21.4256C14.225 19.2104 15.2811 17.2524 17.0068 15.5514C18.7326 13.8505 20.6902 13 22.8795 13C23.4977 13 24.0386 13.178 24.5023 13.534C24.9659 13.89 25.1977 14.3713 25.1977 14.9778V26.6076L28.4045 23.3244L30.0659 25.0253L24.0386 31.1962L18.0114 25.0253L19.6727 23.3244L22.8795 26.6076V15.1756C20.6644 15.4657 18.9258 16.4612 17.6636 18.1622C16.4015 19.8631 15.7705 21.7025 15.7705 23.6804H15.0364C13.4652 23.6804 12.1193 24.2474 10.9989 25.3813C9.87841 26.5153 9.31818 27.9393 9.31818 29.6535C9.31818 31.3676 9.89773 32.7917 11.0568 33.9256C12.2159 35.0596 13.5811 35.6266 15.1523 35.6266H34.4705C35.6295 35.6266 36.6212 35.2046 37.4455 34.3608C38.2697 33.5169 38.6818 32.5016 38.6818 31.3149C38.6818 30.1282 38.2697 29.1129 37.4455 28.269C36.6212 27.4251 35.6295 27.0032 34.4705 27.0032H32.0364V23.6804C32.0364 21.8871 31.6114 20.3378 30.7614 19.0324C29.9114 17.7271 28.8167 16.692 27.4773 15.9272V13.356C29.5636 14.1208 31.2314 15.4525 32.4807 17.3513C33.7299 19.25 34.3545 21.3597 34.3545 23.6804V24.6297C36.2091 24.577 37.7803 25.1835 39.0682 26.4494C40.3561 27.7152 41 29.337 41 31.3149C41 33.1345 40.3561 34.7036 39.0682 36.0222C37.7803 37.3407 36.2477 38 34.4705 38H15.1523Z" fill="white"/>*/}
+                {/*    </svg>*/}
+                {/*    Download all*/}
 
-                </div>
+                {/*</div>*/}
             </div>
             </div>
           <div className={'table-raper'}>
@@ -116,8 +125,8 @@ function History(){
                 <td
                     style={{width:'25%'}}
                 >Invoice</td>
-                <td>Billing Date</td>
-                <td>User</td>
+                <td>Receiver</td>
+                {/*<td>Billing Date</td>*/}
                 <td>Amount</td>
                 <td>Status</td>
             </tr>
@@ -128,7 +137,12 @@ function History(){
             {invoice_data.map(Row)}
             </tbody>
         </table>
-              <p>All Bills</p>
+              <div className={'flex justify-between '}>
+                  <p onClick={()=>page!==0 && setPage(page-1)} className={'cursor-pointer'}> {"<<"} </p>
+                  <p className={'cursor-pointer'} >Page {current_page - 1}</p>
+                  <p onClick={()=>setPage(page+1)} className={'cursor-pointer'}>>></p>
+              </div>
+
           </div>
       </div>
     )

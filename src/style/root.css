@@ -13,12 +13,23 @@
 
 }
 
-body{
+body {
     margin: 0px;
     padding: 0px;
-    /*background-color: var(--primary-color-3);*/
-    background: radial-gradient(198.82% 131.95% at 0.94% 12.84%, #C5FCF3 0%, #91FEEC 100%);    position: relative;
+    background: radial-gradient(198.82% 131.95% at 0.94% 12.84%, #C5FCF3 0%, #91FEEC 100%);
+    position: relative;
 }
+
+/* PNG layer with opacity control */
+/*body::before {*/
+/*    content: "";*/
+/*    position: absolute;*/
+/*    inset: 0; !* covers entire page *!*/
+/*    background: url('bg.png') repeat;*/
+/*    background-size: 50px 50px; !* make PNG small *!*/
+/*    opacity: 0.2; !* reduce visibility *!*/
+/*    pointer-events: none; !* so it doesn't block clicks *!*/
+/*}*/
 html {
     box-sizing: border-box;
 }

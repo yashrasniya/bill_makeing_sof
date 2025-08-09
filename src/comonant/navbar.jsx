@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 const navItems=[
     {title:'Home',icon:'' ,link:'/home'},
     {title:'Company’s',icon:'',link:'/companys'},
-    {title:'Our Detail’s',icon:'',link:'/home'},
+    // {title:'Our Detail’s',icon:'',link:'/home'},
     {title:'logout',icon:'',link:'/logout'},
 ]
 
@@ -17,7 +17,7 @@ function Navbar(){
 
     return(
         <div className="nav">
-        <div className="img-css"><img src={logo} alt={'logo'}/></div>
+        <div className="p-2"><img src={logo} alt={'logo'} className={'h-full '}/></div>
             <div className="links">
                  <div className="items">
                      {navItems.map((obj)=><div className='text-raper' onClick={()=> {navigate(obj.link)}}> {obj.icon} <p> {obj.title} </p></div>)}

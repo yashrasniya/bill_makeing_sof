@@ -1,4 +1,4 @@
-import Navbar from "../comonant/navbar.js";
+import Navbar from "../comonant/navbar.jsx";
 import {NewBillBody} from "../comonant/new_bill_body";
 import {useParams} from "react-router-dom";
 

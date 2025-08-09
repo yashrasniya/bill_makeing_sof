@@ -1,15 +1,16 @@
 import './App.css';
 import './style/root.css';
-import {Login, SignUp} from './pages/login.js';
-import {Home} from './pages/home.js';
+import {Login, SignUp} from './pages/login.jsx';
+import {Home} from './pages/home.jsx';
 import {BrowserRouter, Routes, Route, useNavigate, useLocation} from "react-router-dom";
-import {Companys} from "./pages/company's";
+import {CompanyS} from "./pages/company\'s";
 import {NewBill} from "./pages/new_bill";
 import {useEffect, useState, Suspense} from "react";
 import YAMLEditor from "./pages/ymal_edit";
-import {clientToken} from "./axios";
+import {clientToken} from "./axios.js";
 import Loader from './Loader';
 import ThanksPage from "./pages/thanks_page";
+import Bill_list from "./pages/bill_list";
 
 
 function App() {
@@ -62,10 +63,11 @@ function App() {
             <Loader loading={loading} />
                 <Routes>
 
-                    <Route path='/' element={isLogin ? <Home/> : <Login setLoading={setLoading}/>}></Route>
+                    <Route path='/' element={isLogin ? <Home setLoading={setLoading}/> : <Login setLoading={setLoading}/>}></Route>
                     <Route path='/SignUp' element={<SignUp/>}></Route>
-                    <Route path='/home' element={<Home/>}></Route>
-                    <Route path='/companys' element={<Companys/>}></Route>
+                    <Route path='/home' element={<Home setLoading={setLoading}/>}></Route>
+                    <Route path='/bill_list' element={<Bill_list setLoading={setLoading}/>}></Route>
+                    <Route path='/companys' element={<CompanyS/>}></Route>
                     <Route path='/newbill' element={<NewBill/>}></Route>
                     <Route path='/bill/:invoice_id' element={<NewBill/>}></Route>
                     <Route path='/logout' element={<LogOut/>}></Route>

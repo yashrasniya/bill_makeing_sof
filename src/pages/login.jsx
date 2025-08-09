@@ -47,8 +47,8 @@ function Login({setLoading}){
     return(
         <div className="container" >
         <div className="login_box left">
-            <div className="logo_css">
-                <img src={logo} alt={'logo'} ></img>
+            <div className="flex justify-center items-center w-full">
+                <img src={logo} alt={'logo'} className={'h-1/4 '} ></img>
 
             </div>
         </div>
@@ -56,7 +56,7 @@ function Login({setLoading}){
 
 
                 <div className="logo_css heading"><img src={logo} alt={'logo'} id={'logo_first'} ></img>
-                    <img src={logo_background} id={'logo_two'} alt={'logo'} ></img>
+                    <img src={logo_background} id={'logo_two'} alt={'logo'}  className={'h-1/2'}></img>
                 </div>
 
 
@@ -65,13 +65,13 @@ function Login({setLoading}){
                 <h3 className="login-heading">Login</h3>
                 <div className="input-raper">
                     <p>User Name</p>
-                    <input type="text" name="username"
+                    <input type="text" name="username" className={'bg-white'}
                            value={username}
                            onChange={(e)=>set_username(e.target.value)}/>
                 </div>
                 <div className="input-raper">
                     <p>Password</p>
-                    <input type="password" name="password"
+                    <input type="password" name="password" className={'bg-white'}
                            value={password}
                            onChange={(e)=>set_password(e.target.value)}
                            onKeyDown={(event)=>{
@@ -146,11 +146,13 @@ function SignUp(){
     }
     return(
         <div className="container" >
-            <div className="login_box left">
-                <div className="logo_css"><img src={logo} alt={'logo'} ></img></div>
+            <div className="login_box left h-fit">
+                <div className="flex justify-center items-center w-full"><img src={logo} alt={'logo'} className={'h-1/4'} ></img></div>
             </div>
             <div className="login_box right">
-                <div className="logo_css heading"><img src={logo} alt={'logo'} ></img></div>
+                <div className="logo_css heading"><img src={logo} alt={'logo'} id={'logo_first'} ></img>
+                    <img src={logo_background} id={'logo_two'} alt={'logo'}  className={'h-1/2'}></img>
+                </div>
                 <h3 className="login-heading">SignUp</h3>
 
                 <div className="raper">
@@ -158,27 +160,27 @@ function SignUp(){
 
                     <div className="input-raper">
                         <p>User Name</p>{error.username && <span style={{color: "red",fontSize:"15px"}}> {error?.username}</span>}
-                        <input type="text" name="username" value={user_details.username} onChange={handelChange}/>
+                        <input type="text" name="username" value={user_details.username} onChange={handelChange} className={'bg-white'}/>
                     </div>
                     <div className="input-raper">
                         <p>Email address</p>{error.email && <span style={{color: "red",fontSize:"15px"}}> {error?.email}</span>}
-                        <input type="email" name="email" value={user_details.email} onChange={handelChange} />
+                        <input type="email" name="email" value={user_details.email} onChange={handelChange} className={'bg-white'} />
                     </div>
                     <div className="input-raper">
                         <p>First Name</p>{error.first_name && <span style={{color: "red",fontSize:"15px"}}> {error?.first_name}</span>}
-                        <input type="text" name="first_name" value={user_details.first_name} onChange={handelChange} />
+                        <input type="text" name="first_name" value={user_details.first_name} onChange={handelChange} className={'bg-white'} />
                     </div>
                     <div className="input-raper">
                         <p>Last Name</p>{error.last_name && <span style={{color: "red",fontSize:"15px"}}> {error?.last_name}</span>}
-                        <input type="text" name="last_name" value={user_details.last_name} onChange={handelChange} />
+                        <input type="text" name="last_name" value={user_details.last_name} onChange={handelChange} className={'bg-white'} />
                     </div>
                     <div className="input-raper">
                         <p>Mobile number</p>{error.mobile_number && <span style={{color: "red",fontSize:"15px"}}> {error?.mobile_number}</span>}
-                        <input type="text" name="mobile_number" value={user_details.mobile_number} onChange={handelChange} />
+                        <input type="text" name="mobile_number" value={user_details.mobile_number} onChange={handelChange} className={'bg-white'} />
                     </div>
                     <div className="input-raper">
                         <p>Password</p>{error.password && <span style={{color: "red",fontSize:"15px"}}> {error?.password}</span>}
-                        <input type="password" name="password" value={user_details.password} onChange={handelChange}/>
+                        <input type="password" name="password" value={user_details.password} onChange={handelChange} className={'bg-white'}/>
                     </div>
                     <button  onClick={handelSignUp} >Create New Account</button>
                     <p className='SignUp-text' onClick={()=>{ navigate("/");}}>
