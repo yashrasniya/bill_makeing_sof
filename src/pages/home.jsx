@@ -2,13 +2,16 @@
 import Navbar from "../comonant/navbar.jsx";
 import Boxes from "../comonant/boxs.jsx";
 import History from "../comonant/history";
+import {useState} from "react";
 
-function Home({setLoading}){
+function Home(){
+
+    const [filters, setFilters] = useState({page:1})
     return(
         <>
         <Navbar/>
         <Boxes/>
-        <History setLoading={setLoading}></History>
+        <History  filters={filters}></History>
         </>
     )
 }

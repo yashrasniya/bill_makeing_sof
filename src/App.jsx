@@ -1,23 +1,26 @@
 import './App.css';
 import './style/root.css';
-import {Login, SignUp} from './pages/login.jsx';
-import {Home} from './pages/home.jsx';
-import {BrowserRouter, Routes, Route, useNavigate, useLocation} from "react-router-dom";
-import {CompanyS} from "./pages/company\'s";
-import {NewBill} from "./pages/new_bill";
-import {useEffect, useState, Suspense} from "react";
-import YAMLEditor from "./pages/ymal_edit";
-import {clientToken} from "./axios.js";
+import { Login, SignUp } from './pages/login.jsx';
+import { Home } from './pages/home.jsx';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { CompanyS } from "./pages/company's";
+import { NewBill } from "./pages/new_bill";
+import { useEffect, useState } from "react";
+import { clientToken } from "./axios.js";
 import Loader from './Loader';
 import ThanksPage from "./pages/thanks_page";
 import Bill_list from "./pages/bill_list";
+import TemplateDesign from "./pages/template_design";
+import Navbar from "./comonant/navbar";
+
+// Private route wrapper
 
 
 function App() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [isLogin, setIsLogin] = useState(false);
+    const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(true);
 
     // Logout handler
@@ -33,49 +36,103 @@ function App() {
             });
     };
 
-    // Check profile and redirect if logged in
+    // Check login status on page load / route change
     useEffect(() => {
         clientToken.get('profile/')
             .then((response) => {
                 if (response.status === 200) {
                     setIsLogin(true);
-
-                    // Redirect to /home if at base path
-                    const currentPath = window.location.pathname;
-                    if (currentPath === '/') {
-                        navigate('/home');
+                    if (location.pathname === '/') {
+                        navigate('/home', { replace: true });
                     }
                 }
             })
             .catch((error) => {
-                if (error?.request?.status === 401) {
-                    console.log('Unauthorized');
-                } else {
-                    console.error(error);
-                    alert(`Error ${error?.request?.status}`);
+                setIsLogin(false);
+                if (location.pathname !== '/' && location.pathname !== '/SignUp') {
+                    navigate('/', { replace: true });
                 }
             })
             .finally(() => {
-                setLoading(false); // Stop loading regardless of outcome
+                setLoading(false);
             });
     }, [location]);
-    return (<>
-            <Loader loading={loading} />
-                <Routes>
 
-                    <Route path='/' element={isLogin ? <Home setLoading={setLoading}/> : <Login setLoading={setLoading}/>}></Route>
-                    <Route path='/SignUp' element={<SignUp/>}></Route>
-                    <Route path='/home' element={<Home setLoading={setLoading}/>}></Route>
-                    <Route path='/bill_list' element={<Bill_list setLoading={setLoading}/>}></Route>
-                    <Route path='/companys' element={<CompanyS/>}></Route>
-                    <Route path='/newbill' element={<NewBill/>}></Route>
-                    <Route path='/bill/:invoice_id' element={<NewBill/>}></Route>
-                    <Route path='/logout' element={<LogOut/>}></Route>
-                    <Route path='/yaml' element={<YAMLEditor/>}></Route>
-                    <Route path='/thanks-page' element={<ThanksPage/>}></Route>
-                </Routes>
+    if (loading) {
+        return <Loader />;
+    }
+    function PrivateRoute({ children, isLogin }) {
+        return isLogin ? children : <Login setLoading={setLoading} />;
+    }
+    return (
+        <Routes>
+            {/* Public routes */}
+            <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <Login setLoading={setLoading} />} />
+            <Route path="/SignUp" element={<SignUp />} />
 
-        </>
+            {/* Private routes */}
+            <Route
+                path="/home"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Home />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/bill_list"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <Bill_list  />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/companys"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <CompanyS />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/newbill"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <NewBill />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/bill/:invoice_id"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <NewBill />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/yaml"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <TemplateDesign />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/thanks-page"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <ThanksPage />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/logout"
+                element={<LogOut />}
+            />
+        </Routes>
     );
 }
 

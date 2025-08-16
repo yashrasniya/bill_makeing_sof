@@ -1,16 +1,14 @@
 import React from 'react';
 
-const Loader = ({loading}) => {
-    if (!loading) { return null; }
+const Loader = () => {
     return (
-        <div className={'loader_wrapper'}>
-<div className="loader-container">
-        <div className="spinner"></div>
-        <p>Loading...</p>
-    </div>
+        <div className="loader-wrapper">
+            <div className="loader-container">
+                <div className="spinner"></div>
+                <p>Loading...</p>
+            </div>
         </div>
-
-);
+    );
 };
 
 export default Loader;

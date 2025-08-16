@@ -26,15 +26,15 @@ function Boxes() {
     return (<div className='boxes_raper'>
             <div className={'inner_card '}>
                 <div className={'card_content card-two'}>
-                    <p className={'text-3xl'}>Hi {userInfo.name}</p>
+                    <p className={'md:text-3xl text-xl'}>Hi {userInfo.name}</p>
 
                 </div>
                 <div className={'card_content card-two amount_div'}>
-                    <p style={{fontSize: '1.4vw'}}>This month Sales </p>
-                    <p className={'text-5xl'}>{userInfo?.month_total_final_amount.toLocaleString('en-IN')} ₹</p>
+                    <p >This month Sales </p>
+                    <p className={'md:text-5xl text-xl'}>{userInfo?.month_total_final_amount.toLocaleString('en-IN')} ₹</p>
 
                 </div>
-                <div className={'progress_bar_wrapper pt-8'}>
+                <div className={'progress_bar_wrapper md:pt-8 pt-0'}>
                     <GrowthBar percentageChange={userInfo.percentage_change} invoices_this_month_count={'This Month Bill Count ' + userInfo.invoices_this_month_count}/>
 
                 </div>
@@ -62,10 +62,10 @@ function Boxes() {
                 </div>
                 <div className={'card_content card-two amount_div'}>
                     <p style={{fontSize: '1.4vw'}}>This month GST </p>
-                    <p className={'text-5xl'}>{userInfo?.month_gst_final_amount.toLocaleString('en-IN')} ₹</p>
+                    <p className={'md:text-5xl text-xl'}>{userInfo?.month_gst_final_amount.toLocaleString('en-IN')} ₹</p>
 
                 </div>
-                <div className={'progress_bar_wrapper pt-8'}>
+                <div className={'progress_bar_wrapper md:pt-8 pt-0'}>
                     <GrowthBar percentageChange={userInfo.percentage_gst_amount} invoices_this_month_count={'Prv Month Bill Count ' + userInfo.invoices_prv_month_count}/>
 
                 </div>
