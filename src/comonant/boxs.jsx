@@ -1,7 +1,8 @@
 import '../style/box.css';
-import {useEffect, useState} from "react";
-import {clientToken} from "../axios";
 import GrowthBar from "./GrowthBar";
+import { useSelector } from "react-redux";
+import {clientToken} from "@/axios";
+import {useEffect, useState} from "react";
 
 
 function Boxes() {
@@ -31,11 +32,11 @@ function Boxes() {
                 </div>
                 <div className={'card_content card-two amount_div'}>
                     <p >This month Sales </p>
-                    <p className={'md:text-5xl text-xl'}>{userInfo?.month_total_final_amount.toLocaleString('en-IN')} ₹</p>
+                    <p className={'md:text-5xl text-xl'}>{userInfo?.month_total_final_amount!==1?userInfo?.month_total_final_amount.toLocaleString('en-IN'):'0'} ₹</p>
 
                 </div>
                 <div className={'progress_bar_wrapper md:pt-8 pt-0'}>
-                    <GrowthBar percentageChange={userInfo.percentage_change} invoices_this_month_count={'This Month Bill Count ' + userInfo.invoices_this_month_count}/>
+                    <GrowthBar percentageChange={userInfo?.percentage_change} invoices_this_month_count={'This Month Bill Count ' + userInfo?.invoices_this_month_count}/>
 
                 </div>
             </div>
@@ -62,11 +63,11 @@ function Boxes() {
                 </div>
                 <div className={'card_content card-two amount_div'}>
                     <p style={{fontSize: '1.4vw'}}>This month GST </p>
-                    <p className={'md:text-5xl text-xl'}>{userInfo?.month_gst_final_amount.toLocaleString('en-IN')} ₹</p>
+                    <p className={'md:text-5xl text-xl'}>{userInfo?.month_gst_final_amount!==1?userInfo?.month_gst_final_amount.toLocaleString('en-IN'):'0'} ₹</p>
 
                 </div>
                 <div className={'progress_bar_wrapper md:pt-8 pt-0'}>
-                    <GrowthBar percentageChange={userInfo.percentage_gst_amount} invoices_this_month_count={'Prv Month Bill Count ' + userInfo.invoices_prv_month_count}/>
+                    <GrowthBar percentageChange={userInfo?.percentage_gst_amount} invoices_this_month_count={'Prv Month Bill Count ' + userInfo?.invoices_prv_month_count}/>
 
                 </div>
             </div>

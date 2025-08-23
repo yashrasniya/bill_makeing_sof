@@ -1,17 +1,22 @@
 import './App.css';
 import './style/root.css';
-import { Login, SignUp } from './pages/login.jsx';
+import { Login} from './pages/login.jsx';
 import { Home } from './pages/home.jsx';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { CompanyS } from "./pages/company's";
+import { CompanyS } from "./pages/company's.jsx";
 import { NewBill } from "./pages/new_bill";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { clientToken } from "./axios.js";
 import Loader from './Loader';
 import ThanksPage from "./pages/thanks_page";
 import Bill_list from "./pages/bill_list";
 import TemplateDesign from "./pages/template_design";
 import Navbar from "./comonant/navbar";
+import SignUp from "@/pages/signup";
+import CompanyForm from "@/pages/CompanyForm";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchUser, logoutUser } from "./store/userSlice";
+import Profile from "./pages/profile";
 
 // Private route wrapper
 
@@ -19,55 +24,56 @@ import Navbar from "./comonant/navbar";
 function App() {
     const location = useLocation();
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-    const [isLogin, setIsLogin] = useState(true);
-    const [loading, setLoading] = useState(true);
+    const { isLogin, status, userInfo } = useSelector((state) => state.user);
+    const loading = status === 'loading' || status === 'idle';
 
     // Logout handler
     const LogOut = () => {
         clientToken.get('log_out/')
-            .then(() => {
-                setIsLogin(false);
-                navigate('/');
-            })
-            .catch(() => {
-                setIsLogin(false);
+            .finally(() => {
+                dispatch(logoutUser());
                 navigate('/');
             });
     };
 
-    // Check login status on page load / route change
+    // Fetch user on initial load if not already fetched
     useEffect(() => {
-        clientToken.get('profile/')
-            .then((response) => {
-                if (response.status === 200) {
-                    setIsLogin(true);
-                    if (location.pathname === '/') {
-                        navigate('/home', { replace: true });
-                    }
+        if (status === 'idle') {
+            dispatch(fetchUser());
+        }
+    }, [status, dispatch]);
+
+    // Handle navigation after user data is fetched
+    useEffect(() => {
+        if (status === 'succeeded') {
+            if (userInfo.is_company_varified) {
+                if (location.pathname === '/') {
+                    navigate('/home', { replace: true });
                 }
-            })
-            .catch((error) => {
-                setIsLogin(false);
-                if (location.pathname !== '/' && location.pathname !== '/SignUp') {
-                    navigate('/', { replace: true });
+            } else {
+                if (location.pathname !== '/CompanyForm') {
+                    navigate('/CompanyForm', { replace: true });
                 }
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-    }, [location]);
+            }
+        } else if (status === 'failed') {
+            if (location.pathname !== '/' && location.pathname !== '/SignUp') {
+                navigate('/', { replace: true });
+            }
+        }
+    }, [status, isLogin, userInfo, location.pathname, navigate]);
 
     if (loading) {
         return <Loader />;
     }
     function PrivateRoute({ children, isLogin }) {
-        return isLogin ? children : <Login setLoading={setLoading} />;
+        return isLogin ? children : <Login />;
     }
     return (
         <Routes>
             {/* Public routes */}
-            <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <Login setLoading={setLoading} />} />
+            <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <Login  />} />
             <Route path="/SignUp" element={<SignUp />} />
 
             {/* Private routes */}
@@ -89,7 +95,7 @@ function App() {
                 }
             />
             <Route
-                path="/companys"
+                path="/Customers"
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <CompanyS />
@@ -125,6 +131,23 @@ function App() {
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <ThanksPage />
+                    </PrivateRoute>
+                }
+            /><Route
+                path="/CompanyForm"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <CompanyForm />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/profile"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <Profile />
                     </PrivateRoute>
                 }
             />

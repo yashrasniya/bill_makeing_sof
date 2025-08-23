@@ -20,6 +20,7 @@ function History({ show_header = true, filters = {} }) {
     const [current_page, setCurrentPage] = useState(1);
     const navigate = useNavigate();
     const [isApiCall, setIsApiCall] = useState(false);
+    const [open, setOpen] = useState(false);
 
     useEffect(() => {
         if (!isApiCall) {
@@ -63,14 +64,20 @@ function History({ show_header = true, filters = {} }) {
                 <td
                     className="td-with-icon cursor-pointer"
                     onClick={() =>
-                        window.open(`/bill/${obj.id}`, "_blank", "noopener,noreferrer")
+                        navigate(`/bill/${obj.id}`)
                     }
                 >
                     {obj?.invoice_number ?? "No-number"}
                 </td>
-                <td>{obj.date}</td>
-                <td>{obj.receiver_name || "-"}</td>
-                <td>{obj.total_final_amount ?? 0}</td>
+                <td onClick={() =>
+                    navigate(`/bill/${obj.id}`)
+                }>{obj.date}</td>
+                <td onClick={() =>
+                    navigate(`/bill/${obj.id}`)
+                }>{obj.receiver_name || "-"}</td>
+                <td onClick={() =>
+                    navigate(`/bill/${obj.id}`)
+                }>{obj.total_final_amount ?? 0}</td>
 
                 {/* Options dropdown */}
                 <td className="relative">
@@ -83,10 +90,10 @@ function History({ show_header = true, filters = {} }) {
 
                     {open && (
                         <div
-                            className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded shadow-lg z-50"
+                            className="absolute right-0 mt-2 w-32 bg-[#60dbd8]  rounded shadow-lg z-50 "
                         >
                             <button
-                                className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 hover:text-black"
+                                className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 hover:bg-black"
                                 onClick={() => {
                                     clientToken.get(`pdf/?id=${obj.id}`,{ responseType: 'blob' }).
                                     then((r)=>PdfOpener(r,obj,[]))
@@ -121,9 +128,47 @@ function History({ show_header = true, filters = {} }) {
                         <p className="l1">Billing History</p>
                     </div>
                     <div className="header-button">
-                        <div className="button" onClick={() => navigate("/newBill")}>
-                            Create Bill
-                        </div>
+                        <div className="button" onClick={() => navigate("/newBill")}> Create Bill </div>
+                        {/*<div className={'flex gap-0'}>*/}
+                        {/*    <div*/}
+                        {/*        className="bg-[#071952] text-white text-[1.3rem] pl-[0.8rem] py-[0.8rem] rounded-l-2xl rounded-r-none cursor-pointer "*/}
+                        {/*        onClick={() => navigate("/newBill")}*/}
+                        {/*    >*/}
+                        {/*        Create Bill*/}
+                        {/*    </div>*/}
+
+                        {/*     Dropdown toggle button*/}
+                        {/*        <div*/}
+                        {/*            className=" bg-[#071952] text-white text-[1.3rem]  py-[0.8rem] pr-[0.8rem] rounded-r-2xl rounded-l-none cursor-pointer flex items-center justify-center px-2"*/}
+                        {/*            onClick={() => setOpen(!open)}*/}
+                        {/*        >*/}
+                        {/*            ▼*/}
+                        {/*        </div>*/}
+                        {/*</div>*/}
+
+                        {/* Dropdown menu */}
+                        {open && (
+                            <div className="absolute right-0 mt-12 w-48 bg-white text-black border border-gray-300 rounded-lg shadow-lg z-10">
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => {
+                                        setOpen(false);
+                                        navigate("/newBillWithTemplate");
+                                    }}
+                                >
+                                    Create from Template
+                                </div>
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => {
+                                        setOpen(false);
+                                        navigate("/importBill");
+                                    }}
+                                >
+                                    Import Bill
+                                </div>
+                            </div>
+                        )}
                         <div className="button" onClick={() => navigate("/bill_list")}>
                             All Bills
                         </div>
@@ -148,21 +193,26 @@ function History({ show_header = true, filters = {} }) {
                         {invoice_data.map((obj, index) => (
                             <Row index={index} obj={obj} />
                         ))}
-                        </tbody>
-                    </table>
 
-                    <div className="flex justify-between">
-                        <p
-                            onClick={() => page > 1 && setPage(page - 1)}
-                            className="cursor-pointer"
-                        >
-                            {"<<"}
-                        </p>
-                        <p className="cursor-pointer">Page {current_page}</p>
-                        <p onClick={() => setPage(page + 1)} className="cursor-pointer">
-                            {">>"}
-                        </p>
-                    </div>
+                        </tbody>
+
+                    </table>
+                    {invoice_data.length === 0 ? <p className={'text-center w-full'}>No Data</p>:
+                        <div className="flex justify-between">
+                            <p
+                                onClick={() => page > 1 && setPage(page - 1)}
+                                className="cursor-pointer"
+                            >
+                                {"<<"}
+                            </p>
+                            <p className="cursor-pointer">Page {current_page}</p>
+                            <p onClick={() => setPage(page + 1)} className="cursor-pointer">
+                                {">>"}
+                            </p>
+                        </div>
+                    }
+
+
                 </div>
             )}
         </div>

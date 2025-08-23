@@ -1,159 +1,205 @@
-.nav{
-/*background-color: var(--primary-color-1);*/
+/* NAVBAR - responsive, no overflow, profile dropdown */
+.nav {
     background: linear-gradient(111deg, #75FFE8 0%, #35A29F 74.64%);
-    box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
-
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
     width: 100%;
-    height: 60px;
+    height: 64px;
     display: flex;
-    text-align: center;
-    position: fixed;
-    z-index: 100;
-
-}
-
-.img-css{
-    height: 80%;
-    justify-content: left;
-    margin-left: 2%;
-    margin-top:5px;
-
-}
-
-
-.links{
-    width: 100%;
-    display: flex;
-    color: var(--primary-color-5);
-    padding-top: 3px;
-    overflow: visible;
-    justify-content: right;
-
-
-}
-.profile-icon{
-    border-radius: 50%;
-    height: 50px;
-    min-width: 50px;
-    max-width: 50px;
-    margin-top:5px;
-    margin-right:40px;
-
-}
-.items{
-    width:100%;
-    text-align: right;
-    margin-right: 5%;
-    justify-content: right;
-    display: flex;
-
-}
-
-.text-raper p{
-    font-size: 1.2rem;
-    font-weight: bold;
-    display: flex;
-    text-align: center;
     align-items: center;
-
-
-}
-.text-raper i{
-
-    font-size: 1.4rem;
-    margin-right: 8px;
-}
-
-
-.items-raper ,items-responsive{
-
-    display: none;
-}
-.text-raper{
-    display: flex;
-    flex-direction: row;
     justify-content: space-between;
-    padding: 10px 1%;
-    margin: 0 0.5%;
-    height: 40px;
-    margin-top: 10px;
-    border-radius: 7px;
+    padding: 0 1rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    gap: 1rem;
+    box-sizing: border-box;
 }
-.text-raper:hover{
-    color: var(--primary-color-1);
-    background-color: var(--primary-color-5);
+
+/* logo container (use .img-css if you want) */
+.img-css, .logo {
+    display: flex;
+    align-items: center;
     cursor: pointer;
-    box-shadow: black 0 0 9px 1px;
-
+}
+.img-css img, .logo img {
+    height: 44px;
+    width: auto;
+    display: block;
 }
 
+/* center / right area for links + profile */
+.links {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 0; /* allow children to shrink */
+}
 
+/* container that holds the nav items (desktop) */
+.items {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 0.5rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;               /* prevents overflow by scrolling horizontally */
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+    min-width: 0;
+}
+
+/* hide scrollbar visually but keep scrollable on mobile if needed */
+.items::-webkit-scrollbar { height: 6px; }
+.items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+.items::-webkit-scrollbar-track { background: transparent; }
+
+/* single nav item style */
+.text-raper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+    color: #023; /* subtle text color */
+    transition: background .18s ease, color .18s ease, transform .08s ease;
+    cursor: pointer;
+}
+.text-raper p {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+}
+.text-raper i {
+    font-size: 1.1rem;
+}
+
+/* hover / active */
+.text-raper:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+/* profile area */
+.profile-raper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* profile image */
+.profile-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    margin-left: 8px;
+    margin-right: 8px;
+    background-position: center;
+    background-size: cover;
+    border: 2px solid rgba(255,255,255,0.6);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    cursor: pointer;
+    flex: 0 0 48px;
+}
+
+/* dropdown (rendered by React when open) */
+.profile-raper .dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.15);
+    border: 1px solid rgba(0,0,0,0.06);
+    overflow: hidden;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+}
+.profile-raper .dropdown .dropdown-item {
+    padding: 10px 14px;
+    font-weight: 600;
+    color: #0b2440;
+    cursor: pointer;
+}
+.profile-raper .dropdown .dropdown-item:hover {
+    background: #f5f8fb;
+}
+
+/* small-screen behavior */
+@media (max-width: 900px) {
+    .items {
+        display: none;   /* hide desktop links */
+    }
+    .links {
+        justify-content: flex-end;
+    }
+    .img-css img, .logo img {
+        height: 40px;
+    }
+}
+
+/* extra small screens (stack dropdown) */
+@media (max-width: 420px) {
+    .profile-raper .dropdown {
+        right: 8px;
+        left: 8px;
+        min-width: unset;
+    }
+}
+
+/* fallback/responsive helpers for items-responsive or items-raper if you use them */
+.items-raper, .items-responsive {
+    display: block;
+}
+
+.items-raper {
+    display: flex;
+    justify-content: right;
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    z-index: 200;
+}
+/* visually distinct logout item */
+.profile-raper .dropdown .logout {
+    color: #d33;
+    font-weight: 700;
+}
+
+/* Utility: ensure nav content doesn't push page content (since nav is fixed) */
+/*body { padding-top: 64px; } !* adjust if your nav height changed *!*/
+/* Dropdown should work on both desktop & mobile */
+.items-responsive {
+    background-color: var(--primary-color-5);
+    color: var(--primary-color-4);
+    width: 180px;
+    text-align: left;
+    border-radius: 9px;
+    padding: 6px;
+    margin-right: 50px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Mobile: hide desktop menu */
 @media (max-width: 700px) {
-    .items{
+    .items {
         display: none;
-        /*overflow: visible;*/
-        /*margin-top: 50px;*/
-
-
     }
-
-
-
-    .text-raper{
-        display: flex;
-        text-align: center;
-        /*justify-content: space-between;*/
-        margin-top: 0px;
-        height: auto;
-    }
-    .text-raper i{
-        font-size: 1.4rem;
-        font-weight: bold;
-    }
-    .text-raper p{
-       /*margin: 0;*/
-       margin: 0 0 0 15px;
-        justify-content: center;
-        text-align: center;
-
-    }
-    .text-raper:hover{
-        color:var(--primary-color-5);
-        background-color:var(--primary-color-4);
-        box-shadow: gray 0 0 9px 1px;
-
-
-    }
-    .links{
-        flex-direction: column;
-        justify-content: right;
-    }
-    .items-responsive{
-
-        display: none;
-        background-color: var(--primary-color-5);
-        color: var(--primary-color-4);
-        width: 150px;
-        text-align: left;
-        border: 0;
-        border-radius: 9px;
-        padding: 4px;
-        margin-right: 50px;
-        /*padding-left: 20px;*/
-
-    }
-    .profile-raper{
-       display: flex;
-        justify-content: right;
-    }
-    .profile-icon{
-        cursor: pointer;
-    }
-    .items-raper{
+    .items-raper {
         display: flex;
         justify-content: right;
-        z-index: 3;
-        width: 100%;
-
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        z-index: 200;
     }
 }

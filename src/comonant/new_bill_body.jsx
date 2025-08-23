@@ -3,6 +3,7 @@ import React, {useEffect, useState} from "react";
 import {clientToken} from "../axios";
 import {useNavigate} from "react-router-dom";
 import PdfOpener from "@/utility/pdf_opener";
+import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 
 
 
@@ -60,10 +61,6 @@ function NewBillBody({id}){
         })
     }, [refresh]);
     useEffect(() => {
-
-
-
-
             let form =new FormData()
             Object.keys(InvoiceData).map((obj)=>{
                 if (('products' !== obj)&&(InvoiceData[obj])){
@@ -71,8 +68,11 @@ function NewBillBody({id}){
                 }
 
             })
-        form.set('total_final_amount',parseFloat(grandTotal).toFixed(2))
-        form.set('gst_final_amount',parseFloat(grandGstTotal).toFixed(2))
+        if(grandTotal!==0){
+            form.set('total_final_amount',parseFloat(grandTotal).toFixed(2))
+            form.set('gst_final_amount',parseFloat(grandGstTotal).toFixed(2))
+        }
+
             clientToken.post(url,form).then((response)=>{
                 if (response.status===200){
                     setInvoiceData(response.data)
@@ -110,8 +110,8 @@ function NewBillBody({id}){
                     clientToken.post(`product/properties/${obj.id}/update/`,form).then((response)=>{
                         if (response.status===200){
                             setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
-
                             setPop_up_properties('none')
+                            setRefresh(!refresh)
                         }
                     }).catch((error)=> {
                         console.log(error)
@@ -236,8 +236,8 @@ function NewBillBody({id}){
         setNewProduct(table_content.find((obj)=>obj.id===+key.target.parentElement.id))
         setPop_up_properties('flex')
     }
-    const handelExport = (id) => {
-clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is important for binary data
+    const handelExport = (id,template_id) => {
+clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blob' }) // 'blob' is important for binary data
   .then((r)=>PdfOpener(r,InvoiceData,company_name))
   .catch((error) => {
     console.error('Error downloading the PDF:', error);
@@ -247,7 +247,13 @@ clientToken.get(`pdf/?id=${id}`, { responseType: 'blob' }) // 'blob' is importan
         <div className={'container space'}>
             <div className={'top_head'}>
                 <p>Bill</p>
-                <div className={'button'} onClick={()=>InvoiceData["receiver"]?handelExport(InvoiceData?.id):alert("Receiver is not set")}>Export</div>
+                {/*<div className={'button'} onClick={()=>InvoiceData["receiver"]?handelExport(InvoiceData?.id):alert("Receiver is not set")}>Export</div>*/}
+                <ExportDropdown
+                    InvoiceData={InvoiceData}
+                    handelExport={(invoice_id, template_id)=>InvoiceData["receiver"]?handelExport(invoice_id,template_id):alert("Receiver is not set")}
+                >
+
+                </ExportDropdown>
             </div>
             <div className={'bill_head'}>
                 <div className={'pop-up-box'} id={'new_company_box'} style={{display:Pop_up_properties}}>
