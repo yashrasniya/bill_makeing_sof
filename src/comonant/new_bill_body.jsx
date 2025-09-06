@@ -1,5 +1,5 @@
 import '../style/bill.css';
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {clientToken} from "../axios";
 import {useNavigate} from "react-router-dom";
 import PdfOpener from "@/utility/pdf_opener";
@@ -33,8 +33,8 @@ function NewBillBody({id}){
 
 
     // var checkbox={}
-    var grandTotal=0
-    var grandGstTotal=0
+    let grandTotal=0
+    let grandGstTotal=0
     useEffect(() => {
         clientToken.get('companies/?page_size=999').then((response)=>{
             if (response.status===200){
@@ -61,6 +61,7 @@ function NewBillBody({id}){
         })
     }, [refresh]);
     useEffect(() => {
+        console.log(grandTotal)
             let form =new FormData()
             Object.keys(InvoiceData).map((obj)=>{
                 if (('products' !== obj)&&(InvoiceData[obj])){
@@ -147,8 +148,11 @@ function NewBillBody({id}){
                                                 productUpdateForm.append('total_amount',0)
                                                 clientToken.post(`product/${id}/update/`,productUpdateForm).then((response)=>{
                                                     if (response.status===200){
-                                                        console.log(response.data)
-                                                        setRefresh(!refresh)
+                                                        // console.log(response.data)
+                                                        setRefresh(prev => !prev);
+                                                        setTimeout(() => {
+                                                            setRefresh(prev => !prev);
+                                                        }, 3000);
                                                     }
                                                 }).catch((error)=> {
                                                     console.log(error)
@@ -162,7 +166,7 @@ function NewBillBody({id}){
                                     })
 
                                     setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
-                                    console.log(new_product,newDataFormat)
+                                    // console.log(new_product,newDataFormat)
                                     setPop_up_properties('none')
                                 }
                             }).catch((error)=> {
@@ -189,7 +193,7 @@ function NewBillBody({id}){
             return ''
         }else {
             index!==-1?array[index]={...array[index],value:obj.target.value}:array.push({value:obj.target.value,new_product_in_frontend: {id:obj.target.id}})
-            console.log(array,new_product)
+            // console.log(array,new_product)
             setNewProduct({...new_product,product_properties:array})
         }
 
@@ -243,6 +247,97 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
     console.error('Error downloading the PDF:', error);
   });
     }
+
+    const Rows = (obj) => {
+        const key = obj.id;
+        let total = 1;
+        let extraCal = 0;
+
+        // inner calculator
+        function calculate(abc) {
+            const item = abc.new_product_in_frontend;
+
+            if (item.is_calculable) {
+                if (item.formula) {
+                    console.log(item.formula);
+
+                    if (item.formula === '+') {
+                        extraCal += parseFloat(abc.value);
+                    } else if (item.formula === '-') {
+                        extraCal -= parseFloat(abc.value);
+                    } else if (item.formula === '/') {
+                        total /= parseFloat(abc.value);
+                    } else {
+                        total = 'error';
+                    }
+                } else {
+                    // multiply if not GST
+                    if (abc.value && item.input_title !== 'GST') {
+                        total *= parseFloat(abc.value);
+                    }
+                }
+            }
+        }
+
+        // run calculations
+        obj.product_properties.filter(calculate);
+
+        // compute GST
+        let gstAmount = 0;
+        if (
+            obj.product_properties.length > 0 &&
+            bill_body_items.map((o) => o.input_title).indexOf('GST') !== -1
+        ) {
+            const gstIndex = bill_body_items.map((o) => o.input_title).indexOf('GST');
+            const gst = obj.product_properties[gstIndex]?.value;
+            gstAmount = gst ? total * (gst / 100) : 0;
+        }
+
+        // update totals (assuming grandTotal & grandGstTotal are state/outer scope)
+        grandTotal +=  total + gstAmount + extraCal;
+        grandGstTotal = grandGstTotal + gstAmount;
+
+        // ensure checkbox entry exists
+        if (checkbox[key] === undefined) {
+            setCheckBox({ ...checkbox, [key]: false });
+        }
+
+        // render table row
+        return (
+            <tr key={key} id={key} className="table-row">
+                <td>
+                    <input
+                        type="checkbox"
+                        className="check-box"
+                        id={key}
+                        checked={checkbox[key]}
+                        onChange={handelCheckBox}
+                    />
+                </td>
+
+                {obj.product_properties
+                    .sort(
+                        (a, b) =>
+                            a.new_product_in_frontend.id - b.new_product_in_frontend.id
+                    )
+                    .map((headObj, idx) =>
+                        headObj.new_product_in_frontend.is_show ? (
+                            <td key={idx} onClick={handelOpen}>
+                                {headObj.value}
+                            </td>
+                        ) : (
+                            ''
+                        )
+                    )}
+
+                <td onClick={handelOpen}>{parseFloat(gstAmount).toFixed(2)}</td>
+                <td onClick={handelOpen}>
+                    {parseFloat(total + gstAmount + extraCal).toFixed(2)}
+                </td>
+            </tr>
+        );
+    };
+
     return(
         <div className={'container space'}>
             <div className={'top_head'}>
@@ -270,7 +365,7 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
                             let value=new_product?.product_properties.find((obj_2) => +obj_2.new_product_in_frontend.id === +obj.id)
                             // console.log(new_product.product_properties,value)
                             value=value?value.value:''
-                            console.log(obj.size)
+                            // console.log(obj.size)
                             return (<div className={'form_box'} id={obj.input_title}
                                  style={{flexBasis: `${+obj.size*10}%`}}>{obj.input_title}
                                 <input id={obj.id} onChange={handelInput} value={value}/></div>)
@@ -334,79 +429,10 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
                     </tr>
                     </thead>
                     <tbody>
-                    {table_content.length===0?bill_body_items.map(
-                        (head_obj)=>head_obj.show ? <td>None</td> : ''
-                    ):''}
-                    {table_content.map(
-                        (obj,key)=>{
-                            key=obj.id
-                                var total=1
-                            var extra_cal=0
-                                function calculate(abc){
-                                let item=abc.new_product_in_frontend
-                                    if(item.is_calculable){
-                                        if (item.formula){
-                                            console.log(item.formula)
-                                            if(item.formula==='+'){
-                                                extra_cal=extra_cal+parseFloat(abc.value)
-                                            }
-                                            else if(item.formula==='-'){
-                                                extra_cal=extra_cal-parseFloat(abc.value)
-                                            }
-                                            else if(item.formula==='/'){
-                                                total=total/parseFloat(abc.value)
-                                            }
-
-                                            // total=total*obj[item.input_title]*item.formula.variable
-                                            else {
-                                                total='error'
-                                            }
-
-                                        }
-                                        else {
-                                            if(abc.value && abc.new_product_in_frontend.input_title!=="GST"){
-                                                total=total*abc.value
-                                            }
-
-                                        }
-
-
-                                    }
-                                }
-                            obj.product_properties.filter(calculate)
-
-                                if (obj.product_properties.length>0 && bill_body_items.map((o)=>o.input_title).indexOf('GST')!==-1){
-                                    let gst =obj.product_properties[bill_body_items.map((o)=>o.input_title).indexOf('GST')]?.value
-                                    var gst_amount=gst?total*(gst/100):0
-                                }
-                                else{
-                                    var gst_amount=0
-                                }
-
-                            grandTotal=grandTotal+total+gst_amount+extra_cal
-                            grandGstTotal=grandGstTotal+gst_amount
-
-                            if (checkbox[key]===undefined){
-                                // console.log('hi how r u',checkbox[key])
-                                setCheckBox({...checkbox,[key]:false})
-                            }
-                                // console.log(obj.product_properties.sort((a,b)=>a.new_product_in_frontend-b.new_product_in_frontend))
-
-                                return(<tr key={key} id={key}  className={'table-row'}>
-                                        <td><input type='checkbox'  className={'check-box'} id={key}
-
-                                                   checked={checkbox[key]}
-                                                   onChange={handelCheckBox}  /></td>
-
-                                        {obj.product_properties.sort((a,b)=>a.new_product_in_frontend.id-b.new_product_in_frontend.id).map((head_obj,key_2)=> {
-                                            return(head_obj.new_product_in_frontend.is_show ? <td onClick={handelOpen}>{head_obj.value}</td> : '')
-                                        })}
-                                    <td onClick={handelOpen}>{parseFloat(gst_amount).toFixed(2)}</td>
-                                        <td onClick={handelOpen}>{ parseFloat(total+gst_amount+extra_cal).toFixed(2)}</td>
-
-                                    </tr>
-                                )
-                        })}
+                    {table_content.length === 0 ? bill_body_items.map(
+                        (head_obj) => head_obj.show ? <td>None</td> : ''
+                    ) : ''}
+                    {table_content.map(Rows)}
                     </tbody>
                 </table>
                 <div className={'total'}>
