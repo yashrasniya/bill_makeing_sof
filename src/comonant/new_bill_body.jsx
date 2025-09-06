@@ -346,20 +346,22 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
                                 let item=abc.new_product_in_frontend
                                     if(item.is_calculable){
                                         if (item.formula){
-                                            if(item.formula.variable==='+'){
-                                                extra_cal=extra_cal+abc.value
+                                            console.log(item.formula)
+                                            if(item.formula==='+'){
+                                                extra_cal=extra_cal+parseFloat(abc.value)
                                             }
-                                            else if(item.formula.variable==='-'){
-                                                extra_cal=extra_cal-abc.value
+                                            else if(item.formula==='-'){
+                                                extra_cal=extra_cal-parseFloat(abc.value)
                                             }
-                                            else if(item.formula.variable==='/'){
-                                                total=total/abc.value
+                                            else if(item.formula==='/'){
+                                                total=total/parseFloat(abc.value)
                                             }
 
                                             // total=total*obj[item.input_title]*item.formula.variable
                                             else {
                                                 total='error'
                                             }
+
                                         }
                                         else {
                                             if(abc.value && abc.new_product_in_frontend.input_title!=="GST"){
@@ -400,11 +402,7 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
                                             return(head_obj.new_product_in_frontend.is_show ? <td onClick={handelOpen}>{head_obj.value}</td> : '')
                                         })}
                                     <td onClick={handelOpen}>{parseFloat(gst_amount).toFixed(2)}</td>
-                                        {extra_cal!==0?<td onClick={handelOpen}>{
-                                            parseFloat(total+gst_amount).toFixed(2)
-                                        } +({extra_cal})={
-                                            parseFloat(total+gst_amount+extra_cal).toFixed(2)
-                                        }</td>:<td onClick={handelOpen}>{parseFloat(total+gst_amount).toFixed(2)}</td>}
+                                        <td onClick={handelOpen}>{ parseFloat(total+gst_amount+extra_cal).toFixed(2)}</td>
 
                                     </tr>
                                 )

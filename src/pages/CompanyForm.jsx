@@ -22,18 +22,28 @@ export default function CompanyForm() {
     const [formData, setFormData] = useState({});
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const [error, setError] = useState(null);
     const { isLogin, status, userInfo } = useSelector((state) => state.user);
-
     useEffect(() => {
-        if(userInfo?.is_company_varified && userInfo.is_company_admin){
-            clientToken.get('user-companies/',).then((response)=>{
-                if(response.status===200){
-                    console.log(response.data);
-                    setFormData(response.data)
-                }
-            })
+        if (userInfo?.is_company_varified && userInfo.is_company_admin) {
+            clientToken
+                .get("user-companies/")
+                .then((response) => {
+                    if (response.status === 200) {
+                        setFormData(response.data);
+                        setError(null); // clear any old error
+                    }
+                })
+                .catch((err) => {
+                    console.error("Error fetching companies:", err);
+                    setError(
+                        err.response?.data?.message ||
+                        err.message ||
+                        "Something went wrong while fetching company data."
+                    );
+                });
         }
-    }, []);
+    }, [userInfo]);
 
     const handleChange = (e) => {
         const { name, value, files, type } = e.target;
@@ -45,29 +55,66 @@ export default function CompanyForm() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        let errors_message = ''
+
 
         const data = new FormData();
-        Object.keys(formData).forEach((key) => {
-            if (formData[key]){
-                data.append(key, formData[key]);
-            }
-        });
-
-        clientToken.post('user-companies/', data, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        })
-            .then((response) => {
-                if (response.status === 201) {
-                    console.log("Created:", response.data);
-                    dispatch(fetchUser());
-                    navigate('/home', { replace: true });
+        console.log(formData)
+        Object.keys(fields).forEach((key) => {
+            if (formData[fields[key].name] ){
+                if (fields[key].name === "company_logo" ) {
+                    if( formData[key] instanceof File){
+                        data.append(key, formData[fields[key].name]);
+                    }
                 }
+                else {
+                    console.log(key, formData[fields[key].name])
+                    data.append(key, formData[fields[key].name]);
+                }
+            }
+            else{
+                // setError(key + " is missing ")
+                errors_message = fields[key].name + " is missing "
+
+            }
+
+        });
+        if (errors_message){
+            setError(errors_message)
+            return ''
+        }else{
+            clientToken.post('user-companies/', data, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
             })
-            .catch((error) => {
-                console.error("Error:", error.response?.data || error.message);
-            });
+                .then((response) => {
+                    if (response.status === 201) {
+                        console.log("Created:", response.data);
+                        if (!userInfo?.is_company_varified){
+                            dispatch(fetchUser());
+                            navigate('/home', { replace: true });
+                        }
+                    }
+                })
+                .catch((error) => {
+                    if (error.response.status===400){
+                        let keys = Object.keys(error.response.data)
+                        let message = ''
+                        keys.map((key)=>{
+                            if(error?.response.data[key]  ){
+                                message += key + " " + error?.response.data[key][0]
+                            }
+                        })
+                        console.log(message)
+                        setError(message)
+
+                    }
+
+                    console.log(error.response.status)
+                });
+        }
+
     };
 
 
@@ -75,6 +122,17 @@ export default function CompanyForm() {
         <div className={'pt-20 md:px-30'}>
         <div className="max-w-3xl md:max-w-full  mx-auto p-6 bg-[#35A29F] shadow-lg rounded-2xl ">
             <h2 className="text-2xl font-bold mb-6 text-[#071952] text-center">Company Details</h2>
+            {error && (
+                <div className="fixed top-14 right-4 z-1000 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-3 animate-bounce">
+                    <span>{error}</span>
+                    <button
+                        onClick={() => setError(null)}
+                        className="font-bold hover:text-black"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {fields.map((field) => (
                     <div key={field.name} className="flex flex-col">
