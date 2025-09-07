@@ -17,6 +17,9 @@ import CompanyForm from "@/pages/CompanyForm";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser, logoutUser } from "./store/userSlice";
 import Profile from "./pages/profile";
+import InvoiceTemplateEditor from "@/pages/InvoiceTemplateEditor";
+import TablePage from "@/pages/templates_list";
+import TemplatesList from "@/pages/templates_list";
 
 // Private route wrapper
 
@@ -119,10 +122,11 @@ function App() {
                 }
             />
             <Route
-                path="/yaml"
+                path="/invoice_editor"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <TemplateDesign />
+                        <Navbar />
+                        <InvoiceTemplateEditor />
                     </PrivateRoute>
                 }
             />
@@ -148,6 +152,15 @@ function App() {
                     <PrivateRoute isLogin={isLogin}>
                         <Navbar />
                         <Profile />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/templates"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <TemplatesList />
                     </PrivateRoute>
                 }
             />

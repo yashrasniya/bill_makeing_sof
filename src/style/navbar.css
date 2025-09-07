@@ -57,7 +57,7 @@
 .items::-webkit-scrollbar-track { background: transparent; }
 
 /* single nav item style */
-.text-raper {
+.text-raper , .text-raper-dropdown{
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -73,7 +73,7 @@
     font-weight: 700;
     margin: 0;
 }
-.text-raper i {
+.text-raper i{
     font-size: 1.1rem;
 }
 

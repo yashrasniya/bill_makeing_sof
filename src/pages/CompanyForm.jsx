@@ -63,13 +63,14 @@ export default function CompanyForm() {
         Object.keys(fields).forEach((key) => {
             if (formData[fields[key].name] ){
                 if (fields[key].name === "company_logo" ) {
-                    if( formData[key] instanceof File){
-                        data.append(key, formData[fields[key].name]);
+                    console.log(formData[fields[key].name])
+                    if( formData[fields[key].name] instanceof File){
+                        data.append(fields[key].name, formData[fields[key].name]);
                     }
                 }
                 else {
                     console.log(key, formData[fields[key].name])
-                    data.append(key, formData[fields[key].name]);
+                    data.append(fields[key].name, formData[fields[key].name]);
                 }
             }
             else{

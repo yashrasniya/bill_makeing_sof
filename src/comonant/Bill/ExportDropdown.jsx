@@ -6,7 +6,7 @@ const ExportDropdown = ({ InvoiceData, handelExport }) => {
   const [templates, setTemplates] = useState([])
 
   useEffect(() => {
-    clientToken.get('yaml/list/').then((response) => {
+    clientToken.get('yaml/list/?only_my=true').then((response) => {
       if (response.status===200){
         setTemplates(response.data)
       }
