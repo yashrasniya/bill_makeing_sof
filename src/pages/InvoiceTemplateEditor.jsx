@@ -31,6 +31,7 @@ const InvoiceTemplateEditor = () => {
 console.log(`w-80  shadow-lg p-4 overflow-y-auto ${Limited_access  ? 'hidden':'block'}` )
     // Mock API call - replace with your actual API
     useEffect(() => {
+        console.log(id)
         clientToken.get(`yaml/${id? '?id='+id :' '}`).then((r) => {
                 setConfig(r.data)
                 id = r.data?.id

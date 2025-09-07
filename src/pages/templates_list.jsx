@@ -35,7 +35,7 @@ export default function TemplatesList() {
             <tr
               key={row.id}
               className="hover:bg-blue-100 cursor-pointer"
-              onClick={() => navigate(`/invoice_editor?${row.id}`)}
+              onClick={() => navigate(`/invoice_editor?id=${row.id}`)}
             >
               <td className="border px-4 py-2">{row?.template_name}</td>
               <td className="border px-4 py-2">{row.user}</td>
