@@ -101,9 +101,10 @@ export default function CustomerDropdown({companyName,InvoiceData,setRefresh,set
                                 setNewReceiver({ ...newReceiver, [e.target.name]: e.target.value})}
                             className="border p-2 w-full mb-4 bg-gray-300"
                         />
+                        <h2 className="text-lg font-bold mb-4">Address</h2>
                         <input
                             type="text"
-                            placeholder="Customer Mobile Number"
+                            placeholder="Address"
                             value={newReceiver.address}
                             name={"address"}
                             onChange={(e) =>
