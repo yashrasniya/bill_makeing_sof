@@ -122,7 +122,7 @@ export default function CompanyForm() {
     return (
         <div className={'pt-20 md:px-30'}>
         <div className="max-w-3xl md:max-w-full  mx-auto p-6 bg-[#35A29F] shadow-lg rounded-2xl ">
-            <h2 className="text-2xl font-bold mb-6 text-[#071952] text-center">Company Details</h2>
+            <h2 className="text-2xl font-bold mb-6 text-[#071952] text-center">Your Company Details</h2>
             {error && (
                 <div className="fixed top-14 right-4 z-1000 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-3 animate-bounce">
                     <span>{error}</span>
