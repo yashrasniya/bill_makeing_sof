@@ -4,6 +4,7 @@ import {clientToken} from "../axios";
 import {useNavigate} from "react-router-dom";
 import PdfOpener from "@/utility/pdf_opener";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
+import CustomerDropdown from "@/comonant/customer_pop";
 
 
 
@@ -382,17 +383,18 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
                        onChange={(e)=> setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})}
                         onSelect={()=>setRefresh(!refresh)}
                     />
-                <p>Receiver</p>
-                <select  id={'receiver'} onChange={(event)=> {
-                    if(event.target.value) {
-                        setInvoiceData({...InvoiceData, [event.target.id]: event.target.value})
-                        console.log(InvoiceData)
-                        setRefresh(!refresh)
-                    }
-                }}>
-                    <option selected={InvoiceData?.receiver===null} value={null}>---</option>
-                    {company_name.map((obj)=><option value={obj.id} selected={obj.id === InvoiceData?.receiver}>{obj.name}</option>)}
-                </select>
+
+                {/*<select  id={'receiver'} onChange={(event)=> {*/}
+                {/*    if(event.target.value) {*/}
+                {/*        setInvoiceData({...InvoiceData, [event.target.id]: event.target.value})*/}
+                {/*        console.log(InvoiceData)*/}
+                {/*        setRefresh(!refresh)*/}
+                {/*    }*/}
+                {/*}}>*/}
+                {/*    <option selected={InvoiceData?.receiver===null} value={null}>---</option>*/}
+                {/*    {company_name.map((obj)=><option value={obj.id} selected={obj.id === InvoiceData?.receiver}>{obj.name}</option>)}*/}
+                {/*</select>*/}
+                <CustomerDropdown companyName={company_name} InvoiceData={InvoiceData} setRefresh={setRefresh} setInvoiceData={setInvoiceData}/>
                 <p>Invoice Date</p>
                 <input type={'date'} id={'date'} value={InvoiceData?.date??new Date().toISOString().split('T')[0]} onChange={(e)=> {
                     setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})
