@@ -20,6 +20,7 @@ import Profile from "./pages/profile";
 import InvoiceTemplateEditor from "@/pages/InvoiceTemplateEditor";
 import TablePage from "@/pages/templates_list";
 import TemplatesList from "@/pages/templates_list";
+import UIConfig from "@/pages/UIConfig";
 
 // Private route wrapper
 
@@ -161,6 +162,15 @@ function App() {
                     <PrivateRoute isLogin={isLogin}>
                         <Navbar />
                         <TemplatesList />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/UIConfig"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <UIConfig />
                     </PrivateRoute>
                 }
             />

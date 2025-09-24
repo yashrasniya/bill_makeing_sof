@@ -72,7 +72,7 @@ function NavDropdown({ navItems, navItemsDropdown,dropdownOpen ,setDropdownOpen}
                             Array.isArray(obj.children) && obj.children.length > 0;
 
                         return (
-                            <div key={`dd-${i}`} className="text-raper-dropdown cursor-pointer flex flex-col hover:text-blue-500 md:hidden">
+                            <div key={`dd-${i}`} className="text-raper-dropdown cursor-pointer flex flex-col hover:text-blue-500  md:hidden">
                                 {/* Parent row */}
                                 <div
                                     className="flex justify-between items-center"
@@ -133,6 +133,7 @@ function Navbar() {
     let navItemsDropdown = [
         { title: "Profile", link: "/profile" },
         { title: "Invoice Preview", link: "", children:templates },
+        { title: "UI Config", link: "/UIConfig", },
         { title: "logout", link: "/logout" },
     ];
 

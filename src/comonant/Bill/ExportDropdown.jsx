@@ -65,18 +65,18 @@ const handelWhatsapp = (id) => {
       {/* Dropdown Menu */}
       {open && (
         <div className="absolute mt-2 -left-20 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-          {/*<div*/}
-          {/*  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"*/}
-          {/*  onClick={() => handleOptionClick("whatsapp")}*/}
-          {/*>*/}
-          {/*  Share by WhatsApp*/}
-          {/*</div>*/}
-          {/*<div*/}
-          {/*  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"*/}
-          {/*  onClick={() => handleOptionClick("email")}*/}
-          {/*>*/}
-          {/*  Share by Email*/}
-          {/*</div>*/}
+          <div
+            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+            onClick={() => handleOptionClick("whatsapp")}
+          >
+            Share by WhatsApp
+          </div>
+          <div
+            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+            onClick={() => handleOptionClick("email")}
+          >
+            Share by Email
+          </div>
           {templates.map((e)=> <div
               className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
               onClick={() => handleOptionClick("pdf",e?.id)}
