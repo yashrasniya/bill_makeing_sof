@@ -5,6 +5,7 @@ import {useNavigate} from "react-router-dom";
 import PdfOpener from "@/utility/pdf_opener";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
+import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
 
 
 
@@ -237,6 +238,7 @@ function NewBillBody({id}){
     }
     const handelOpen = (key) => {
         set_update(true)
+        console.log(key.target.parentElement.id)
         // console.log(table_content,key.target.parentElement.id)
         setNewProduct(table_content.find((obj)=>obj.id===+key.target.parentElement.id))
         setPop_up_properties('flex')
@@ -415,45 +417,100 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
                     Product</div>
             </div>
             <div className={'companys_table_raper'}>
-                <table className={'table'}>
-                    <thead>
-                    <tr >
-                        <td><input type='checkbox'  className={'check-box'} onChange={ (base_obj)=> {
-                            var list={}
-                            Object.keys(checkbox).map((obj) => list[obj]=base_obj.target.checked)
-                            setCheckBox(list)
-                        }}/></td>
-                        {bill_body_items.map((obj)=> obj.is_show?<td>{obj.input_title}</td>:''
+                <div className="pb-20 md:pb-0">
+                    {/* Desktop Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="table w-full border-collapse">
+                            <thead>
+                            <tr>
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        className="check-box"
+                                        onChange={(base_obj) => {
+                                            var list = {};
+                                            Object.keys(checkbox).map(
+                                                (obj) => (list[obj] = base_obj.target.checked)
+                                            );
+                                            setCheckBox(list);
+                                        }}
+                                    />
+                                </td>
+                                {bill_body_items.map((obj) =>
+                                    obj.is_show ? <td key={obj.input_title}>{obj.input_title}</td> : null
+                                )}
+                                <td>GST Amount</td>
+                                <td>Total Amount</td>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {table_content.length === 0
+                                ? bill_body_items.map((head_obj, i) =>
+                                    head_obj.is_show ? <td key={i}>None</td> : null
+                                )
+                                : ""}
+                            {table_content.map(Rows)}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    {/* Mobile Card View */}
+                    <div className="block md:hidden space-y-4">
+                        {table_content.length === 0 ? (
+                            <div className="p-4 border rounded-lg shadow bg-white text-center">
+                                No Data Available
+                            </div>
+                        ) : (
+                            table_content.map((obj, index) => (
+                                <CollapsibleRowCard
+                                    key={obj.id}
+                                    rowData={obj}
+                                    checkbox={checkbox}
+                                    handelCheckBox={handelCheckBox}
+                                    rowIndex={index}
+                                    billBodyItems={bill_body_items}
+                                    handelOpen={handelOpen}
+                                />
+                            ))
                         )}
 
-                        <td> GST Amount</td>
-                        <td> Total Amount</td>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {table_content.length === 0 ? bill_body_items.map(
-                        (head_obj) => head_obj.show ? <td>None</td> : ''
-                    ) : ''}
-                    {table_content.map(Rows)}
-                    </tbody>
-                </table>
-                <div className={'total'}>
-                    <table className={'table'}>
-                        <thead>
+
+                    </div>
+
+                </div>
+
+                {/* Desktop view */}
+                <div className="hidden md:flex justify-end w-full mt-4">
+                    <table className="w-2/5 text-[#0B666A] text-center border border-gray-300">
+                        <thead className="">
                         <tr>
-                            <td>Total GST Amount</td>
-                            <td>Total Amount</td>
+                            <td className="p-2 font-bold">Total GST Amount</td>
+                            <td className="p-2 font-bold">Total Amount</td>
                         </tr>
                         </thead>
                         <tbody>
-                        <tr>
-                            <td>{  parseFloat(grandGstTotal).toFixed(2)}/-</td>
-                            <td>{  parseFloat(grandTotal).toFixed(2)}/-</td>
+                        <tr className="font-semibold">
+                            <td className="p-2">{parseFloat(grandGstTotal).toFixed(2)}/-</td>
+                            <td className="p-2">{parseFloat(grandTotal).toFixed(2)}/-</td>
                         </tr>
                         </tbody>
                     </table>
-
                 </div>
+
+                {/* Mobile view */}
+                <div className="block md:hidden fixed bottom-0 left-0 w-full bg-[#071952] px-8 py-2 rounded-t-xl">
+
+                    <div className="flex justify-between text-white font-semibold text-lg mb-1 ">
+                        <span>Total Amount</span>
+                        <span>{parseFloat(grandTotal).toFixed(2)}/-</span>
+                    </div>
+                    <div className="flex justify-between text-white font-semibold text-xs">
+                        <span>Total GST Amount</span>
+                        <span>{parseFloat(grandGstTotal).toFixed(2)}/-</span>
+                    </div>
+                </div>
+
             </div>
             
         </div>

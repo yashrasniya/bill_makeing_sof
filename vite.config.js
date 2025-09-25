@@ -13,4 +13,8 @@ export default defineConfig({
     build: {
         outDir: 'build', // CRA's default build output
     },
+    server: {
+        host: "192.168.29.29", // your local IP
+        port: 5173,            // or any port you like
+    }
 });
