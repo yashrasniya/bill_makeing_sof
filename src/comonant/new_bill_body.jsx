@@ -1,6 +1,6 @@
 import '../style/bill.css';
 import React, {useEffect, useRef, useState} from "react";
-import {clientToken} from "../axios";
+import {clientToken} from "@/axios";
 import {useNavigate} from "react-router-dom";
 import PdfOpener from "@/utility/pdf_opener";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
@@ -31,6 +31,7 @@ function NewBillBody({id}){
     const [url,setUrl]=useState(id?`invoice/${id}/update/`:'invoice/')
     const [refresh,setRefresh]=useState(false)
     const [newDataFormat,setNewDataFormat]=useState({})
+    const [invoiceNumber, setInvoiceNumber] = useState(InvoiceData?.invoice_number ?? "");
     let navigate =useNavigate()
 
 
@@ -47,6 +48,17 @@ function NewBillBody({id}){
             alert(`error ${error.request.status}`)
         })
     }, [refresh]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            // Debounced update (runs only after 500ms pause)
+            setInvoiceData((prev) => ({ ...prev, invoice_number: invoiceNumber }));
+            setRefresh((r) => !r);
+        }, 500); // 500ms debounce time
+
+        // Cleanup timeout if user keeps typing
+        return () => clearTimeout(handler);
+    }, [invoiceNumber]);
 
     useEffect(() => {
         clientToken.get('new/product/in/frontend/').then((response)=>{
@@ -79,6 +91,7 @@ function NewBillBody({id}){
             clientToken.post(url,form).then((response)=>{
                 if (response.status===200){
                     setInvoiceData(response.data)
+                    setInvoiceNumber(response.data.invoice_number)
                     if(url==='invoice/'){
                         navigate(`/bill/${response.data.id}`)
                     }
@@ -381,11 +394,17 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
                 </div>
                 {/* Header */}
                 <p>Invoice No.</p>
-                <input placeholder={''} id={'invoice_number'}  type="number" value={InvoiceData?.invoice_number}
-                       onChange={(e)=> setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})}
-                        onSelect={()=>setRefresh(!refresh)}
-                    />
-
+                {/*<input placeholder={''} id={'invoice_number'}  type="number" value={InvoiceData?.invoice_number}*/}
+                {/*       onChange={(e)=> setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})}*/}
+                {/*        onSelect={()=>setRefresh(!refresh)}*/}
+                {/*    />*/}
+                <input
+                    placeholder=""
+                    id="invoice_number"
+                    type="number"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                />
                 {/*<select  id={'receiver'} onChange={(event)=> {*/}
                 {/*    if(event.target.value) {*/}
                 {/*        setInvoiceData({...InvoiceData, [event.target.id]: event.target.value})*/}
@@ -398,10 +417,7 @@ clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: 'blo
                 {/*</select>*/}
                 <CustomerDropdown companyName={company_name} InvoiceData={InvoiceData} setRefresh={setRefresh} setInvoiceData={setInvoiceData}/>
                 <p>Invoice Date</p>
-                <input type={'date'} id={'date'} value={InvoiceData?.date??new Date().toISOString().split('T')[0]} onChange={(e)=> {
-                    setInvoiceData({...InvoiceData, [e.target.id]: e.target.value})
-                    setRefresh(!refresh)
-                }}/>
+
             </div>
             <div className={'header-button '}>
                 <div className={'button delete'} onClick={handelDelete}><svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
