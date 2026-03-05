@@ -128,6 +128,8 @@ function Navbar() {
     let navItems = [
         { title: "Dashboard", link: "/home" },
         { title: "Customers", link: "/Customers" },
+        { title: "Inventory", link: "/inventory" },
+        { title: "Template Gallery", link: "/available-templates" },
     ];
 
     let navItemsDropdown = [

@@ -1,404 +1,533 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Stage, Layer, Text, Rect, Group, Line,Image as KonvaImage, } from 'react-konva';
-import { Trash2, Bold, Italic, Type, Move, Save } from 'lucide-react';
-import {clientToken} from "@/axios";
+import { Stage, Layer, Text, Rect, Group, Line, Image as KonvaImage } from 'react-konva';
+import { Trash2, Bold, Type, Save, Move, Square, Minus } from 'lucide-react';
+import { clientToken } from "@/axios";
 import useImage from "use-image";
-import {useLocation} from "react-router-dom";
-import {useSelector} from "react-redux";
+import { useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 
+const ReaderBackground = ({ pdf_template }) => {
+    const [backgroundImage] = useImage(pdf_template);
+    return <KonvaImage image={backgroundImage} x={0} y={0} width={595} height={842} />;
+};
 
-const ReaderBackground = ({pdf_template}) =>{
-    const [backgroundImage] = useImage(pdf_template );
-    return <KonvaImage
-                image={backgroundImage}
-                x={0}
-                y={0}
-                width={595}
-                height={842} />
-}
+/* ── UI Helpers ── */
+const inputStyle = {
+    width: '100%', padding: '8px 12px', fontSize: '13px',
+    border: '1.5px solid #cbd5e1', borderRadius: '8px',
+    outline: 'none', color: '#0f172a', background: 'white',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+};
+const focIn = e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.12)'; };
+const focOut = e => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; };
+
 const InvoiceTemplateEditor = () => {
     const [config, setConfig] = useState(null);
     const { userInfo } = useSelector((state) => state.user);
 
-    const  location = useLocation()
+    const location = useLocation();
     const params = new URLSearchParams(location.search);
-    let id = params.get("id");
-    const [selectedElement, setSelectedElement] = useState(null);
+    const id = params.get("id");
+
+    const [selectedElementId, setSelectedElementId] = useState(null);
     const [stageScale, setStageScale] = useState(1);
     const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
     const stageRef = useRef();
-    const [Limited_access, setLimited_access] = useState(!userInfo?.is_staff)
-console.log(`w-80  shadow-lg p-4 overflow-y-auto ${Limited_access  ? 'hidden':'block'}` )
-    // Mock API call - replace with your actual API
+    const [Limited_access, setLimited_access] = useState(!userInfo?.is_staff);
+    const [saving, setSaving] = useState(false);
+
     useEffect(() => {
-        console.log(id)
-        clientToken.get(`yaml/${id? '?id='+id :' '}`).then((r) => {
-                setConfig(r.data)
-                id = r.data?.id
-            console.log(r.data)
-            }
-        ).catch(e => alert(e.response.data.detail))
-    }, []);
-    function isMobileDevice() {
-        return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(
-            navigator.userAgent
-        );
-    }
+        clientToken.get(`yaml/${id ? '?id=' + id : ''}`).then((r) => {
+            setConfig(r.data);
+        }).catch(e => alert(e.response?.data?.detail || "Failed to load template"));
+    }, [id]);
+
     useEffect(() => {
-        if (isMobileDevice()) {
-            setLimited_access(true)
+        if (/Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent)) {
+            setLimited_access(true);
         }
-    })
+    }, []);
 
-    // Flatten all elements for easier manipulation
-    const getAllElements = (stretcher=false) => {
+    // Extract elements from config dynamically every render
+    const extractElements = () => {
         if (!config?.Bill) return [];
-
-        const elements = [];
-        const stretcher_elements = [];
-        const sections = ['bill_stretcher', 'my_company_details', 'harder', 'footer','product_stretcher'];
+        const extracted = [];
+        const sections = ['bill_stretcher', 'my_company_details', 'harder', 'footer', 'product_stretcher'];
 
         sections.forEach(section => {
             if (config.Bill[section]) {
-
                 config.Bill[section].forEach((item, index) => {
                     Object.entries(item).forEach(([key, element]) => {
-                        if (element.type !== 'rectangles' && element.type !== 'line') {
-                            element = {...element, y: 842 - element.y};
-                            elements.push({
-                                ...element,
-                                id: `${section}_${key}_${index}`,
-                                section,
-                                key,
-                                index
-                            });
-                        }
-                        else {
-                            stretcher_elements.push({
-                                ...element,
-                                id: `${section}_${key}_${index}`,
-                                section,
-                                key,
-                                index
-                            })
-                        }
+                        extracted.push({
+                            ...element,
+                            id: `${section}_${key}_${index}`,
+                            section, key, index,
+                            // Backend maps Y from bottom (A4 height = 842)
+                            canvasY: 842 - element.y
+                        });
                     });
                 });
             }
         });
-        if(stretcher){
-            return stretcher_elements
-        }
-        // Handle product list
+
         if (config.Bill.product?.product_list) {
             config.Bill.product.product_list.forEach((item, index) => {
                 Object.entries(item).forEach(([key, element]) => {
-                    elements.push({
+                    extracted.push({
                         ...element,
-                        y: 842 - config.Bill.product.start,
+                        canvasY: 842 - config.Bill.product.start,
                         id: `product_${key}_${index}`,
-                        section: 'product',
-                        key,
-                        index
+                        section: 'product', key, index
                     });
                 });
             });
         }
-
-        return elements;
+        return extracted;
     };
 
+    const allElements = extractElements();
+    const activeEl = allElements.find(el => el.id === selectedElementId) || null;
+
     const updateElement = (elementId, updates) => {
-        const newConfig = { ...config };
-        const element = getAllElements().find(el => el.id === elementId);
+        const newConfig = JSON.parse(JSON.stringify(config)); // Deep copy is critical here!
+        const elMeta = allElements.find(el => el.id === elementId);
+        if (!elMeta) return;
 
-        if (!element) return;
-        if (updates.y){
-            updates.y = 842 - updates.y;
+        // Convert canvasY back to backend's Y coordinate (bottom-based)
+        if (updates.canvasY !== undefined) {
+            updates.y = 842 - updates.canvasY;
+            delete updates.canvasY;
         }
-        if (element.section === 'product') {
-            const productItem = newConfig.Bill.product.product_list[element.index];
-            productItem[element.key] = { ...productItem[element.key], ...updates };
-        } else {
-            const sectionItem = newConfig.Bill[element.section][element.index];
 
-            sectionItem[element.key] = { ...sectionItem[element.key],  ...updates};
+        if (elMeta.section === 'product') {
+            const productItem = newConfig.Bill.product.product_list[elMeta.index];
+            productItem[elMeta.key] = { ...productItem[elMeta.key], ...updates };
+        } else {
+            const sectionItem = newConfig.Bill[elMeta.section][elMeta.index];
+            sectionItem[elMeta.key] = { ...sectionItem[elMeta.key], ...updates };
         }
 
         setConfig(newConfig);
-        let new_element = getAllElements().find(el => el.id === elementId);
-        setSelectedElement(new_element)
     };
 
     const deleteElement = (elementId) => {
-        if (!selectedElement) return;
+        if (!elementId) return;
+        const newConfig = JSON.parse(JSON.stringify(config));
+        const elMeta = allElements.find(el => el.id === elementId);
+        if (!elMeta) return;
 
-        const newConfig = { ...config };
-        const element = getAllElements().find(el => el.id === elementId);
-
-        if (!element) return;
-
-        if (element.section === 'product') {
-            newConfig.Bill.product.product_list.splice(element.index, 1);
+        if (elMeta.section === 'product') {
+            newConfig.Bill.product.product_list.splice(elMeta.index, 1);
         } else {
-            newConfig.Bill[element.section].splice(element.index, 1);
+            newConfig.Bill[elMeta.section].splice(elMeta.index, 1);
         }
 
         setConfig(newConfig);
-        setSelectedElement(null);
-    };
-
-    const handleElementDragEnd = (e, elementId) => {
-        const newPos = e.target.position();
-        updateElement(elementId, { x: newPos.x, y: newPos.y });
+        setSelectedElementId(null); // Deselect if deleted
     };
 
     const handleWheel = (e) => {
         e.evt.preventDefault();
-
-        const scaleBy = 1.02;
+        const scaleBy = 1.05;
         const stage = e.target.getStage();
         const oldScale = stage.scaleX();
         const pointer = stage.getPointerPosition();
+        const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
+        const newScale = e.evt.deltaY > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+        setStageScale(newScale);
+        setStagePos({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+    };
 
-        const mousePointTo = {
-            x: (pointer.x - stage.x()) / oldScale,
-            y: (pointer.y - stage.y()) / oldScale,
+    const handleSave = () => {
+        setSaving(true);
+        const payload = JSON.parse(JSON.stringify(config));
+        clientToken.put(`yaml/`, payload).then((r) => {
+            if (r.status === 200) alert("Template Saved Successfully ✅");
+        }).catch(e => {
+            alert("Failed to save: " + (e.response?.data?.error || "Unknown error"));
+        }).finally(() => setSaving(false));
+    };
+
+    const getDummyValue = (label) => {
+        if (!label) return 'Sample Text';
+        const l = label.toLowerCase();
+        if (l.includes('date')) return '15/08/2026';
+        if (l.includes('invoice_number')) return 'INV-2026-001';
+        if (l.includes('receiver,name') || l.includes('customer')) return 'Acme Solutions Ltd.';
+        if (l.includes('receiver,address')) return '123 Business Valley, Tech Park,\nCity, 400001';
+        if (l.includes('gst') && l.includes('number')) return '27AADCA2230EA1Z';
+        if (l.includes('description')) return 'Premium Software License';
+        if (l.includes('quantity')) return '10';
+        if (l.includes('rate')) return '150.00';
+        if (l.includes('amount') && !l.includes('total') && !l.includes('gst')) return '1500.00';
+        if (l.includes('total_amount_with_out_gst')) return '1500.00';
+        if (l.includes('total_amount_with_gst')) return '1770.00';
+        if (l.includes('state_gst_amount') || l.includes('center_gst_amount')) return '135.00';
+        if (l.includes('total_amount_in_text')) return 'One Thousand Seven Hundred Seventy Only';
+        if (l.includes('s.no') || l === 'sno') return '1';
+        if (l === '636' || l === 'title') return 'INVOICE';
+        return 'Sample Text';
+    };
+
+    /* ── Render Elements ── */
+    const RenderNode = ({ shape }) => {
+        const isSelected = activeEl?.id === shape.id;
+        const color = isSelected ? '#4f46e5' : '#000000';
+
+        const displayValue = (shape.value !== undefined && shape.value !== '')
+            ? shape.value
+            : (shape.default_value !== undefined && shape.default_value !== '')
+                ? shape.default_value
+                : getDummyValue(shape.label || shape.key);
+
+        const handleInteraction = (e) => {
+            const node = e.target;
+            const now = Date.now();
+            const lastClick = node.lastClickTime || 0;
+
+            if (now - lastClick < 300) {
+                // Double click detected
+                if (!Limited_access && (!shape.type || shape.type === 'text')) {
+                    const newText = window.prompt("Edit text value:", displayValue);
+                    if (newText !== null) {
+                        updateElement(shape.id, { value: newText });
+                    }
+                }
+            } else {
+                setSelectedElementId(shape.id);
+            }
+            node.lastClickTime = now;
         };
 
-        const newScale = e.evt.deltaY > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+        const commonProps = {
+            draggable: !Limited_access,
+            onClick: handleInteraction,
+            onTap: handleInteraction,
+        };
 
-        setStageScale(newScale);
-        setStagePos({
-            x: pointer.x - mousePointTo.x * newScale,
-            y: pointer.y - mousePointTo.y * newScale,
-        });
-    };
-    const RenderStretcher = ({shape}) => {
         if (shape.type === "rectangles") {
-            if(shape.rectangles_type==="image"){
-                const [image] = useImage(shape.src ); // returns <img> once loaded
-                return ( <KonvaImage image={image}
-                                     x={shape.x}
-                                     y={842-shape.y}
-                                     width={shape.width}
-                                     height={-shape.height} />
-                )
+            const dragEnd = (e) => {
+                const node = e.target;
+                updateElement(shape.id, { x: node.x(), canvasY: node.y() });
+            };
+
+            if (shape.rectangles_type === "image" || shape.src) {
+                const [image] = useImage(shape.src);
+                return (
+                    <Group {...commonProps} x={shape.x} y={shape.canvasY} onDragEnd={dragEnd}>
+                        {isSelected && <Rect width={shape.width} height={-shape.height} stroke="#4f46e5" strokeWidth={2} dash={[4, 4]} />}
+                        <KonvaImage image={image} width={shape.width} height={-shape.height} />
+                    </Group>
+                );
             }
             return (
                 <Rect
-                    key={shape.id}
-                    x={shape.x}
-                    y={842-shape.y}
-                    width={shape.width}
-                    height={-shape.height}
-                    stroke="black"
-                />
-            );}
-        if (shape.type === "line") {
-            return (
-                <Line
-                    key={shape.id}
-                    points={[shape.x, 842-shape.y, shape.x2, 842-shape.y2]}
-                    stroke="black"
+                    {...commonProps}
+                    x={shape.x} y={shape.canvasY} width={shape.width} height={-shape.height}
+                    stroke={isSelected ? '#4f46e5' : (shape.stroke || 'black')}
+                    strokeWidth={isSelected ? 2 : 1} dash={isSelected ? [4, 4] : []}
+                    onDragEnd={dragEnd}
                 />
             );
         }
-    }
-    const renderElement = (element) => {
-        let  displayText = `${element.prefix || ''}${element.value || element.default_value || ''}${element.suffix || ''}`;
-        displayText = displayText || 'X'
+
+        if (shape.type === "line") {
+            return (
+                <Line
+                    {...commonProps}
+                    points={[shape.x, shape.canvasY, shape.x2, 842 - shape.y2]}
+                    stroke={isSelected ? '#4f46e5' : (shape.stroke || 'black')}
+                    strokeWidth={isSelected ? 2 : 1} hitStrokeWidth={10}
+                    onDragEnd={(e) => {
+                        const node = e.target;
+                        const dx = node.x(); const dy = node.y();
+                        node.position({ x: 0, y: 0 }); // Reset pure translation to calculate actual coordinate shift
+                        updateElement(shape.id, {
+                            x: shape.x + dx, x2: shape.x2 + dx,
+                            canvasY: shape.canvasY + dy, y2: shape.y2 - dy // note: y2 is stored as backend coord natively here
+                        });
+                    }}
+                />
+            );
+        }
+
+        const displayText = `${shape.prefix || ''}${displayValue}${shape.suffix || ''}`;
+        const finalDisplay = displayText === '' ? 'X' : displayText;
+        const fontSize = shape.font_size || 12;
+
         return (
             <Text
-                key={element.id}
-                x={element.x}
-                y={element.y - (element.font_size || 12)}
-                text={displayText}
-                fontSize={element.font_size || 12}
-                fontStyle={element.font === 'bold' ? 'bold' : 'normal'}
-                fill={selectedElement?.id === element.id ? '#3B82F6' : '#000000'}
-                draggable={!Limited_access}
-                onClick={() => setSelectedElement(element)}
-                onDragEnd={(e) => handleElementDragEnd(e, element.id)}
+                {...commonProps}
+                x={shape.x}
+                // Convert bottom-anchor "canvasY" to top-anchor via font offset
+                y={shape.canvasY - fontSize}
+                text={finalDisplay}
+                fontSize={fontSize}
+                fontStyle={shape.font === 'bold' ? 'bold' : 'normal'}
+                fill={color}
+                onDragEnd={(e) => {
+                    const node = e.target;
+                    // convert node top Y back to canvas bottom Y
+                    updateElement(shape.id, { x: node.x(), canvasY: node.y() + fontSize });
+                }}
             />
         );
     };
 
-    const elements = getAllElements();
-    const stretcher_elements = getAllElements(true);
-
     if (!config) {
         return (
-            <div className="flex items-center justify-center h-screen">
-                <div className="text-lg">Loading template...</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f8fafc' }}>
+                <div style={{ width: '36px', height: '36px', border: '3px solid #e0e7ff', borderTop: '3px solid #4f46e5', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
             </div>
         );
     }
-    const handelSave = () => {
-      clientToken.put(`yaml/`,config).then((r) => {
-          if(r.status === 200){
-              alert("Template Saved Successfully")
-          }
-      })
-    }
+
     return (
-        <div className="flex h-screen ">
+        <div style={{ display: 'flex', height: '100vh', background: '#f8fafc', fontFamily: "'Inter', sans-serif" }}>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-            {/* Sidebar */}
-            <div className={`w-80  shadow-lg p-4 overflow-y-auto ${Limited_access  ? 'hidden':'block'}` }>
-                <h2 className="text-xl font-bold mb-4">Invoice Editor</h2>
+            {/* ── Sidebar ── */}
+            <div style={{
+                width: '340px', background: 'white', borderRight: '1px solid #e2e8f0',
+                display: Limited_access ? 'none' : 'flex', flexDirection: 'column',
+                boxShadow: '4px 0 24px rgba(0,0,0,0.03)', zIndex: 10,
+            }}>
+                {/* Header */}
+                <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                    <h2 style={{
+                        fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.5px',
+                        background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text', margin: 0,
+                    }}>Invoice Editor</h2>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', fontWeight: 500 }}>
+                        Select and configure layout elements
+                    </p>
+                </div>
 
-                {selectedElement && (
-                    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                        <h3 className="font-semibold mb-2">Edit Selected Element</h3>
-
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Text Content:</label>
-                                <input
-                                    type="text"
-                                    value={selectedElement.value || ''}
-                                    onChange={(e) => updateElement(selectedElement.id, { value: e.target.value })}
-                                    className="w-full p-2 border rounded"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Font Size:</label>
-                                <input
-                                    type="number"
-                                    value={selectedElement.font_size || 12}
-                                    onChange={(e) => updateElement(selectedElement.id, { font_size: parseInt(e.target.value) })}
-                                    className="w-full p-2 border rounded"
-                                    min="8"
-                                    max="72"
-                                />
-                            </div>
-
-                            <div className="flex space-x-2">
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px' }}>
+                    {/* Active Element Properties */}
+                    {activeEl ? (
+                        <div style={{
+                            background: '#f8fafc', border: '1.5px solid #e2e8f0',
+                            borderRadius: '16px', padding: '16px', marginTop: '20px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                <div style={{ width: '4px', height: '16px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
+                                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    {activeEl.type === 'rectangles' ? 'Edit Rectangle' : activeEl.type === 'line' ? 'Edit Line' : 'Edit Text'}
+                                </h3>
                                 <button
-                                    onClick={() => updateElement(selectedElement.id, {
-                                        font: selectedElement.font === 'bold' ? 'normal' : 'bold'
-                                    })}
-                                    className={`p-2 rounded ${selectedElement.font === 'bold' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                                    onClick={() => deleteElement(activeEl.id)}
+                                    style={{ marginLeft: 'auto', padding: '6px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                    title="Delete Element"
                                 >
-                                    <Bold size={16} />
-                                </button>
-
-                                <button
-                                    onClick={() => deleteElement(selectedElement.id)}
-                                    className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
-                                >
-                                    <Trash2 size={16} />
+                                    <Trash2 size={14} />
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">X Position:</label>
-                                    <input
-                                        type="number"
-                                        value={Math.round(selectedElement.x)}
-                                        onChange={(e) => updateElement(selectedElement.id, { x: parseInt(e.target.value) })}
-                                        className="w-full p-1 border rounded text-sm"
-                                    />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {/* Shared X, Y Inputs */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X Pos</label>
+                                        <input type="number" value={Math.round(activeEl.x)} onChange={(e) => updateElement(activeEl.id, { x: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y Pos (Canvas)</label>
+                                        <input type="number" value={Math.round(activeEl.canvasY)} onChange={(e) => updateElement(activeEl.id, { canvasY: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Y Position:</label>
-                                    <input
-                                        type="number"
-                                        value={Math.round(selectedElement.y)}
-                                        onChange={(e) => updateElement(selectedElement.id, { y: parseInt(e.target.value) })}
-                                        className="w-full p-1 border rounded text-sm"
-                                    />
-                                </div>
+
+                                {/* Text Options */}
+                                {(!activeEl.type || activeEl.type === 'text') && (
+                                    <>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Text Content</label>
+                                            <input type="text" value={activeEl.value || ''} placeholder={getDummyValue(activeEl.label || activeEl.key)} onChange={(e) => updateElement(activeEl.id, { value: e.target.value })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Prefix</label>
+                                                <input type="text" value={activeEl.prefix || ''} onChange={(e) => updateElement(activeEl.id, { prefix: e.target.value })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Suffix</label>
+                                                <input type="text" value={activeEl.suffix || ''} onChange={(e) => updateElement(activeEl.id, { suffix: e.target.value })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Font Size</label>
+                                                <input type="number" value={activeEl.font_size || 12} onChange={(e) => updateElement(activeEl.id, { font_size: parseInt(e.target.value) || 1 })} style={inputStyle} onFocus={focIn} onBlur={focOut} min="8" max="72" />
+                                            </div>
+                                            <button
+                                                onClick={() => updateElement(activeEl.id, { font: activeEl.font === 'bold' ? 'normal' : 'bold' })}
+                                                style={{ height: '37.5px', padding: '0 12px', borderRadius: '8px', border: `1.5px solid ${activeEl.font === 'bold' ? '#4f46e5' : '#cbd5e1'}`, background: activeEl.font === 'bold' ? '#4f46e5' : 'white', color: activeEl.font === 'bold' ? 'white' : '#475569', cursor: 'pointer' }}
+                                            ><Bold size={16} /></button>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Rectangle Options */}
+                                {activeEl.type === 'rectangles' && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Width</label>
+                                            <input type="number" value={Math.round(activeEl.width || 0)} onChange={(e) => updateElement(activeEl.id, { width: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Height</label>
+                                            <input type="number" value={Math.round(activeEl.height || 0)} onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Line Options */}
+                                {activeEl.type === 'line' && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X2 Pos</label>
+                                            <input type="number" value={Math.round(activeEl.x2 || 0)} onChange={(e) => updateElement(activeEl.id, { x2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y2 Pos (Backend)</label>
+                                            <input type="number" value={Math.round(activeEl.y2 || 0)} onChange={(e) => updateElement(activeEl.id, { y2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    </div>
-                )}
-
-                {/* Elements List */}
-                <div>
-                    <h3 className="font-semibold mb-2">Template Elements</h3>
-                    <div className="space-y-1 max-h-96 overflow-y-auto">
-                        {elements.map(element => (
-                            <div
-                                key={element.id}
-                                onClick={() => setSelectedElement(element)}
-                                className={`p-2 rounded cursor-pointer text-sm ${
-                                    selectedElement?.id === element.id
-                                        ? 'bg-blue-100 border-blue-300'
-                                        : 'bg-gray-50 hover:bg-gray-100'
-                                }`}
-                            >
-                                <div className="font-medium">{element.label}</div>
-                                <div className="text-xs text-gray-600 truncate">
-                                    {element.prefix || ''}{element.value || 'No value'}{element.suffix || ''}
-                                </div>
+                    ) : (
+                        <div style={{ padding: '40px 0', textAlign: 'center', color: '#94a3b8' }}>
+                            <div style={{ display: 'inline-flex', padding: '16px', background: '#f1f5f9', borderRadius: '50%', marginBottom: '16px' }}>
+                                <Move size={24} color="#64748b" />
                             </div>
-                        ))}
+                            <p style={{ fontSize: '13px', margin: 0, fontWeight: 600 }}>No element selected</p>
+                            <p style={{ fontSize: '12px', margin: '4px 0 0' }}>Click an element on the canvas.</p>
+                        </div>
+                    )}
+
+                    {/* All Elements List */}
+                    <div style={{ marginTop: '24px', paddingBottom: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <div style={{ width: '4px', height: '16px', background: '#cbd5e1', borderRadius: '4px' }} />
+                            <h3 style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Component Tree</h3>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {allElements.map(el => (
+                                <div
+                                    key={el.id}
+                                    onClick={() => setSelectedElementId(el.id)}
+                                    style={{
+                                        padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
+                                        background: activeEl?.id === el.id ? '#eef2ff' : 'white',
+                                        border: `1.5px solid ${activeEl?.id === el.id ? '#c7d2fe' : '#e2e8f0'}`,
+                                        display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.1s',
+                                    }}
+                                    onMouseEnter={e => { if (activeEl?.id !== el.id) e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                    onMouseLeave={e => { if (activeEl?.id !== el.id) e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                                >
+                                    {el.type === 'rectangles' ? <Square size={16} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />
+                                        : el.type === 'line' ? <Minus size={16} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />
+                                            : <Type size={16} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />}
+
+                                    <div style={{ overflow: 'hidden' }}>
+                                        <div style={{ fontSize: '12.5px', fontWeight: 600, color: activeEl?.id === el.id ? '#4f46e5' : '#334155' }}>
+                                            {el.label || el.key || 'Unnamed'}
+                                        </div>
+                                        {(!el.type || el.type === 'text') && (
+                                            <div style={{ fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                                {el.prefix || ''}{el.value || 'null'}{el.suffix || ''}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                <button
-                    onClick={handelSave}
-                    className="w-full mt-4 p-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center space-x-2"
-                >
-                    <Save size={16} />
-                    <span>Save Template</span>
-                </button>
+                {/* Save Block */}
+                <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: 'white' }}>
+                    <button
+                        onClick={handleSave} disabled={saving}
+                        style={{
+                            width: '100%', padding: '12px', fontSize: '14px', fontWeight: 700, color: 'white',
+                            background: saving ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '12px', border: 'none',
+                            cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                            boxShadow: '0 4px 14px rgba(79,70,229,0.3)', transition: 'transform 0.15s, box-shadow 0.15s',
+                        }}
+                        onMouseEnter={e => { if (!saving) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(79,70,229,0.4)'; } }}
+                        onMouseLeave={e => { if (!saving) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(79,70,229,0.3)'; } }}
+                    >
+                        <Save size={18} />
+                        {saving ? "Saving..." : "Save Template"}
+                    </button>
+                </div>
             </div>
 
-            {/* Canvas */}
-            <div className="flex-1 p-4">
-                <div className="bg-white rounded-lg shadow-lg h-full overflow-hidden">
-                    <div className="p-4 border-b">
-                        <h3 className="font-semibold">Invoice Template Preview</h3>
-                        <p className="text-sm text-gray-600">
-                            Click elements to select, drag to move. Use mouse wheel to zoom.{Limited_access}
+            {/* ── Canvas Area ── */}
+            <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0f172a' }}>Template Preview</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+                            Click elements to select, drag to move. Use mouse wheel or trackpad to zoom.
+                            {Limited_access ? " (View Only)" : ""}
                         </p>
                     </div>
+                </div>
 
-                    <div className="h-full">
+                <div style={{
+                    flex: 1, background: '#cbd5e1', borderRadius: '16px',
+                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.1)', overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
+                    backgroundSize: '20px 20px', position: 'relative',
+                }}>
+                    <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
                         <Stage
-                            width={Limited_access?595:window.innerWidth - 320}
-                            height={window.innerHeight - 100}
+                            width={window.innerWidth - (Limited_access ? 48 : 388)}
+                            height={window.innerHeight - 120}
                             onWheel={handleWheel}
-                            scaleX={stageScale}
-                            scaleY={stageScale}
-                            x={stagePos.x}
-                            y={stagePos.y}
+                            scaleX={stageScale} scaleY={stageScale} x={stagePos.x} y={stagePos.y}
                             draggable
-                            ref={stageRef}
+                            style={{ cursor: 'grab' }}
+                            onMouseDown={(e) => {
+                                // clicking empty stage clears selection
+                                if (e.target === e.target.getStage()) setSelectedElementId(null);
+                            }}
                         >
                             <Layer>
-                                {/* Background */}
+                                {/* A4 Paper Drop Shadow & Background */}
                                 <Rect
-                                    x={0}
-                                    y={0}
-                                    width={595}
-                                    height={842}
-                                    fill="white"
-                                    stroke="#e5e7eb"
-                                    strokeWidth={1}
+                                    x={0} y={0} width={595} height={842} fill="white"
+                                    shadowColor="rgba(0,0,0,0.15)" shadowBlur={20} shadowOffsetY={10}
                                 />
                                 <ReaderBackground pdf_template={config.pdf_template} />
 
-                                {/* Render all elements */}
-                                {stretcher_elements.map(element => <RenderStretcher shape={element}/>)}
-                                {elements.map(element => renderElement(element))}
+                                {/* Render all elements! */}
+                                {allElements.map(el => <RenderNode key={el.id} shape={el} />)}
 
-                                {/* Selection indicator */}
-                                {selectedElement && (
-                                    <Rect
-                                        x={selectedElement.x - 2}
-                                        y={selectedElement.y - 2}
-                                        width={200}
-                                        height={selectedElement.font_size + 4 || 16}
-                                        stroke="#3B82F6"
-                                        strokeWidth={1}
-                                        fill="rgba(59, 130, 246, 0.1)"
-                                    />
+                                {/* Custom Outline around explicit text selections */}
+                                {activeEl && (!activeEl.type || activeEl.type === 'text') && (
+                                    <Group listening={false}>
+                                        <Rect
+                                            x={activeEl.x - 4}
+                                            // Selected box covers from top of rect to bottom. Display Y = bottom.
+                                            y={activeEl.canvasY - (activeEl.font_size || 12) - 4}
+                                            width={(activeEl.value?.toString()?.length || 5) * (activeEl.font_size || 12) * 0.6 + 8} // rough width estimate
+                                            height={(activeEl.font_size || 12) + 8}
+                                            stroke="#4f46e5" strokeWidth={1.5} fill="rgba(79, 70, 229, 0.08)" dash={[4, 4]}
+                                        />
+                                        <Rect
+                                            x={activeEl.x - 6} y={activeEl.canvasY - (activeEl.font_size || 12) - 6}
+                                            width={6} height={6} fill="white" stroke="#4f46e5" strokeWidth={1.5}
+                                        />
+                                    </Group>
                                 )}
                             </Layer>
                         </Stage>

@@ -22,6 +22,9 @@ import InvoiceTemplateEditor from "@/pages/InvoiceTemplateEditor";
 import TablePage from "@/pages/templates_list";
 import TemplatesList from "@/pages/templates_list";
 import UIConfig from "@/pages/UIConfig";
+import InventoryPage from "./pages/inventory";
+import AvailableTemplates from "./pages/AvailableTemplates";
+import PrivacyPolicy from "./pages/privacy";
 
 // Private route wrapper
 
@@ -81,6 +84,7 @@ function App() {
             <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <LandingPage />} />
             <Route path="/login" element={isLogin ? <Navigate to="/home" replace /> : <Login />} />
             <Route path="/SignUp" element={<SignUp />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
 
             {/* Private routes */}
             <Route
@@ -172,6 +176,22 @@ function App() {
                     <PrivateRoute isLogin={isLogin}>
                         <Navbar />
                         <UIConfig />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/inventory"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <InventoryPage />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/available-templates"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <AvailableTemplates />
                     </PrivateRoute>
                 }
             />

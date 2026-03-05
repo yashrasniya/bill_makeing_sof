@@ -32,6 +32,8 @@ function NewBillBody({ id }) {
     const [refresh, setRefresh] = useState(false)
     const [newDataFormat, setNewDataFormat] = useState({})
     const [invoiceNumber, setInvoiceNumber] = useState(InvoiceData?.invoice_number ?? "");
+    const [inventoryProducts, setInventoryProducts] = useState([]);
+    const [selectedInventoryProductId, setSelectedInventoryProductId] = useState(null);
     let navigate = useNavigate()
 
 
@@ -47,6 +49,12 @@ function NewBillBody({ id }) {
             console.log(error)
             alert(`error ${error.request.status}`)
         })
+
+        clientToken.get('/inventory/products/?limit=500').then((res) => {
+            if (res.status === 200) {
+                setInventoryProducts(res.data.results || res.data)
+            }
+        }).catch(err => console.error("Could not load inventory: ", err));
     }, [refresh]);
 
     useEffect(() => {
@@ -139,6 +147,17 @@ function NewBillBody({ id }) {
         }
         else {
             let id = -1
+
+            // Extract quantity if the user selected an inventory product
+            let parsedQuantity = 0;
+            if (selectedInventoryProductId) {
+                const qtyField = bill_body_items.find(item => item.input_title === 'Quantity');
+                if (qtyField) {
+                    let qValue = new_product.product_properties.find(s => +s.new_product_in_frontend?.id === +qtyField.id)?.value;
+                    if (qValue && !isNaN(qValue)) parsedQuantity = parseFloat(qValue);
+                }
+            }
+
             const form = new FormData()
             form.append('product_properties', '')
             form.append('gst_amount', 0)
@@ -150,6 +169,19 @@ function NewBillBody({ id }) {
 
                         clientToken.post(`invoice/${InvoiceData.id}/product/add/`, { product_id: response.data.id }).then((response) => {
                             if (response.status === 200) {
+                                // NEW STOCK DEDUCTION LOGIC (Runs exactly once per product added)
+                                if (selectedInventoryProductId && parsedQuantity > 0) {
+                                    const stockForm = new FormData();
+                                    stockForm.append('product', selectedInventoryProductId);
+                                    stockForm.append('quantity', parsedQuantity);
+                                    stockForm.append('movement_type', 'OUT');
+                                    stockForm.append('notes', `Auto-deducted for Invoice #${InvoiceData.id || 'Unknown'}`);
+
+                                    // Fire and forget stock deduction
+                                    clientToken.post('/inventory/stock-movements/', stockForm)
+                                        .catch(err => console.error("Failed to deduct stock:", err));
+                                }
+
                                 console.log(new_product)
                                 new_product.product_properties.map((obj) => {
                                     const productPropertiesForm = new FormData()
@@ -163,7 +195,6 @@ function NewBillBody({ id }) {
                                             productUpdateForm.append('total_amount', 0)
                                             clientToken.post(`product/${id}/update/`, productUpdateForm).then((response) => {
                                                 if (response.status === 200) {
-                                                    // console.log(response.data)
                                                     setRefresh(prev => !prev);
                                                     setTimeout(() => {
                                                         setRefresh(prev => !prev);
@@ -181,8 +212,8 @@ function NewBillBody({ id }) {
                                 })
 
                                 setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
-                                // console.log(new_product,newDataFormat)
                                 setPop_up_properties('none')
+                                setSelectedInventoryProductId(null);
                             }
                         }).catch((error) => {
                             console.log(error)
@@ -215,6 +246,49 @@ function NewBillBody({ id }) {
         }
 
     }
+
+    const autoFillFromInventory = (e) => {
+        const selectedProductId = e.target.value;
+        if (!selectedProductId) return;
+
+        const product = inventoryProducts.find(p => p.id === parseInt(selectedProductId));
+        if (!product) return;
+
+        let array = new_product?.product_properties ? [...new_product.product_properties] : [];
+
+        // Find IDs for Name, Rate, and GST fields based on bill_body_items
+        const nameField = bill_body_items.find(item => item.input_title === 'Name of Product');
+        const rateField = bill_body_items.find(item => item.input_title === 'Rate');
+        const gstField = bill_body_items.find(item => item.input_title === 'GST');
+
+        if (nameField) {
+            let nIndex = array.findIndex(s => +s.new_product_in_frontend.id === +nameField.id);
+            if (nIndex !== -1) array[nIndex].value = product.name;
+            else array.push({ value: product.name, new_product_in_frontend: { id: nameField.id } });
+        } else {
+            const descField = bill_body_items.find(item => item.input_title.toLowerCase().includes('description') || item.input_title.toLowerCase().includes('decription'));
+            if (descField) {
+                let dIndex = array.findIndex(s => +s.new_product_in_frontend.id === +descField.id);
+                if (dIndex !== -1) array[dIndex].value = product.name;
+                else array.push({ value: product.name, new_product_in_frontend: { id: descField.id } });
+            }
+        }
+
+        if (rateField) {
+            let rIndex = array.findIndex(s => +s.new_product_in_frontend.id === +rateField.id);
+            if (rIndex !== -1) array[rIndex].value = product.price;
+            else array.push({ value: product.price, new_product_in_frontend: { id: rateField.id } });
+        }
+
+        if (gstField && product.gst_percentage !== undefined) {
+            let gIndex = array.findIndex(s => +s.new_product_in_frontend.id === +gstField.id);
+            if (gIndex !== -1) array[gIndex].value = product.gst_percentage;
+            else array.push({ value: product.gst_percentage, new_product_in_frontend: { id: gstField.id } });
+        }
+
+        setSelectedInventoryProductId(product.id);
+        setNewProduct({ ...new_product, product_properties: array });
+    };
     const handelCheckBox = (obj) => {
         console.log(obj.target.checked)
         setCheckBox({ ...checkbox, [obj.target.id]: obj.target.checked })
@@ -395,6 +469,7 @@ function NewBillBody({ id }) {
                         <a className={'close'} onClick={() => {
                             setPop_up_properties('none')
                             setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
+                            setSelectedInventoryProductId(null);
                         }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 44 44" fill="none">
                                 <path d="M24.585 22L32.4683 14.135C32.8136 13.7898 33.0075 13.3216 33.0075 12.8333C33.0075 12.3451 32.8136 11.8769 32.4683 11.5317C32.1231 11.1864 31.6549 10.9925 31.1667 10.9925C30.6785 10.9925 30.2102 11.1864 29.865 11.5317L22 19.415L14.135 11.5317C13.7898 11.1864 13.3216 10.9925 12.8333 10.9925C12.3451 10.9925 11.8769 11.1864 11.5317 11.5317C11.1865 11.8769 10.9925 12.3451 10.9925 12.8333C10.9925 13.3216 11.1865 13.7898 11.5317 14.135L19.415 22L11.5317 29.865C11.3598 30.0354 11.2235 30.2382 11.1304 30.4616C11.0373 30.685 10.9894 30.9246 10.9894 31.1667C10.9894 31.4087 11.0373 31.6483 11.1304 31.8717C11.2235 32.0951 11.3598 32.2979 11.5317 32.4683C11.7021 32.6402 11.9049 32.7766 12.1283 32.8696C12.3517 32.9627 12.5913 33.0106 12.8333 33.0106C13.0754 33.0106 13.315 32.9627 13.5384 32.8696C13.7618 32.7766 13.9646 32.6402 14.135 32.4683L22 24.585L29.865 32.4683C30.0354 32.6402 30.2382 32.7766 30.4616 32.8696C30.685 32.9627 30.9247 33.0106 31.1667 33.0106C31.4087 33.0106 31.6483 32.9627 31.8717 32.8696C32.0951 32.7766 32.2979 32.6402 32.4683 32.4683C32.6402 32.2979 32.7766 32.0951 32.8696 31.8717C32.9627 31.6483 33.0106 31.4087 33.0106 31.1667C33.0106 30.9246 32.9627 30.685 32.8696 30.4616C32.7766 30.2382 32.6402 30.0354 32.4683 29.865L24.585 22Z" fill="#4f46e5" />
@@ -402,6 +477,26 @@ function NewBillBody({ id }) {
                         </a>
 
                         <p>New Product</p>
+
+                        {!update && (
+                            <div className="mb-4 mt-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">
+                                    Quick Fill from Inventory
+                                </label>
+                                <select
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-indigo-50/30"
+                                    onChange={autoFillFromInventory}
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>Select a product to auto-fill...</option>
+                                    {inventoryProducts.map(p => (
+                                        <option key={p.id} value={p.id}>
+                                            {p.name} (₹{p.price}) - {p.current_stock} in stock
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div className={'pop-up-box_inputs'}>
                             {bill_body_items.map((obj) => {

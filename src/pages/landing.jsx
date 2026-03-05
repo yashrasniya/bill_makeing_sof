@@ -666,10 +666,17 @@ function LandingPage() {
                     </div>
                     <p style={{ fontSize: '13px' }}>© {new Date().getFullYear()} Invoice App. All rights reserved.</p>
                     <div style={{ display: 'flex', gap: '20px' }}>
-                        {['Templates', 'Inventory', 'Reports', 'Login'].map(item => (
+                        {['Templates', 'Inventory', 'Reports', 'Login', 'Privacy'].map(item => (
                             <span key={item} style={{ fontSize: '13px', cursor: 'pointer', transition: 'color 0.2s' }}
                                 onMouseEnter={e => e.currentTarget.style.color = 'white'}
                                 onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+                                onClick={() => {
+                                    if (item === 'Privacy') navigate('/privacy');
+                                    else if (item === 'Login') navigate('/login');
+                                    else if (item === 'Templates') document.getElementById('template-builder')?.scrollIntoView({ behavior: 'smooth' });
+                                    else if (item === 'Inventory') document.getElementById('inventory')?.scrollIntoView({ behavior: 'smooth' });
+                                    else if (item === 'Reports') document.getElementById('reports')?.scrollIntoView({ behavior: 'smooth' });
+                                }}
                             >{item}</span>
                         ))}
                     </div>
