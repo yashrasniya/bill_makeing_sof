@@ -1,145 +1,181 @@
+/* ═══════════════════════════════════════╗
+   STAT CARDS — Indigo / Purple theme     ║
+╚═══════════════════════════════════════ */
 
-
-.boxes_raper{
+.boxes_raper {
     width: 100%;
     display: flex;
-    /*margin-top: 60px;*/
-    padding: 30px 25px 25px 25px;
-
+    padding: 28px 28px 20px 28px;
     justify-content: space-evenly;
+    gap: 24px;
+    background: #f8fafc;
 }
-.card{
+
+.inner_card {
     width: 42%;
-    border-radius: 3vw;
-    /*background: #35A29F;*/
-    /*box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);*/
-
-
-
-}
-.inner_card{
-    /*--margin:0.8vw;*/
-    /*margin-top:var(--margin);*/
-    /*margin-left:var(--margin);*/
-
-    width: 42%;
-    height: 35vh;
+    height: 36vh;
     flex-shrink: 0;
-    border-radius: 1vw;
-    color: #071952;
-    /*background: #0B666A;*/
-    box-shadow: 0px 0px 10px 5px rgba(0, 0, 0, 0.25);
-    background: linear-gradient(111deg, #a7fdf0 0%, #55c2bf);
-
-    /*text*/
-    font-family: Inter;
-    font-style: normal;
+    border-radius: 20px;
+    color: #0f172a;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    box-shadow: 0 12px 40px rgba(79, 70, 229, 0.3), 0 2px 8px rgba(0, 0, 0, 0.08);
+    font-family: 'Inter', sans-serif;
     font-weight: 700;
-    line-height: normal;
-
-
     padding: 3vh 2vw;
-
     font-size: 1.1vw;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-evenly;
-
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
-.card_content{
+
+/* Subtle orb decoration */
+.inner_card::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+}
+
+.inner_card::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: -30px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    pointer-events: none;
+}
+
+.inner_card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 48px rgba(79, 70, 229, 0.4);
+}
+
+.card_content {
     display: flex;
     flex-direction: row;
-
     flex-basis: 60%;
     flex-wrap: wrap;
-
 }
-.card-two{
+
+.card-two {
     flex-basis: 50%;
 }
-.card_content p{
 
+.card_content p {
     flex-basis: 100%;
+    color: rgba(255, 255, 255, 0.9);
 }
-.two{
+
+.two {
     flex-basis: 40%;
-    /*text-align: right;*/
     justify-content: center;
 }
-.inner_card .f1{
+
+/* Label text */
+.inner_card p:first-child {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1vw;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* Big number */
+.amount_div p:last-child,
+.inner_card .md\:text-5xl {
+    color: white;
+    font-weight: 800;
+}
+
+.inner_card .f1 {
     font-size: 2vw;
+    color: rgba(255, 255, 255, 0.9);
 }
-.inner_card .f2{
+
+.inner_card .f2 {
     font-size: 6vw;
-
+    color: white;
 }
-.inner_card .f3{
+
+.inner_card .f3 {
     font-size: 4.5vw;
-
+    color: white;
 }
-.progress_bar_wrapper{
+
+.progress_bar_wrapper {
     flex-basis: 100%;
-
-
-}
-.amount_div{
-    justify-content: right;
-    text-align: right   ;
-
 }
 
-.card_content .button{
+.amount_div {
+    justify-content: flex-end;
+    text-align: right;
+}
 
+.card_content .button {
     margin-top: 2.8rem;
-
 }
-.card_content li{
+
+.card_content li {
     padding-top: 1vh;
 }
 
-.gray{
+.gray {
     width: 100%;
     height: 1vw;
-    background-color: #FFF;
+    background-color: rgba(255, 255, 255, 0.25);
     border-radius: 20px;
+}
 
-}
-.blue{
+.blue {
     width: 40%;
-    height:100%;
-    background-color: #071952;
+    height: 100%;
+    background-color: white;
     border-radius: 20px;
 }
+
+/* ── Responsive ── */
 @media (max-width: 700px) {
-    .boxes_raper{
-        overflow-x:scroll;
+    .boxes_raper {
+        overflow-x: scroll;
         width: 100vw;
         justify-content: normal;
-        gap:40px;
-    }
-    .inner_card{
-        width: 100%;
-        height: 15vh;
-        font-size: 1.8vw;
-        padding: 2vh 3vw;
+        gap: 16px;
+        padding: 16px;
     }
 
-    .inner_card .f1{
+    .inner_card {
+        width: 85vw;
+        min-width: 260px;
+        height: 18vh;
+        font-size: 2.5vw;
+        padding: 2vh 4vw;
+        border-radius: 16px;
+    }
+
+    .inner_card .f1 {
         font-size: 4vw;
     }
-    .inner_card .f2{
+
+    .inner_card .f2 {
         font-size: 10vw;
-
     }
-    .inner_card .f3{
-        font-size: 4.5vw;
 
+    .inner_card .f3 {
+        font-size: 6vw;
     }
-    .card_content .button{
 
+    .card_content .button {
         margin-top: 0.5rem;
-        padding: .6rem 0.3rem;
-
+        padding: 0.6rem 0.3rem;
     }
 }
-

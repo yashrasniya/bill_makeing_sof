@@ -1,7 +1,8 @@
 import './App.css';
 import './style/root.css';
-import { Login} from './pages/login.jsx';
+import { Login } from './pages/login.jsx';
 import { Home } from './pages/home.jsx';
+import { LandingPage } from './pages/landing.jsx';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { CompanyS } from "./pages/company's.jsx";
 import { NewBill } from "./pages/new_bill";
@@ -62,7 +63,7 @@ function App() {
                 }
             }
         } else if (status === 'failed') {
-            if (location.pathname !== '/' && location.pathname !== '/SignUp') {
+            if (location.pathname !== '/' && location.pathname !== '/SignUp' && location.pathname !== '/login') {
                 navigate('/', { replace: true });
             }
         }
@@ -77,7 +78,8 @@ function App() {
     return (
         <Routes>
             {/* Public routes */}
-            <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <Login  />} />
+            <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <LandingPage />} />
+            <Route path="/login" element={isLogin ? <Navigate to="/home" replace /> : <Login />} />
             <Route path="/SignUp" element={<SignUp />} />
 
             {/* Private routes */}
@@ -94,7 +96,7 @@ function App() {
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <Navbar />
-                        <Bill_list  />
+                        <Bill_list />
                     </PrivateRoute>
                 }
             />
@@ -142,7 +144,6 @@ function App() {
                 path="/CompanyForm"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <Navbar />
                         <CompanyForm />
                     </PrivateRoute>
                 }

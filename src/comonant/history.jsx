@@ -7,8 +7,9 @@ import PdfOpener from "@/utility/pdf_opener";
 // Simple loader component
 const Loader = () => (
     <div className="flex justify-center items-center py-10">
-        <div className="w-8 h-8 border-4 border-[#0B666A] border-t-transparent rounded-full animate-spin"></div>
-        <p className="ml-3 text-[#0B666A] font-medium">Loading...</p>
+        <div style={{ width: '32px', height: '32px', border: '3px solid #e0e7ff', borderTop: '3px solid #4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+        <p style={{ marginLeft: '12px', color: '#4f46e5', fontWeight: 600 }}>Loading...</p>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
 );
 
@@ -18,7 +19,7 @@ const TableRow = ({ obj, index, refresh, setRefresh }) => {
     const navigate = useNavigate();
 
     return (
-        <tr key={index} className="hidden md:table-row border-b border-[#35A29F]">
+        <tr key={index} className="hidden md:table-row" style={{ borderBottom: '1px solid #f1f5f9' }}>
             <td
                 className="td-with-icon cursor-pointer font-bold"
                 onClick={() => navigate(`/bill/${obj.id}`)}
@@ -38,7 +39,7 @@ const TableRow = ({ obj, index, refresh, setRefresh }) => {
                 </button>
 
                 {open && (
-                    <div className="absolute right-0 mt-2 w-32 bg-[#60dbd8] rounded shadow-lg z-50">
+                    <div style={{ position: 'absolute', right: 0, marginTop: '8px', width: '140px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 24px rgba(79,70,229,0.15)', border: '1px solid #e0e7ff', overflow: 'hidden', zIndex: 50 }}>
                         <button
                             className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                             onClick={() => {
@@ -104,7 +105,7 @@ const CardRow = ({ obj, index, refresh, setRefresh }) => {
                 </button>
 
                 {open && (
-                    <div className="absolute right-0 mt-2 w-32 bg-[#60dbd8] rounded shadow-lg z-50">
+                    <div style={{ position: 'absolute', right: 0, marginTop: '8px', width: '140px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 24px rgba(79,70,229,0.15)', border: '1px solid #e0e7ff', overflow: 'hidden', zIndex: 50 }}>
                         <button
                             className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                             onClick={() => {
@@ -239,30 +240,30 @@ function History({ show_header = true, filters = {} }) {
       text-center
     "
                     >
-                        <thead className="text-[1.2rem] border-collapse">
-                        <tr className="border-b border-[#35A29F]">
-                            <td className="w-1/4 px-2 py-2 font-bold">Invoice No.</td>
-                            <td className="px-2 py-2 font-bold">Date</td>
-                            <td className="px-2 py-2 font-bold">Customer</td>
-                            <td className="px-2 py-2 font-bold ">Amount</td>
-                        </tr>
+                        <thead style={{ background: 'linear-gradient(110deg,#312e81,#4f46e5)', color: 'white' }}>
+                            <tr>
+                                <td className="w-1/4 px-2 py-2 font-bold">Invoice No.</td>
+                                <td className="px-2 py-2 font-bold">Date</td>
+                                <td className="px-2 py-2 font-bold">Customer</td>
+                                <td className="px-2 py-2 font-bold ">Amount</td>
+                            </tr>
                         </thead>
                         <tbody>
-                        {invoice_data.map((obj, index) => (
-                            <TableRow
-                                key={index}
-                                index={index}
-                                obj={obj}
-                                refresh={refresh}
-                                setRefresh={setRefresh}
-                            />
-                        ))}
+                            {invoice_data.map((obj, index) => (
+                                <TableRow
+                                    key={index}
+                                    index={index}
+                                    obj={obj}
+                                    refresh={refresh}
+                                    setRefresh={setRefresh}
+                                />
+                            ))}
                         </tbody>
                     </table>
 
 
 
-            {/* Mobile Card List */}
+                    {/* Mobile Card List */}
                     <div className="md:hidden">
                         {invoice_data.map((obj, index) => (
                             <CardRow

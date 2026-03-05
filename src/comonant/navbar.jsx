@@ -3,10 +3,10 @@ import logo from "../assets/bill_ninja_logo.png"
 import profle from "../assets/user.jpg"
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import {useEffect, useState} from "react";
-import {clientToken} from "@/axios";
+import { useEffect, useState } from "react";
+import { clientToken } from "@/axios";
 
-function NavDropdown({ navItems, navItemsDropdown,dropdownOpen ,setDropdownOpen}) {
+function NavDropdown({ navItems, navItemsDropdown, dropdownOpen, setDropdownOpen }) {
     const [openSub, setOpenSub] = useState(null); // id/index of open submenu
     const navigate = useNavigate();
 
@@ -119,8 +119,8 @@ function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     useEffect(() => {
         clientToken.get('yaml/list/').then((response) => {
-            if (response.status===200){
-                setTemplates(response.data.map((obj)=>({title:obj.template_name,link:`/invoice_editor?id=${obj.id}`})))
+            if (response.status === 200) {
+                setTemplates(response.data.map((obj) => ({ title: obj.template_name, link: `/invoice_editor?id=${obj.id}` })))
                 // console.log(response.data.map((obj)=>({title:obj.template_name,link:`/invoice_editor?id=${obj.id}`})))
             }
         })
@@ -132,7 +132,7 @@ function Navbar() {
 
     let navItemsDropdown = [
         { title: "Profile", link: "/profile" },
-        { title: "Invoice Preview", link: "", children:templates },
+        { title: "Invoice Preview", link: "", children: templates },
         { title: "UI Config", link: "/UIConfig", },
         { title: "logout", link: "/logout" },
     ];
@@ -145,14 +145,33 @@ function Navbar() {
     }
 
     return (
-        <div className={'pt-15'}>
-            <div className="nav">
-                {/* Logo → go to Dashboard */}
-                <div className="p-2 cursor-pointer" onClick={() => navigate("/home")}>
-                    <img src={'/favicon_io/apple-touch-icon.png'} alt="logo" className="h-full w-15" />
+        <>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+            {/* Fixed spacer so page content doesn't hide under the nav */}
+            <div style={{ height: '64px' }} />
+
+            <div className="nav" style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
+
+                {/* ── Brand logo ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => navigate("/home")}>
+                    <div style={{
+                        width: '36px', height: '36px', borderRadius: '10px',
+                        background: 'rgba(255,255,255,0.18)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        flexShrink: 0,
+                    }}>
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                            <path d="M4 5h12M4 10h8M4 15h5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                    </div>
+                    <span style={{ fontSize: '16px', fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>
+                        Invoice App
+                    </span>
                 </div>
 
-                {/* Desktop links */}
+                {/* ── Desktop links + profile ── */}
                 <div className="links">
                     <div className="items">
                         {navItems.map((obj, i) => (
@@ -162,7 +181,7 @@ function Navbar() {
                         ))}
                     </div>
 
-                    {/* Profile picture + dropdown */}
+                    {/* Profile avatar ── opens dropdown */}
                     <div className="profile-raper">
                         <div
                             className="profile-icon"
@@ -171,20 +190,18 @@ function Navbar() {
                                 backgroundSize: "cover",
                             }}
                             onClick={() => setDropdownOpen(!dropdownOpen)}
-                        ></div>
+                        />
                     </div>
 
-                    {/* Dropdown (works for both desktop & mobile) */}
                     <NavDropdown
                         navItems={navItems}
                         navItemsDropdown={navItemsDropdown}
                         dropdownOpen={dropdownOpen}
                         setDropdownOpen={setDropdownOpen}
-                    ></NavDropdown>
+                    />
                 </div>
             </div>
-        </div>
-
+        </>
     );
 }
 

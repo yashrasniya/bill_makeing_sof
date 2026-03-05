@@ -1,205 +1,220 @@
-/* NAVBAR - responsive, no overflow, profile dropdown */
+/* ═══════════════════════════════════════╗
+   NAVBAR — Indigo / Purple theme         ║
+   matches landing · login · signup pages ║
+╚═══════════════════════════════════════ */
+
+/* ── Base bar ── */
 .nav {
-    background: linear-gradient(111deg, #75FFE8 0%, #35A29F 74.64%);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    background: linear-gradient(110deg, #312e81 0%, #4f46e5 55%, #6d28d9 100%);
+    box-shadow: 0 4px 24px rgba(79, 70, 229, 0.3);
     width: 100%;
     height: 64px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 1rem;
+    padding: 0 1.25rem;
     position: fixed;
     top: 0;
     left: 0;
     z-index: 1000;
     gap: 1rem;
     box-sizing: border-box;
+    backdrop-filter: blur(12px);
 }
 
-/* logo container (use .img-css if you want) */
-.img-css, .logo {
+/* ── Logo area ── */
+.img-css,
+.logo {
     display: flex;
     align-items: center;
     cursor: pointer;
 }
-.img-css img, .logo img {
-    height: 44px;
+
+.img-css img,
+.logo img {
+    height: 40px;
     width: auto;
     display: block;
+    filter: brightness(0) invert(1);
+    /* force white on dark bg */
+    border-radius: 8px;
 }
 
-/* center / right area for links + profile */
+/* ── Right side links container ── */
 .links {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
     flex: 1;
     justify-content: flex-end;
-    min-width: 0; /* allow children to shrink */
+    min-width: 0;
 }
 
-/* container that holds the nav items (desktop) */
+/* ── Desktop nav items wrapper ── */
 .items {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem;
     margin-right: 0.5rem;
     flex-wrap: nowrap;
-    overflow-x: auto;               /* prevents overflow by scrolling horizontally */
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 2px;
     min-width: 0;
 }
 
-/* hide scrollbar visually but keep scrollable on mobile if needed */
-.items::-webkit-scrollbar { height: 6px; }
-.items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
-.items::-webkit-scrollbar-track { background: transparent; }
+.items::-webkit-scrollbar {
+    height: 4px;
+}
 
-/* single nav item style */
-.text-raper , .text-raper-dropdown{
+.items::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.items::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ── Single nav item ── */
+.text-raper,
+.text-raper-dropdown {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
+    padding: 7px 14px;
     border-radius: 10px;
     white-space: nowrap;
-    color: #023; /* subtle text color */
-    transition: background .18s ease, color .18s ease, transform .08s ease;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.1s ease;
     cursor: pointer;
+    letter-spacing: 0.01em;
 }
-.text-raper p {
-    font-size: 1rem;
-    font-weight: 700;
+
+.text-raper p,
+.text-raper-dropdown p {
+    font-size: 14px;
+    font-weight: 600;
     margin: 0;
-}
-.text-raper i{
-    font-size: 1.1rem;
+    color: inherit;
 }
 
-/* hover / active */
-.text-raper:hover {
+/* ── Hover state ── */
+.text-raper:hover,
+.text-raper-dropdown:hover {
+    background: rgba(255, 255, 255, 0.15);
     color: #fff;
-    background: rgba(255,255,255,0.12);
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-/* profile area */
+/* ── Profile ring ── */
 .profile-raper {
     position: relative;
     display: flex;
     align-items: center;
 }
 
-/* profile image */
 .profile-icon {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    margin-left: 8px;
-    margin-right: 8px;
+    margin-left: 6px;
+    margin-right: 4px;
     background-position: center;
     background-size: cover;
-    border: 2px solid rgba(255,255,255,0.6);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15), 0 0 0 3px rgba(255, 255, 255, 0.1);
     cursor: pointer;
-    flex: 0 0 48px;
+    flex: 0 0 40px;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* dropdown (rendered by React when open) */
-.profile-raper .dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    min-width: 180px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 8px 28px rgba(0,0,0,0.15);
-    border: 1px solid rgba(0,0,0,0.06);
-    overflow: hidden;
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-}
-.profile-raper .dropdown .dropdown-item {
-    padding: 10px 14px;
-    font-weight: 600;
-    color: #0b2440;
-    cursor: pointer;
-}
-.profile-raper .dropdown .dropdown-item:hover {
-    background: #f5f8fb;
+.profile-icon:hover {
+    border-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 0 0 3px rgba(255, 255, 255, 0.25);
 }
 
-/* small-screen behavior */
-@media (max-width: 900px) {
-    .items {
-        display: none;   /* hide desktop links */
-    }
-    .links {
-        justify-content: flex-end;
-    }
-    .img-css img, .logo img {
-        height: 40px;
-    }
-}
-
-/* extra small screens (stack dropdown) */
-@media (max-width: 420px) {
-    .profile-raper .dropdown {
-        right: 8px;
-        left: 8px;
-        min-width: unset;
-    }
-}
-
-/* fallback/responsive helpers for items-responsive or items-raper if you use them */
-.items-raper, .items-responsive {
-    display: block;
-}
-
+/* ── Dropdown menu ── */
 .items-raper {
-    display: flex;
-    justify-content: right;
     position: absolute;
     top: 60px;
     right: 20px;
-    z-index: 200;
-}
-/* visually distinct logout item */
-.profile-raper .dropdown .logout {
-    color: #d33;
-    font-weight: 700;
+    z-index: 2000;
+    display: flex;
+    justify-content: flex-end;
 }
 
-/* Utility: ensure nav content doesn't push page content (since nav is fixed) */
-/*body { padding-top: 64px; } !* adjust if your nav height changed *!*/
-/* Dropdown should work on both desktop & mobile */
 .items-responsive {
-    background-color: var(--primary-color-5);
-    color: var(--primary-color-4);
-    width: 180px;
+    background: white;
+    color: #0f172a;
+    width: 200px;
     text-align: left;
-    border-radius: 9px;
-    padding: 6px;
-    margin-right: 50px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 16px 48px rgba(79, 70, 229, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(79, 70, 229, 0.1);
     display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 
-/* Mobile: hide desktop menu */
-@media (max-width: 700px) {
+/* items inside the responsive dropdown */
+.items-responsive .text-raper,
+.items-responsive .text-raper-dropdown {
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 12px;
+    border-radius: 9px;
+    width: 100%;
+    display: flex;
+}
+
+.items-responsive .text-raper:hover,
+.items-responsive .text-raper-dropdown:hover {
+    background: #eef2ff;
+    color: #4f46e5;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Logout item stands out */
+.items-responsive .text-raper-dropdown:last-child p {
+    color: #dc2626;
+}
+
+.items-responsive .text-raper-dropdown:last-child:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
     .items {
         display: none;
     }
+
+    .links {
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 420px) {
     .items-raper {
-        display: flex;
-        justify-content: right;
-        position: absolute;
-        top: 60px;
-        right: 20px;
-        z-index: 200;
+        right: 8px;
+        left: 8px;
+    }
+
+    .items-responsive {
+        width: 100%;
+    }
+}
+
+@media (max-width: 700px) {
+    .items {
+        display: none;
     }
 }
