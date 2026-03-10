@@ -134,7 +134,6 @@ function Navbar() {
 
     let navItemsDropdown = [
         { title: "Profile", link: "/profile" },
-        { title: "Invoice Preview", link: "", children: templates },
         { title: "UI Config", link: "/UIConfig", },
         { title: "logout", link: "/logout" },
     ];

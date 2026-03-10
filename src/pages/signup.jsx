@@ -24,6 +24,66 @@ const blurInput = (e) => {
 };
 const errorInput = { ...baseInput, borderColor: '#fca5a5' };
 
+/* individual field renderer */
+const Field = ({ label, name, type = 'text', placeholder = '', value, errorMsg, onChange, showPass, onTogglePass }) => {
+  const hasError = errorMsg;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.02em' }}>
+        {label}
+      </label>
+      {name === 'password' ? (
+        <div style={{ position: 'relative' }}>
+          <input
+            type={showPass ? 'text' : 'password'}
+            name={name}
+            value={value || ''}
+            onChange={onChange}
+            placeholder={placeholder || label}
+            onFocus={focusInput}
+            onBlur={blurInput}
+            style={{ ...(hasError ? errorInput : baseInput), paddingRight: '42px' }}
+          />
+          <button onClick={onTogglePass} type="button" style={{
+            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px',
+          }}>
+            {showPass ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" strokeLinecap="round" />
+                <line x1="1" y1="1" x2="23" y2="23" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
+        </div>
+      ) : (
+        <input
+          type={type} name={name}
+          value={value || ''}
+          onChange={onChange}
+          placeholder={placeholder || label}
+          onFocus={focusInput}
+          onBlur={blurInput}
+          style={hasError ? errorInput : baseInput}
+        />
+      )}
+      {hasError && (
+        <span style={{ fontSize: '11px', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <svg width="11" height="11" viewBox="0 0 20 20" fill="#dc2626">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-9V7a1 1 0 10-2 0v2a1 1 0 102 0zm0 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
+          </svg>
+          {Array.isArray(hasError) ? hasError[0] : hasError}
+        </span>
+      )}
+    </div>
+  );
+};
+
 function SignUp() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -76,65 +136,6 @@ function SignUp() {
     }
   };
 
-  /* individual field renderer */
-  const Field = ({ label, name, type = 'text', placeholder = '' }) => {
-    const hasError = error[name];
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-        <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.02em' }}>
-          {label}
-        </label>
-        {name === 'password' ? (
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showPass ? 'text' : 'password'}
-              name={name}
-              value={user_details[name] || ''}
-              onChange={handelChange}
-              placeholder={placeholder || label}
-              onFocus={focusInput}
-              onBlur={blurInput}
-              style={{ ...(hasError ? errorInput : baseInput), paddingRight: '42px' }}
-            />
-            <button onClick={() => setShowPass(v => !v)} type="button" style={{
-              position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px',
-            }}>
-              {showPass ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" strokeLinecap="round" />
-                  <line x1="1" y1="1" x2="23" y2="23" strokeLinecap="round" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              )}
-            </button>
-          </div>
-        ) : (
-          <input
-            type={type} name={name}
-            value={user_details[name] || ''}
-            onChange={handelChange}
-            placeholder={placeholder || label}
-            onFocus={focusInput}
-            onBlur={blurInput}
-            style={hasError ? errorInput : baseInput}
-          />
-        )}
-        {hasError && (
-          <span style={{ fontSize: '11px', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <svg width="11" height="11" viewBox="0 0 20 20" fill="#dc2626">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-9V7a1 1 0 10-2 0v2a1 1 0 102 0zm0 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
-            </svg>
-            {Array.isArray(hasError) ? hasError[0] : hasError}
-          </span>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div style={{
@@ -264,22 +265,22 @@ function SignUp() {
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Account Details</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <Field label="First Name" name="first_name" placeholder="John" />
-              <Field label="Last Name" name="last_name" placeholder="Doe" />
+              <Field label="First Name" name="first_name" placeholder="John" value={user_details.first_name} errorMsg={error?.first_name} onChange={handelChange} />
+              <Field label="Last Name" name="last_name" placeholder="Doe" value={user_details.last_name} errorMsg={error?.last_name} onChange={handelChange} />
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-            <Field label="Username" name="username" placeholder="johndoe" />
-            <Field label="Mobile Number" name="mobile_number" type="tel" placeholder="9876543210" />
+            <Field label="Username" name="username" placeholder="johndoe" value={user_details.username} errorMsg={error?.username} onChange={handelChange} />
+            <Field label="Mobile Number" name="mobile_number" type="tel" placeholder="9876543210" value={user_details.mobile_number} errorMsg={error?.mobile_number} onChange={handelChange} />
           </div>
 
           <div style={{ marginBottom: '14px' }}>
-            <Field label="Email Address" name="email" type="email" placeholder="john@example.com" />
+            <Field label="Email Address" name="email" type="email" placeholder="john@example.com" value={user_details.email} errorMsg={error?.email} onChange={handelChange} />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <Field label="Password" name="password" type="password" placeholder="Min. 8 characters" />
+            <Field label="Password" name="password" type="password" placeholder="Min. 8 characters" value={user_details.password} errorMsg={error?.password} onChange={handelChange} showPass={showPass} onTogglePass={() => setShowPass(!showPass)} />
           </div>
 
           {/* Terms note */}

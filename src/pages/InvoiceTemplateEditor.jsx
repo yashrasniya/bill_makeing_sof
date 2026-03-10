@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Text, Rect, Group, Line, Image as KonvaImage } from 'react-konva';
-import { Trash2, Bold, Type, Save, Move, Square, Minus, Copy, Plus, DownloadCloud, Eye } from 'lucide-react';
+import { Trash2, Bold, Type, Save, Move, Square, Minus, Copy, Plus, DownloadCloud, Eye, Lock, Unlock, Code } from 'lucide-react';
 import { clientToken } from "@/axios";
 import useImage from "use-image";
 import { useLocation } from "react-router-dom";
@@ -33,17 +33,31 @@ const InvoiceTemplateEditor = () => {
     const [stageScale, setStageScale] = useState(1);
     const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
     const stageRef = useRef();
-    const [Limited_access, setLimited_access] = useState(!userInfo?.is_staff);
+    
+    // Admins can edit if they are staff (superadmin) OR if they are an admin of a verified company
+    const canEdit = userInfo?.is_staff || (userInfo?.is_company_admin && userInfo?.is_company_varified);
+    const [Limited_access, setLimited_access] = useState(!canEdit);
+    
     const [saving, setSaving] = useState(false);
     const [exportInvoiceId, setExportInvoiceId] = useState('');
     const [exporting, setExporting] = useState(false);
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+    const [selectedVersionId, setSelectedVersionId] = useState('');
+    const [shapesLocked, setShapesLocked] = useState(true);
+    const [isJsonEditMode, setIsJsonEditMode] = useState(false);
+    const [jsonContent, setJsonContent] = useState('');
 
     useEffect(() => {
-        clientToken.get(`yaml/${id ? '?id=' + id : ''}`).then((r) => {
+        let qs = `yaml/${id ? '?id=' + id : '?'}`;
+        if (selectedVersionId) qs += `&version_id=${selectedVersionId}`;
+        clientToken.get(qs).then((r) => {
             setConfig(r.data);
         }).catch(e => alert(e.response?.data?.detail || "Failed to load template"));
-    }, [id]);
+    }, [id, selectedVersionId]);
+
+    useEffect(() => {
+        setIsJsonEditMode(false);
+    }, [selectedElementId]);
 
     useEffect(() => {
         if (/Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent)) {
@@ -221,6 +235,9 @@ const InvoiceTemplateEditor = () => {
         const payload = JSON.parse(JSON.stringify(config));
         return clientToken.put(`yaml/`, payload).then((r) => {
             if (r.status === 200) {
+                if (r.data?.versions_list) {
+                    setConfig(prev => ({ ...prev, versions_list: r.data.versions_list }));
+                }
                 alert("Template Saved Successfully ✅");
                 return true;
             }
@@ -297,7 +314,12 @@ const InvoiceTemplateEditor = () => {
                 ? shape.default_value
                 : getDummyValue(shape.label || shape.key);
 
+        const isShape = shape.type === "rectangles" || shape.type === "line";
+        const isLocked = isShape && shapesLocked;
+
         const handleInteraction = (e) => {
+            if (isLocked) return;
+
             const node = e.target;
             const now = Date.now();
             const lastClick = node.lastClickTime || 0;
@@ -317,7 +339,7 @@ const InvoiceTemplateEditor = () => {
         };
 
         const commonProps = {
-            draggable: !Limited_access,
+            draggable: !Limited_access && !isLocked,
             onClick: handleInteraction,
             onTap: handleInteraction,
         };
@@ -410,7 +432,7 @@ const InvoiceTemplateEditor = () => {
                 y={shape.canvasY - fontSize}
                 text={finalDisplay}
                 fontSize={fontSize}
-                fontFamily={'Times New Roman'}
+                fontFamily={shape.font_family || 'Times New Roman'}
                 lineHeight={konvaLineHeight}
                 fontStyle={shape.font === 'bold' ? 'bold' : 'normal'}
                 fill={color}
@@ -444,15 +466,69 @@ const InvoiceTemplateEditor = () => {
             }}>
                 {/* Header */}
                 <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                    <h2 style={{
-                        fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.5px',
-                        background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
-                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text', margin: 0,
-                    }}>Invoice Editor</h2>
+                    {!Limited_access ? (
+                        <input
+                            type="text"
+                            value={config.template_name || 'Untitled Template'}
+                            onChange={(e) => setConfig({ ...config, template_name: e.target.value })}
+                            style={{
+                                fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.5px',
+                                background: 'transparent',
+                                border: '1px dashed transparent',
+                                borderBottom: '1px dashed #cbd5e1',
+                                borderRadius: '6px 6px 0 0',
+                                outline: 'none',
+                                color: '#4f46e5',
+                                width: '100%',
+                                padding: '4px 6px',
+                                margin: '0 -6px',
+                                transition: 'all 0.2s',
+                                boxSizing: 'border-box',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                fontFamily: 'inherit',
+                            }}
+                            onFocus={(e) => { e.target.style.borderColor = '#4f46e5'; e.target.style.background = '#f8fafc'; }}
+                            onBlur={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.borderBottomColor = '#cbd5e1'; e.target.style.background = 'transparent'; }}
+                            title="Edit Template Name"
+                        />
+                    ) : (
+                        <h2 style={{
+                            fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.5px',
+                            background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text', margin: 0,
+                        }}>{config.template_name || 'Invoice Editor'}</h2>
+                    )}
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', fontWeight: 500 }}>
                         Select and configure layout elements
                     </p>
+
+                    {config?.versions_list && config.versions_list.length > 0 && !Limited_access && (
+                        <div style={{ marginTop: '16px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Version History</label>
+                            <select 
+                                value={selectedVersionId} 
+                                onChange={(e) => {
+                                    if(window.confirm("Loading a previous version will replace your current unsaved edits. Continue?")) {
+                                        setSelectedVersionId(e.target.value);
+                                    }
+                                }} 
+                                style={{ 
+                                    width: '100%', padding: '8px', marginTop: '6px', 
+                                    borderRadius: '6px', border: '1px solid #cbd5e1', 
+                                    fontSize: '13px', backgroundColor: '#f8fafc',
+                                    outline: 'none', cursor: 'pointer', fontFamily: 'inherit'
+                                }}
+                            >
+                                <option value="">Latest / Current Version</option>
+                                {config.versions_list.map(v => (
+                                    <option key={v.id} value={v.id}>Version from {v.created_at}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
 
                 {/* Add Element Section */}
@@ -510,6 +586,22 @@ const InvoiceTemplateEditor = () => {
                                 </h3>
                                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
                                     <button
+                                        onClick={() => {
+                                            if (!isJsonEditMode) {
+                                                const elMeta = allElements.find(el => el.id === activeEl.id);
+                                                const sourceData = elMeta.section === 'product'
+                                                    ? config.Bill.product.product_list[elMeta.index][elMeta.key]
+                                                    : config.Bill[elMeta.section][elMeta.index][elMeta.key];
+                                                setJsonContent(JSON.stringify(sourceData, null, 2));
+                                            }
+                                            setIsJsonEditMode(!isJsonEditMode);
+                                        }}
+                                        style={{ padding: '6px', background: isJsonEditMode ? '#4f46e5' : '#f1f5f9', color: isJsonEditMode ? 'white' : '#64748b', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                        title="Show Raw JSON"
+                                    >
+                                        <Code size={14} />
+                                    </button>
+                                    <button
                                         onClick={() => duplicateElement(activeEl.id)}
                                         style={{ padding: '6px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
                                         title="Duplicate Element"
@@ -525,97 +617,172 @@ const InvoiceTemplateEditor = () => {
                                     </button>
                                 </div>
                             </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {/* Shared X, Y Inputs */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X Pos</label>
-                                        <input type="number" value={Math.round(activeEl.x)} onChange={(e) => updateElement(activeEl.id, { x: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y Pos (Canvas)</label>
-                                        <input type="number" value={Math.round(activeEl.canvasY)} onChange={(e) => updateElement(activeEl.id, { canvasY: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                            {isJsonEditMode ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Edit Raw JSON Data</label>
+                                    <textarea
+                                        value={jsonContent}
+                                        onChange={(e) => setJsonContent(e.target.value)}
+                                        style={{ 
+                                            ...inputStyle, 
+                                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace", 
+                                            fontSize: '11px', 
+                                            minHeight: '260px', 
+                                            whiteSpace: 'pre',
+                                            padding: '12px',
+                                            lineHeight: '1.5',
+                                            backgroundColor: '#1e293b',
+                                            color: '#f8fafc',
+                                            borderColor: '#334155'
+                                        }}
+                                        spellCheck="false"
+                                        onFocus={focIn}
+                                        onBlur={focOut}
+                                    />
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                        <button 
+                                            onClick={() => setIsJsonEditMode(false)}
+                                            style={{ flex: 1, padding: '10px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+                                        >
+                                            Discard
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                try {
+                                                    const updates = JSON.parse(jsonContent);
+                                                    updateElement(activeEl.id, updates);
+                                                    setIsJsonEditMode(false);
+                                                } catch (e) {
+                                                    alert("Invalid JSON format! Check your syntax.");
+                                                }
+                                            }}
+                                            style={{ flex: 1, padding: '10px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(79,70,229,0.2)' }}
+                                        >
+                                            Apply Changes
+                                        </button>
                                     </div>
                                 </div>
-
-                                {/* Text Options */}
-                                {(!activeEl.type || activeEl.type === 'text') && (
-                                    <>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {/* Shared X, Y Inputs */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Text Content</label>
-                                            <textarea
-                                                value={activeEl.value || ''}
-                                                placeholder={getDummyValue(activeEl.label || activeEl.key)}
-                                                onChange={(e) => updateElement(activeEl.id, { value: e.target.value })}
-                                                style={{ ...inputStyle, resize: 'vertical', minHeight: '60px' }}
-                                                onFocus={focIn}
-                                                onBlur={focOut}
-                                            />
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X Pos</label>
+                                            <input type="number" value={Math.round(activeEl.x)} onChange={(e) => updateElement(activeEl.id, { x: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
                                         </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y Pos (Canvas)</label>
+                                            <input type="number" value={Math.round(activeEl.canvasY)} onChange={(e) => updateElement(activeEl.id, { canvasY: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                        </div>
+                                    </div>
 
-                                        {/* Multiline / Wrap Settings */}
-                                        <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Multi-line & Wrap Rules</div>
+                                    {/* Text Options */}
+                                    {(!activeEl.type || activeEl.type === 'text') && (
+                                        <>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Text Content</label>
+                                                <textarea
+                                                    value={activeEl.value || ''}
+                                                    placeholder={getDummyValue(activeEl.label || activeEl.key)}
+                                                    onChange={(e) => updateElement(activeEl.id, { value: e.target.value })}
+                                                    style={{ ...inputStyle, resize: 'vertical', minHeight: '60px' }}
+                                                    onFocus={focIn}
+                                                    onBlur={focOut}
+                                                />
+                                            </div>
+
+                                            {/* Multiline / Wrap Settings */}
+                                            <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                <div style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Multi-line & Wrap Rules</div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Char Limit / Line</label>
+                                                        <input type="number" value={activeEl.limit || ''} placeholder="e.g. 55" onChange={(e) => updateElement(activeEl.id, { limit: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Max Lines</label>
+                                                        <input type="number" value={activeEl.no_lines || ''} placeholder="e.g. 2" onChange={(e) => updateElement(activeEl.id, { no_lines: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Distance down to next line">Line Gap (Y)</label>
+                                                        <input type="number" value={activeEl.next_line?.gap || ''} placeholder="e.g. 12" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), gap: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="X offset for text on next line">Next X</label>
+                                                        <input type="number" value={activeEl.next_line?.x || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), x: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Font size for wrapped lines">Next Font Pt</label>
+                                                        <input type="number" value={activeEl.next_line?.font_size || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), font_size: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Char Limit / Line</label>
-                                                    <input type="number" value={activeEl.limit || ''} placeholder="e.g. 55" onChange={(e) => updateElement(activeEl.id, { limit: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Prefix</label>
+                                                    <input type="text" value={activeEl.prefix || ''} onChange={(e) => updateElement(activeEl.id, { prefix: e.target.value })} placeholder="e.g. Total: " style={inputStyle} onFocus={focIn} onBlur={focOut} />
                                                 </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Max Lines</label>
-                                                    <input type="number" value={activeEl.no_lines || ''} placeholder="e.g. 2" onChange={(e) => updateElement(activeEl.id, { no_lines: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Distance down to next line">Line Gap (Y)</label>
-                                                    <input type="number" value={activeEl.next_line?.gap || ''} placeholder="e.g. 12" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), gap: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="X offset for text on next line">Next X</label>
-                                                    <input type="number" value={activeEl.next_line?.x || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), x: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Font size for wrapped lines">Next Font Pt</label>
-                                                    <input type="number" value={activeEl.next_line?.font_size || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), font_size: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Suffix</label>
+                                                    <input type="text" value={activeEl.suffix || ''} onChange={(e) => updateElement(activeEl.id, { suffix: e.target.value })} placeholder="e.g. USD" style={inputStyle} onFocus={focIn} onBlur={focOut} />
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Prefix</label>
-                                                <input type="text" value={activeEl.prefix || ''} onChange={(e) => updateElement(activeEl.id, { prefix: e.target.value })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Font Size</label>
+                                                    <input type="number" value={activeEl.font_size || 12} onChange={(e) => updateElement(activeEl.id, { font_size: parseInt(e.target.value) || 1 })} style={inputStyle} onFocus={focIn} onBlur={focOut} min="8" max="72" />
+                                                </div>
+                                                <button
+                                                    onClick={() => updateElement(activeEl.id, { font: activeEl.font === 'bold' ? 'normal' : 'bold' })}
+                                                    style={{ height: '37.5px', padding: '0 12px', borderRadius: '8px', border: `1.5px solid ${activeEl.font === 'bold' ? '#4f46e5' : '#cbd5e1'}`, background: activeEl.font === 'bold' ? '#4f46e5' : 'white', color: activeEl.font === 'bold' ? 'white' : '#475569', cursor: 'pointer' }}
+                                                >
+                                                    <Bold size={16} />
+                                                </button>
                                             </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Suffix</label>
-                                                <input type="text" value={activeEl.suffix || ''} onChange={(e) => updateElement(activeEl.id, { suffix: e.target.value })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Font Size</label>
-                                                <input type="number" value={activeEl.font_size || 12} onChange={(e) => updateElement(activeEl.id, { font_size: parseInt(e.target.value) || 1 })} style={inputStyle} onFocus={focIn} onBlur={focOut} min="8" max="72" />
-                                            </div>
-                                            <button
-                                                onClick={() => updateElement(activeEl.id, { font: activeEl.font === 'bold' ? 'normal' : 'bold' })}
-                                                style={{ height: '37.5px', padding: '0 12px', borderRadius: '8px', border: `1.5px solid ${activeEl.font === 'bold' ? '#4f46e5' : '#cbd5e1'}`, background: activeEl.font === 'bold' ? '#4f46e5' : 'white', color: activeEl.font === 'bold' ? 'white' : '#475569', cursor: 'pointer' }}
-                                            ><Bold size={16} /></button>
-                                        </div>
-                                    </>
-                                )}
+                                        </>
+                                    )}
 
                                 {/* Rectangle Options */}
                                 {activeEl.type === 'rectangles' && (
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Width</label>
-                                            <input type="number" value={Math.round(activeEl.width || 0)} onChange={(e) => updateElement(activeEl.id, { width: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                            <input 
+                                                type="number" 
+                                                value={Math.round(activeEl.width || 0)} 
+                                                onChange={(e) => {
+                                                    const newWidth = parseInt(e.target.value) || 0;
+                                                    if (activeEl.rectangles_type === 'image' && activeEl.src) {
+                                                        const img = new window.Image();
+                                                        img.src = activeEl.src;
+                                                        img.onload = () => {
+                                                            const ratio = img.height / img.width;
+                                                            updateElement(activeEl.id, { width: newWidth, height: newWidth * ratio });
+                                                        };
+                                                    } else {
+                                                        updateElement(activeEl.id, { width: newWidth });
+                                                    }
+                                                }} 
+                                                style={inputStyle} onFocus={focIn} onBlur={focOut} 
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Height</label>
-                                            <input type="number" value={Math.round(activeEl.height || 0)} onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                                                Height {activeEl.rectangles_type === 'image' ? '(Auto)' : ''}
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                value={Math.round(activeEl.height || 0)} 
+                                                onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })} 
+                                                style={{...inputStyle, background: activeEl.rectangles_type === 'image' ? '#f1f5f9' : 'white', cursor: activeEl.rectangles_type === 'image' ? 'not-allowed' : 'text'}} 
+                                                onFocus={focIn} onBlur={focOut} 
+                                                disabled={activeEl.rectangles_type === 'image'}
+                                                title={activeEl.rectangles_type === 'image' ? "Height is automatically calculated to preserve aspect ratio" : ""}
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -633,7 +800,8 @@ const InvoiceTemplateEditor = () => {
                                         </div>
                                     </div>
                                 )}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div style={{ padding: '40px 0', textAlign: 'center', color: '#94a3b8' }}>
@@ -745,6 +913,22 @@ const InvoiceTemplateEditor = () => {
                             {Limited_access ? " (View Only)" : ""}
                         </p>
                     </div>
+                    
+                    {!Limited_access && (
+                        <button
+                            onClick={() => setShapesLocked(!shapesLocked)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                                background: shapesLocked ? '#f1f5f9' : 'white', cursor: 'pointer',
+                                fontSize: '13px', fontWeight: 600, color: shapesLocked ? '#64748b' : '#4f46e5',
+                                transition: 'all 0.2s', display: 'flex'
+                            }}
+                        >
+                            {shapesLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                            {shapesLocked ? "Shapes Locked" : "Shapes Unlocked"}
+                        </button>
+                    )}
                 </div>
 
                 <div style={{
@@ -775,8 +959,9 @@ const InvoiceTemplateEditor = () => {
                                 />
                                 <ReaderBackground pdf_template={config.pdf_template} />
 
-                                {/* Render all elements! */}
-                                {allElements.map(el => <RenderNode key={el.id} shape={el} />)}
+                                {/* Render all elements! Shapes first, then Text so Text is above Shapes */}
+                                {allElements.filter(el => el.type === 'rectangles' || el.type === 'line').map(el => <RenderNode key={el.id} shape={el} />)}
+                                {allElements.filter(el => el.type !== 'rectangles' && el.type !== 'line').map(el => <RenderNode key={el.id} shape={el} />)}
 
                                 {/* Custom Outline around explicit text selections */}
                                 {activeEl && (!activeEl.type || activeEl.type === 'text') && (
