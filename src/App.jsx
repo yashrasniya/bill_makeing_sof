@@ -66,7 +66,7 @@ function App() {
                 }
             }
         } else if (status === 'failed') {
-            if (location.pathname !== '/' && location.pathname !== '/SignUp' && location.pathname !== '/login') {
+            if (location.pathname !== '/' && location.pathname !== '/SignUp' && location.pathname !== '/login' && location.pathname !== '/privacy') {
                 navigate('/', { replace: true });
             }
         }
