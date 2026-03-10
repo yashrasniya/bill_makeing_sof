@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Text, Rect, Group, Line, Image as KonvaImage } from 'react-konva';
-import { Trash2, Bold, Type, Save, Move, Square, Minus, Copy, Plus } from 'lucide-react';
+import { Trash2, Bold, Type, Save, Move, Square, Minus, Copy, Plus, DownloadCloud, Eye } from 'lucide-react';
 import { clientToken } from "@/axios";
 import useImage from "use-image";
 import { useLocation } from "react-router-dom";
@@ -35,6 +35,9 @@ const InvoiceTemplateEditor = () => {
     const stageRef = useRef();
     const [Limited_access, setLimited_access] = useState(!userInfo?.is_staff);
     const [saving, setSaving] = useState(false);
+    const [exportInvoiceId, setExportInvoiceId] = useState('');
+    const [exporting, setExporting] = useState(false);
+    const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
 
     useEffect(() => {
         clientToken.get(`yaml/${id ? '?id=' + id : ''}`).then((r) => {
@@ -216,11 +219,50 @@ const InvoiceTemplateEditor = () => {
     const handleSave = () => {
         setSaving(true);
         const payload = JSON.parse(JSON.stringify(config));
-        clientToken.put(`yaml/`, payload).then((r) => {
-            if (r.status === 200) alert("Template Saved Successfully ✅");
+        return clientToken.put(`yaml/`, payload).then((r) => {
+            if (r.status === 200) {
+                alert("Template Saved Successfully ✅");
+                return true;
+            }
         }).catch(e => {
             alert("Failed to save: " + (e.response?.data?.error || "Unknown error"));
+            return false;
         }).finally(() => setSaving(false));
+    };
+
+    const handleExport = async () => {
+        if (!exportInvoiceId.trim()) {
+            alert("Please enter a valid Invoice ID to use as sample data for the PDF.");
+            return;
+        }
+
+        // Auto-save the template first
+        setExporting(true);
+        try {
+            const payload = JSON.parse(JSON.stringify(config));
+            await clientToken.put(`yaml/`, payload);
+        } catch (e) {
+            alert("Failed to auto-save template before exporting.");
+            setExporting(false);
+            return;
+        }
+
+        clientToken.get(`/pdf/?id=${exportInvoiceId.trim()}&template_id=${id}`, { responseType: 'blob' })
+            .then((r) => {
+                const url = window.URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }));
+                setPdfPreviewUrl(url);
+            })
+            .catch(e => {
+                alert("Failed to export PDF! Please make sure the Invoice ID is correct and belongs to you.");
+            })
+            .finally(() => setExporting(false));
+    };
+
+    const closePdfPreview = () => {
+        if (pdfPreviewUrl) {
+            window.URL.revokeObjectURL(pdfPreviewUrl);
+            setPdfPreviewUrl(null);
+        }
     };
 
     const getDummyValue = (label) => {
@@ -327,8 +369,38 @@ const InvoiceTemplateEditor = () => {
         }
 
         const displayText = `${shape.prefix || ''}${displayValue}${shape.suffix || ''}`;
-        const finalDisplay = displayText === '' ? 'X' : displayText;
+
+        // Basic naive line-wrapping simulation for canvas preview if 'limit' or 'no_lines' is provided
+        let finalDisplay = displayText === '' ? 'X' : displayText;
+        if ((shape.limit && finalDisplay.length > shape.limit) || finalDisplay.includes('\n')) {
+            const lines = [];
+            const rawLines = finalDisplay.split('\n');
+            let maxLines = shape.no_lines || rawLines.length;
+
+            if (shape.limit) {
+                // simple wrapping simulation
+                let currentLineCount = 0;
+                for (const raw of rawLines) {
+                    let textLeft = raw;
+                    while (textLeft.length > 0 && currentLineCount < maxLines) {
+                        lines.push(textLeft.substring(0, shape.limit));
+                        textLeft = textLeft.substring(shape.limit);
+                        currentLineCount++;
+                    }
+                }
+                finalDisplay = lines.join('\n');
+            }
+        }
+
         const fontSize = shape.font_size || 12;
+
+        // Calculate Konva lineHeight based on next_line.gap if provided
+        // next_line.gap usually represents absolute pixel distance to next line
+        // Konva lineHeight is a multiplier (e.g., 1.5 * fontSize)
+        let konvaLineHeight = 1;
+        if (shape.next_line && shape.next_line.gap) {
+            konvaLineHeight = shape.next_line.gap / fontSize;
+        }
 
         return (
             <Text
@@ -338,6 +410,8 @@ const InvoiceTemplateEditor = () => {
                 y={shape.canvasY - fontSize}
                 text={finalDisplay}
                 fontSize={fontSize}
+                fontFamily={'Times New Roman'}
+                lineHeight={konvaLineHeight}
                 fontStyle={shape.font === 'bold' ? 'bold' : 'normal'}
                 fill={color}
                 onDragEnd={(e) => {
@@ -470,8 +544,45 @@ const InvoiceTemplateEditor = () => {
                                     <>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                             <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Text Content</label>
-                                            <input type="text" value={activeEl.value || ''} placeholder={getDummyValue(activeEl.label || activeEl.key)} onChange={(e) => updateElement(activeEl.id, { value: e.target.value })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                            <textarea
+                                                value={activeEl.value || ''}
+                                                placeholder={getDummyValue(activeEl.label || activeEl.key)}
+                                                onChange={(e) => updateElement(activeEl.id, { value: e.target.value })}
+                                                style={{ ...inputStyle, resize: 'vertical', minHeight: '60px' }}
+                                                onFocus={focIn}
+                                                onBlur={focOut}
+                                            />
                                         </div>
+
+                                        {/* Multiline / Wrap Settings */}
+                                        <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Multi-line & Wrap Rules</div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Char Limit / Line</label>
+                                                    <input type="number" value={activeEl.limit || ''} placeholder="e.g. 55" onChange={(e) => updateElement(activeEl.id, { limit: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Max Lines</label>
+                                                    <input type="number" value={activeEl.no_lines || ''} placeholder="e.g. 2" onChange={(e) => updateElement(activeEl.id, { no_lines: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Distance down to next line">Line Gap (Y)</label>
+                                                    <input type="number" value={activeEl.next_line?.gap || ''} placeholder="e.g. 12" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), gap: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="X offset for text on next line">Next X</label>
+                                                    <input type="number" value={activeEl.next_line?.x || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), x: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Font size for wrapped lines">Next Font Pt</label>
+                                                    <input type="number" value={activeEl.next_line?.font_size || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), font_size: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                 <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Prefix</label>
@@ -579,8 +690,34 @@ const InvoiceTemplateEditor = () => {
                     </div>
                 </div>
 
-                {/* Save Block */}
-                <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: 'white' }}>
+                {/* Save & Export Block */}
+                <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: 'white', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                    {/* Export PDF Sub-section */}
+                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Preview & Export PDF</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <input
+                                type="text"
+                                placeholder="Invoice ID (e.g. 1)"
+                                value={exportInvoiceId}
+                                onChange={e => setExportInvoiceId(e.target.value)}
+                                style={{ ...inputStyle, flex: 1, padding: '8px 10px', fontSize: '12px' }}
+                            />
+                            <button
+                                onClick={handleExport} disabled={exporting}
+                                style={{
+                                    padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: 'white', whiteSpace: 'nowrap',
+                                    background: exporting ? '#94a3b8' : '#0ea5e9', borderRadius: '8px', border: 'none',
+                                    cursor: exporting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                                }}
+                            >
+                                <Eye size={14} />
+                                {exporting ? "Previewing..." : "Preview"}
+                            </button>
+                        </div>
+                    </div>
+
                     <button
                         onClick={handleSave} disabled={saving}
                         style={{
@@ -663,6 +800,64 @@ const InvoiceTemplateEditor = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal for PDF Preview */}
+            {pdfPreviewUrl && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.75)', zIndex: 9999,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', padding: '24px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white', borderRadius: '16px',
+                        width: '100%', maxWidth: '1000px', height: '100%',
+                        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                    }}>
+                        <div style={{
+                            padding: '16px 24px', borderBottom: '1px solid #e2e8f0',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            backgroundColor: '#f8fafc'
+                        }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>Invoice PDF Preview</h2>
+                                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>Previewing template with invoice data #{exportInvoiceId}</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <a
+                                    href={pdfPreviewUrl}
+                                    download={`template_preview_${id}.pdf`}
+                                    style={{
+                                        padding: '8px 16px', backgroundColor: '#eef2ff', color: '#4f46e5',
+                                        border: '1px solid #c7d2fe', borderRadius: '8px', cursor: 'pointer',
+                                        fontSize: '13px', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px'
+                                    }}
+                                >
+                                    <DownloadCloud size={16} /> Download
+                                </a>
+                                <button
+                                    onClick={closePdfPreview}
+                                    style={{
+                                        padding: '8px 16px', backgroundColor: '#f1f5f9', color: '#475569',
+                                        border: 'none', borderRadius: '8px', cursor: 'pointer',
+                                        fontSize: '13px', fontWeight: 600
+                                    }}
+                                >
+                                    Close Preview
+                                </button>
+                            </div>
+                        </div>
+                        <div style={{ flex: 1, backgroundColor: '#cbd5e1' }}>
+                            <iframe
+                                src={pdfPreviewUrl}
+                                title="PDF Preview"
+                                style={{ width: '100%', height: '100%', border: 'none' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
