@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Text, Rect, Group, Line, Image as KonvaImage } from 'react-konva';
-import { Trash2, Bold, Type, Save, Move, Square, Minus } from 'lucide-react';
+import { Trash2, Bold, Type, Save, Move, Square, Minus, Copy, Plus } from 'lucide-react';
 import { clientToken } from "@/axios";
 import useImage from "use-image";
 import { useLocation } from "react-router-dom";
@@ -125,6 +125,81 @@ const InvoiceTemplateEditor = () => {
         setConfig(newConfig);
         setSelectedElementId(null); // Deselect if deleted
     };
+
+    const duplicateElement = (elementId) => {
+        if (!elementId) return;
+        const newConfig = JSON.parse(JSON.stringify(config));
+        const elMeta = allElements.find(el => el.id === elementId);
+        if (!elMeta) return;
+
+        const duplicatedProps = {};
+        if (elMeta.section === 'product') {
+            const productItem = newConfig.Bill.product.product_list[elMeta.index];
+            const originalObj = productItem[elMeta.key];
+            const newKey = `${elMeta.key}_copy_${Date.now()}`;
+
+            productItem[newKey] = {
+                ...originalObj,
+                x: (originalObj.x || 0) + 10,
+                y: (originalObj.y || 842) - 10,
+            };
+            setSelectedElementId(`product_${newKey}_${elMeta.index}`);
+        } else {
+            const sectionItem = newConfig.Bill[elMeta.section][elMeta.index];
+            const originalObj = sectionItem[elMeta.key];
+            const newKey = `${elMeta.key}_copy_${Date.now()}`;
+
+            sectionItem[newKey] = {
+                ...originalObj,
+                x: (originalObj.x || 0) + 10,
+                y: (originalObj.y || 842) - 10,
+            };
+            setSelectedElementId(`${elMeta.section}_${newKey}_${elMeta.index}`);
+        }
+
+        setConfig(newConfig);
+    };
+
+    const addNewElement = (section, type) => {
+        const newConfig = JSON.parse(JSON.stringify(config));
+        const newKey = `new_${type}_${Date.now()}`;
+
+        const defaultObject = {
+            type: type,
+            x: 50,
+            y: 750, // High up on canvas (bottom-anchored)
+            value: type === 'text' ? 'New Text' : undefined,
+            width: type === 'rectangles' ? 100 : undefined,
+            height: type === 'rectangles' ? 50 : undefined,
+            x2: type === 'line' ? 150 : undefined,
+            y2: type === 'line' ? 750 : undefined,
+            font_size: type === 'text' ? 12 : undefined,
+        };
+
+        if (section === 'product') {
+            if (!newConfig.Bill.product.product_list.length) {
+                newConfig.Bill.product.product_list.push({});
+            }
+            newConfig.Bill.product.product_list[0][newKey] = defaultObject;
+            setSelectedElementId(`product_${newKey}_0`);
+        } else {
+            if (!newConfig.Bill[section]) {
+                newConfig.Bill[section] = [{}];
+            }
+            if (!newConfig.Bill[section].length) {
+                newConfig.Bill[section].push({});
+            }
+            newConfig.Bill[section][0][newKey] = defaultObject;
+            setSelectedElementId(`${section}_${newKey}_0`);
+        }
+
+        setConfig(newConfig);
+        setIsAddMode(false);
+    };
+
+    const [isAddMode, setIsAddMode] = useState(false);
+    const [addSection, setAddSection] = useState('bill_stretcher');
+    const [addElementType, setAddElementType] = useState('text');
 
     const handleWheel = (e) => {
         e.evt.preventDefault();
@@ -306,6 +381,46 @@ const InvoiceTemplateEditor = () => {
                     </p>
                 </div>
 
+                {/* Add Element Section */}
+                {!Limited_access && (
+                    <div style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                        {!isAddMode ? (
+                            <button
+                                onClick={() => setIsAddMode(true)}
+                                style={{ width: '100%', padding: '10px', background: '#eef2ff', color: '#4f46e5', border: '1px dashed #a5b4fc', borderRadius: '10px', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+                            >
+                                <Plus size={16} /> Add New Block
+                            </button>
+                        ) : (
+                            <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Section Group</label>
+                                    <select value={addSection} onChange={e => setAddSection(e.target.value)} style={{ ...inputStyle, padding: '6px 10px' }}>
+                                        <option value="bill_stretcher">Bill Header (bill_stretcher)</option>
+                                        <option value="my_company_details">Company Details</option>
+                                        <option value="harder">Header Info (harder)</option>
+                                        <option value="product_stretcher">Product Table Header</option>
+                                        <option value="product">Product List Item</option>
+                                        <option value="footer">Footer</option>
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Element Type</label>
+                                    <select value={addElementType} onChange={e => setAddElementType(e.target.value)} style={{ ...inputStyle, padding: '6px 10px' }}>
+                                        <option value="text">Text Box</option>
+                                        <option value="rectangles">Rectangle/Square</option>
+                                        <option value="line">Line</option>
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={() => setIsAddMode(false)} style={{ flex: 1, padding: '8px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+                                    <button onClick={() => addNewElement(addSection, addElementType)} style={{ flex: 1, padding: '8px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>Create</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px' }}>
                     {/* Active Element Properties */}
                     {activeEl ? (
@@ -319,13 +434,22 @@ const InvoiceTemplateEditor = () => {
                                 <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     {activeEl.type === 'rectangles' ? 'Edit Rectangle' : activeEl.type === 'line' ? 'Edit Line' : 'Edit Text'}
                                 </h3>
-                                <button
-                                    onClick={() => deleteElement(activeEl.id)}
-                                    style={{ marginLeft: 'auto', padding: '6px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                                    title="Delete Element"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
+                                <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+                                    <button
+                                        onClick={() => duplicateElement(activeEl.id)}
+                                        style={{ padding: '6px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                        title="Duplicate Element"
+                                    >
+                                        <Copy size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => deleteElement(activeEl.id)}
+                                        style={{ padding: '6px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                        title="Delete Element"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -434,9 +558,14 @@ const InvoiceTemplateEditor = () => {
                                         : el.type === 'line' ? <Minus size={16} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />
                                             : <Type size={16} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />}
 
-                                    <div style={{ overflow: 'hidden' }}>
-                                        <div style={{ fontSize: '12.5px', fontWeight: 600, color: activeEl?.id === el.id ? '#4f46e5' : '#334155' }}>
-                                            {el.label || el.key || 'Unnamed'}
+                                    <div style={{ overflow: 'hidden', flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                            <div style={{ fontSize: '12.5px', fontWeight: 600, color: activeEl?.id === el.id ? '#4f46e5' : '#334155', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                                {el.label || el.key || 'Unnamed'}
+                                            </div>
+                                            <div style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#64748b' }}>
+                                                {el.section}
+                                            </div>
                                         </div>
                                         {(!el.type || el.type === 'text') && (
                                             <div style={{ fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
