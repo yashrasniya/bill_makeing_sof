@@ -73,7 +73,12 @@ function NewBillBody({ id }) {
             if (response.status === 200) {
                 setBill_body_items(response.data)
                 let d = []
-                response.data.map((item) => { d.push({ new_product_in_frontend: item, value: '' }) })
+                response.data.map((item) => { 
+                    d.push({ 
+                        new_product_in_frontend: item, 
+                        value: item.default_value || '' 
+                    }) 
+                })
                 setNewDataFormat({ product_properties: d })
                 setNewProduct({ ...new_product, product_properties: JSON.parse(JSON.stringify(d)) })
             }
@@ -506,7 +511,28 @@ function NewBillBody({ id }) {
                                     <div className={'form_box'} id={obj.input_title} key={obj.id}
                                         style={{ flexBasis: `${+obj.size * 10}%` }}>
                                         {obj.input_title}
-                                        <input id={obj.id} onChange={handelInput} value={value} />
+                                        {obj.presets ? (
+                                            <select 
+                                                id={obj.id} 
+                                                onChange={handelInput} 
+                                                value={value}
+                                                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                            >
+                                                <option value="">-- Select {obj.input_title} --</option>
+                                                {obj.presets.split(',').map(preset => (
+                                                    <option key={preset.trim()} value={preset.trim()}>
+                                                        {preset.trim()}
+                                                    </option>
+                                                ))}
+                                                <option value="CUSTOM">-- Custom Value --</option>
+                                            </select>
+                                        ) : (
+                                            <input id={obj.id} onChange={handelInput} value={value} />
+                                        )}
+                                        {/* If user selects CUSTOM or if no presets, allow manual entry? 
+                                            Actually, let's keep it simple: if presets exist, it's a dropdown. 
+                                            If user wants custom, they can add it to presets in UIConfig. 
+                                        */}
                                     </div>
                                 )
                             })}

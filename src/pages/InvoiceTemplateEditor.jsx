@@ -33,11 +33,11 @@ const InvoiceTemplateEditor = () => {
     const [stageScale, setStageScale] = useState(1);
     const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
     const stageRef = useRef();
-    
+
     // Admins can edit if they are staff (superadmin) OR if they are an admin of a verified company
     const canEdit = userInfo?.is_staff || (userInfo?.is_company_admin && userInfo?.is_company_varified);
     const [Limited_access, setLimited_access] = useState(!canEdit);
-    
+
     const [saving, setSaving] = useState(false);
     const [exportInvoiceId, setExportInvoiceId] = useState('');
     const [exporting, setExporting] = useState(false);
@@ -46,6 +46,8 @@ const InvoiceTemplateEditor = () => {
     const [shapesLocked, setShapesLocked] = useState(true);
     const [isJsonEditMode, setIsJsonEditMode] = useState(false);
     const [jsonContent, setJsonContent] = useState('');
+    const [recentInvoices, setRecentInvoices] = useState([]);
+    const [loadingInvoices, setLoadingInvoices] = useState(false);
 
     useEffect(() => {
         let qs = `yaml/${id ? '?id=' + id : '?'}`;
@@ -63,6 +65,17 @@ const InvoiceTemplateEditor = () => {
         if (/Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent)) {
             setLimited_access(true);
         }
+        
+        // Fetch recent invoices for preview selection
+        setLoadingInvoices(true);
+        clientToken.get('invoice/?page_size=50&ordering=-date')
+            .then(r => {
+                // If API returns paginated data (results array) or direct array
+                const data = r.data.results || r.data;
+                setRecentInvoices(data);
+            })
+            .catch(err => console.error("Failed to fetch invoices", err))
+            .finally(() => setLoadingInvoices(false));
     }, []);
 
     // Extract elements from config dynamically every render
@@ -508,16 +521,16 @@ const InvoiceTemplateEditor = () => {
                     {config?.versions_list && config.versions_list.length > 0 && !Limited_access && (
                         <div style={{ marginTop: '16px' }}>
                             <label style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Version History</label>
-                            <select 
-                                value={selectedVersionId} 
+                            <select
+                                value={selectedVersionId}
                                 onChange={(e) => {
-                                    if(window.confirm("Loading a previous version will replace your current unsaved edits. Continue?")) {
+                                    if (window.confirm("Loading a previous version will replace your current unsaved edits. Continue?")) {
                                         setSelectedVersionId(e.target.value);
                                     }
-                                }} 
-                                style={{ 
-                                    width: '100%', padding: '8px', marginTop: '6px', 
-                                    borderRadius: '6px', border: '1px solid #cbd5e1', 
+                                }}
+                                style={{
+                                    width: '100%', padding: '8px', marginTop: '6px',
+                                    borderRadius: '6px', border: '1px solid #cbd5e1',
                                     fontSize: '13px', backgroundColor: '#f8fafc',
                                     outline: 'none', cursor: 'pointer', fontFamily: 'inherit'
                                 }}
@@ -572,6 +585,38 @@ const InvoiceTemplateEditor = () => {
                 )}
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px' }}>
+                    {/* All Elements List */}
+                    <div style={{ marginTop: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px' }}>
+                        <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>All Layout Blocks</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHieght: '300px', overflowY: 'auto' }}>
+                            {allElements.map(el => (
+                                <div
+                                    key={el.id}
+                                    onClick={() => setSelectedElementId(el.id)}
+                                    style={{
+                                        padding: '8px 12px',
+                                        background: selectedElementId === el.id ? '#eef2ff' : 'white',
+                                        border: `1px solid ${selectedElementId === el.id ? '#a5b4fc' : '#e2e8f0'}`,
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        color: selectedElementId === el.id ? '#4f46e5' : '#475569',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        fontWeight: selectedElementId === el.id ? 600 : 400,
+                                        transition: 'all 0.1s'
+                                    }}
+                                >
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
+                                        {el.label || el.key}
+                                    </span>
+                                    <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'capitalize' }}>{el.type || 'text'}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Active Element Properties */}
                     {activeEl ? (
                         <div style={{
@@ -581,8 +626,8 @@ const InvoiceTemplateEditor = () => {
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                                 <div style={{ width: '4px', height: '16px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
-                                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    {activeEl.type === 'rectangles' ? 'Edit Rectangle' : activeEl.type === 'line' ? 'Edit Line' : 'Edit Text'}
+                                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }} title={activeEl.label || activeEl.key}>
+                                    {activeEl.label || activeEl.key || (activeEl.type === 'rectangles' ? 'Rectangle' : activeEl.type === 'line' ? 'Line' : 'Text')}
                                 </h3>
                                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
                                     <button
@@ -623,11 +668,11 @@ const InvoiceTemplateEditor = () => {
                                     <textarea
                                         value={jsonContent}
                                         onChange={(e) => setJsonContent(e.target.value)}
-                                        style={{ 
-                                            ...inputStyle, 
-                                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace", 
-                                            fontSize: '11px', 
-                                            minHeight: '260px', 
+                                        style={{
+                                            ...inputStyle,
+                                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                            fontSize: '11px',
+                                            minHeight: '260px',
                                             whiteSpace: 'pre',
                                             padding: '12px',
                                             lineHeight: '1.5',
@@ -640,13 +685,13 @@ const InvoiceTemplateEditor = () => {
                                         onBlur={focOut}
                                     />
                                     <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                        <button 
+                                        <button
                                             onClick={() => setIsJsonEditMode(false)}
                                             style={{ flex: 1, padding: '10px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
                                         >
                                             Discard
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 try {
                                                     const updates = JSON.parse(jsonContent);
@@ -664,6 +709,24 @@ const InvoiceTemplateEditor = () => {
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {/* Block Label / Mapping ID */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Mapping Label (ID)</label>
+                                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>Key: {activeEl.key}</span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={activeEl.label || activeEl.key || ''}
+                                            onChange={(e) => updateElement(activeEl.id, { label: e.target.value })}
+                                            placeholder="e.g. invoice_number, date..."
+                                            style={{ ...inputStyle, fontWeight: 600, color: '#4f46e5' }}
+                                            onFocus={focIn}
+                                            onBlur={focOut}
+                                            title="This ID is used by the API to inject data into this specific block."
+                                        />
+                                    </div>
+
                                     {/* Shared X, Y Inputs */}
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -746,60 +809,60 @@ const InvoiceTemplateEditor = () => {
                                         </>
                                     )}
 
-                                {/* Rectangle Options */}
-                                {activeEl.type === 'rectangles' && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Width</label>
-                                            <input 
-                                                type="number" 
-                                                value={Math.round(activeEl.width || 0)} 
-                                                onChange={(e) => {
-                                                    const newWidth = parseInt(e.target.value) || 0;
-                                                    if (activeEl.rectangles_type === 'image' && activeEl.src) {
-                                                        const img = new window.Image();
-                                                        img.src = activeEl.src;
-                                                        img.onload = () => {
-                                                            const ratio = img.height / img.width;
-                                                            updateElement(activeEl.id, { width: newWidth, height: newWidth * ratio });
-                                                        };
-                                                    } else {
-                                                        updateElement(activeEl.id, { width: newWidth });
-                                                    }
-                                                }} 
-                                                style={inputStyle} onFocus={focIn} onBlur={focOut} 
-                                            />
+                                    {/* Rectangle Options */}
+                                    {activeEl.type === 'rectangles' && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Width</label>
+                                                <input
+                                                    type="number"
+                                                    value={Math.round(activeEl.width || 0)}
+                                                    onChange={(e) => {
+                                                        const newWidth = parseInt(e.target.value) || 0;
+                                                        if (activeEl.rectangles_type === 'image' && activeEl.src) {
+                                                            const img = new window.Image();
+                                                            img.src = activeEl.src;
+                                                            img.onload = () => {
+                                                                const ratio = img.height / img.width;
+                                                                updateElement(activeEl.id, { width: newWidth, height: newWidth * ratio });
+                                                            };
+                                                        } else {
+                                                            updateElement(activeEl.id, { width: newWidth });
+                                                        }
+                                                    }}
+                                                    style={inputStyle} onFocus={focIn} onBlur={focOut}
+                                                />
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                                                    Height {activeEl.rectangles_type === 'image' ? '(Auto)' : ''}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={Math.round(activeEl.height || 0)}
+                                                    onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })}
+                                                    style={{ ...inputStyle, background: activeEl.rectangles_type === 'image' ? '#f1f5f9' : 'white', cursor: activeEl.rectangles_type === 'image' ? 'not-allowed' : 'text' }}
+                                                    onFocus={focIn} onBlur={focOut}
+                                                    disabled={activeEl.rectangles_type === 'image'}
+                                                    title={activeEl.rectangles_type === 'image' ? "Height is automatically calculated to preserve aspect ratio" : ""}
+                                                />
+                                            </div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
-                                                Height {activeEl.rectangles_type === 'image' ? '(Auto)' : ''}
-                                            </label>
-                                            <input 
-                                                type="number" 
-                                                value={Math.round(activeEl.height || 0)} 
-                                                onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })} 
-                                                style={{...inputStyle, background: activeEl.rectangles_type === 'image' ? '#f1f5f9' : 'white', cursor: activeEl.rectangles_type === 'image' ? 'not-allowed' : 'text'}} 
-                                                onFocus={focIn} onBlur={focOut} 
-                                                disabled={activeEl.rectangles_type === 'image'}
-                                                title={activeEl.rectangles_type === 'image' ? "Height is automatically calculated to preserve aspect ratio" : ""}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {/* Line Options */}
-                                {activeEl.type === 'line' && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X2 Pos</label>
-                                            <input type="number" value={Math.round(activeEl.x2 || 0)} onChange={(e) => updateElement(activeEl.id, { x2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                    {/* Line Options */}
+                                    {activeEl.type === 'line' && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X2 Pos</label>
+                                                <input type="number" value={Math.round(activeEl.x2 || 0)} onChange={(e) => updateElement(activeEl.id, { x2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y2 Pos (Backend)</label>
+                                                <input type="number" value={Math.round(activeEl.y2 || 0)} onChange={(e) => updateElement(activeEl.id, { y2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                            </div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y2 Pos (Backend)</label>
-                                            <input type="number" value={Math.round(activeEl.y2 || 0)} onChange={(e) => updateElement(activeEl.id, { y2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
-                                        </div>
-                                    </div>
-                                )}
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -862,27 +925,55 @@ const InvoiceTemplateEditor = () => {
                 <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: 'white', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
                     {/* Export PDF Sub-section */}
-                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Preview & Export PDF</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <input
-                                type="text"
-                                placeholder="Invoice ID (e.g. 1)"
+                    <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: '14px', border: '1px solid #bae6fd' }}>
+                        <label style={{ fontSize: '11px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.05em' }}>
+                            Preview with Invoice Data
+                        </label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <select
                                 value={exportInvoiceId}
                                 onChange={e => setExportInvoiceId(e.target.value)}
-                                style={{ ...inputStyle, flex: 1, padding: '8px 10px', fontSize: '12px' }}
-                            />
-                            <button
-                                onClick={handleExport} disabled={exporting}
-                                style={{
-                                    padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: 'white', whiteSpace: 'nowrap',
-                                    background: exporting ? '#94a3b8' : '#0ea5e9', borderRadius: '8px', border: 'none',
-                                    cursor: exporting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-                                }}
+                                style={{ ...inputStyle, fontSize: '12px', border: '1.5px solid #7dd3fc' }}
+                                onFocus={focIn}
+                                onBlur={focOut}
                             >
-                                <Eye size={14} />
-                                {exporting ? "Previewing..." : "Preview"}
-                            </button>
+                                <option value=""> {loadingInvoices ? 'Loading invoices...' : '-- Select Invoice --'} </option>
+                                {recentInvoices.map(inv => (
+                                    <option key={inv.id} value={inv.id}>
+                                        #{inv.invoice_number} - {inv.receiver_name} ({inv.date})
+                                    </option>
+                                ))}
+                            </select>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ flex: 1, height: '1px', background: '#bae6fd' }}></div>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: '#7dd3fc', textTransform: 'uppercase' }}>or enter id</span>
+                                <div style={{ flex: 1, height: '1px', background: '#bae6fd' }}></div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Invoice ID (e.g. 24)"
+                                    value={exportInvoiceId}
+                                    onChange={e => setExportInvoiceId(e.target.value)}
+                                    style={{ ...inputStyle, flex: 1, padding: '8px 10px', fontSize: '12px', border: '1.5px solid #e2e8f0' }}
+                                />
+                                <button
+                                    onClick={handleExport}
+                                    disabled={exporting || !exportInvoiceId}
+                                    style={{
+                                        padding: '10px 18px', fontSize: '13px', fontWeight: 700, color: 'white', whiteSpace: 'nowrap',
+                                        background: (exporting || !exportInvoiceId) ? '#cbd5e1' : '#0ea5e9', borderRadius: '10px', border: 'none',
+                                        cursor: (exporting || !exportInvoiceId) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                        boxShadow: (exporting || !exportInvoiceId) ? 'none' : '0 4px 12px rgba(14,165,233,0.25)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <Eye size={16} />
+                                    {exporting ? "Wait..." : "Preview"}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -913,7 +1004,7 @@ const InvoiceTemplateEditor = () => {
                             {Limited_access ? " (View Only)" : ""}
                         </p>
                     </div>
-                    
+
                     {!Limited_access && (
                         <button
                             onClick={() => setShapesLocked(!shapesLocked)}

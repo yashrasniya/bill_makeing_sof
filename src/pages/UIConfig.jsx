@@ -8,6 +8,8 @@ const temp_ui_config = {
     is_calculable: false,
     is_show: false,
     size: 3.0,
+    presets: "",
+    default_value: "",
 };
 
 /* ── stable style helpers ── */
@@ -265,6 +267,21 @@ const UIConfig = () => {
                                             <input type="checkbox" name="is_calculable" checked={formData.is_calculable || false} onChange={handleChange} style={{ width: '18px', height: '18px', accentColor: '#4f46e5', cursor: 'pointer' }} />
                                             Value is calculable
                                         </label>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Default Value</label>
+                                            <input type="text" name="default_value" value={formData.default_value || ""} onChange={handleChange} onFocus={focIn} onBlur={focOut} style={inp} placeholder="e.g. 0" />
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preset Options</label>
+                                            <input type="text" name="presets" value={formData.presets || ""} onChange={handleChange} onFocus={focIn} onBlur={focOut} style={inp} placeholder="Option 1, Option 2, Option 3" />
+                                            <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>
+                                                Separate options with commas (e.g. 5%, 12%, 18%)
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
