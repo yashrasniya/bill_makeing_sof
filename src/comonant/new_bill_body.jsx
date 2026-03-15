@@ -356,14 +356,23 @@ function NewBillBody({ id }) {
 
             if (item.is_calculable) {
                 if (item.formula) {
-                    console.log(item.formula);
-
+                    const val = parseFloat(abc.value) || 0;
                     if (item.formula === '+') {
-                        extraCal += parseFloat(abc.value);
+                        if (item.on_with_out_gst_amount) extraCal += val;
+                        else total += val;
                     } else if (item.formula === '-') {
-                        extraCal -= parseFloat(abc.value);
+                        if (item.on_with_out_gst_amount) extraCal -= val;
+                        else total -= val;
                     } else if (item.formula === '/') {
-                        total /= parseFloat(abc.value);
+                        total /= val || 1;
+                    } else if (item.formula === '%+') {
+                        const calculatedVal = (val / 100) * total;
+                        if (item.on_with_out_gst_amount) extraCal += calculatedVal;
+                        else total += calculatedVal;
+                    } else if (item.formula === '%-') {
+                        const calculatedVal = (val / 100) * total;
+                        if (item.on_with_out_gst_amount) extraCal -= calculatedVal;
+                        else total -= calculatedVal;
                     } else {
                         total = 'error';
                     }
@@ -376,8 +385,16 @@ function NewBillBody({ id }) {
             }
         }
 
-        // run calculations
-        obj.product_properties.filter(calculate);
+        // run calculations - process non-formula fields first to get base total
+        [...obj.product_properties]
+            .sort((a, b) => {
+                const aFormula = a.new_product_in_frontend.formula;
+                const bFormula = b.new_product_in_frontend.formula;
+                if (!aFormula && bFormula) return -1;
+                if (aFormula && !bFormula) return 1;
+                return 0;
+            })
+            .forEach(calculate);
 
         // compute GST
         let gstAmount = 0;

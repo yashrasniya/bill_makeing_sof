@@ -7,6 +7,7 @@ const temp_ui_config = {
     input_title: '',
     is_calculable: false,
     is_show: false,
+    on_with_out_gst_amount: false,
     size: 3.0,
     presets: "",
     default_value: "",
@@ -234,7 +235,21 @@ const UIConfig = () => {
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Formula</label>
-                                        <input type="text" name="formula" value={formData.formula || ""} onChange={handleChange} onFocus={focIn} onBlur={focOut} style={inp} placeholder="e.g. qty * price" />
+                                        <select 
+                                            name="formula" 
+                                            value={formData.formula || ""} 
+                                            onChange={handleChange} 
+                                            onFocus={focIn} 
+                                            onBlur={focOut} 
+                                            style={inp}
+                                        >
+                                            <option value="">Multiplication (Default)</option>
+                                            <option value="+">Addition (+)</option>
+                                            <option value="-">Subtraction (-)</option>
+                                            <option value="/">Division (/)</option>
+                                            <option value="%+">Percentage Add (%+)</option>
+                                            <option value="%-">Percentage Subtract (%-)</option>
+                                        </select>
 
                                         {/* Formula Helper Guide */}
                                         <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', marginTop: '4px' }}>
@@ -247,7 +262,9 @@ const UIConfig = () => {
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
                                                 <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#4f46e5', display: 'inline-block', width: '16px' }}>+</strong> Addition</div>
                                                 <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#ef4444', display: 'inline-block', width: '16px' }}>-</strong> Subtraction</div>
-                                                <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#eab308', display: 'inline-block', width: '16px' }}>*</strong> Multiplication</div>
+                                                <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#0ea5e9', display: 'inline-block', width: '25px' }}>%+</strong> Percentage Add</div>
+                                                <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#ec4899', display: 'inline-block', width: '25px' }}>%-</strong> Percentage Sub</div>
+                                                <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#eab308', display: 'inline-block', width: '25px' }}>*</strong> Multiplication</div>
                                                 <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#10b981', display: 'inline-block', width: '16px' }}>/</strong> Division</div>
                                             </div>
                                             <div style={{ marginTop: '10px', fontSize: '12px', color: '#475569', background: 'white', padding: '8px', border: '1px dashed #cbd5e1', borderRadius: '6px', fontFamily: 'monospace' }}>
@@ -266,6 +283,11 @@ const UIConfig = () => {
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: '#334155' }}>
                                             <input type="checkbox" name="is_calculable" checked={formData.is_calculable || false} onChange={handleChange} style={{ width: '18px', height: '18px', accentColor: '#4f46e5', cursor: 'pointer' }} />
                                             Value is calculable
+                                        </label>
+
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: '#334155' }}>
+                                            <input type="checkbox" name="on_with_out_gst_amount" checked={formData.on_with_out_gst_amount || false} onChange={handleChange} style={{ width: '18px', height: '18px', accentColor: '#4f46e5', cursor: 'pointer' }} />
+                                            On Without GST Amount
                                         </label>
                                     </div>
 

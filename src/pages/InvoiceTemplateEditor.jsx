@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Text, Rect, Group, Line, Image as KonvaImage } from 'react-konva';
-import { Trash2, Bold, Type, Save, Move, Square, Minus, Copy, Plus, DownloadCloud, Eye, Lock, Unlock, Code } from 'lucide-react';
+import { Trash2, Bold, Type, Save, Move, Square, Minus, Copy, Plus, DownloadCloud, Eye, Lock, Unlock, Code, Settings, Layers } from 'lucide-react';
 import { clientToken } from "@/axios";
 import useImage from "use-image";
 import { useLocation } from "react-router-dom";
@@ -48,12 +48,45 @@ const InvoiceTemplateEditor = () => {
     const [jsonContent, setJsonContent] = useState('');
     const [recentInvoices, setRecentInvoices] = useState([]);
     const [loadingInvoices, setLoadingInvoices] = useState(false);
+    const [sidebarTab, setSidebarTab] = useState('blocks'); // 'blocks', 'editor', 'config'
+    const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+    const [lastSavedConfig, setLastSavedConfig] = useState(null);
+
+    useEffect(() => {
+        if (autoSaveEnabled && config && lastSavedConfig) {
+            const timer = setTimeout(() => {
+                const currentStr = JSON.stringify(config);
+                const lastStr = JSON.stringify(lastSavedConfig.config);
+                const autoSaveChanged = autoSaveEnabled !== lastSavedConfig.autoSave;
+
+                if (currentStr !== lastStr || autoSaveChanged) {
+                    handleSave(true);
+                }
+            }, 3000); // Auto-save after 3 seconds of inactivity
+            return () => clearTimeout(timer);
+        }
+    }, [config, autoSaveEnabled, lastSavedConfig]);
+
+    useEffect(() => {
+        if (config && !lastSavedConfig) {
+            setLastSavedConfig({ config, autoSave: autoSaveEnabled });
+        }
+    }, [config, autoSaveEnabled, lastSavedConfig]);
+
+    useEffect(() => {
+        if (selectedElementId && !selectedElementId.startsWith('new')) {
+            setSidebarTab('editor');
+        }
+    }, [selectedElementId]);
 
     useEffect(() => {
         let qs = `yaml/${id ? '?id=' + id : '?'}`;
         if (selectedVersionId) qs += `&version_id=${selectedVersionId}`;
         clientToken.get(qs).then((r) => {
             setConfig(r.data);
+            if (r.data?.auto_save !== undefined) {
+                setAutoSaveEnabled(r.data.auto_save);
+            }
         }).catch(e => alert(e.response?.data?.detail || "Failed to load template"));
     }, [id, selectedVersionId]);
 
@@ -65,7 +98,7 @@ const InvoiceTemplateEditor = () => {
         if (/Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent)) {
             setLimited_access(true);
         }
-        
+
         // Fetch recent invoices for preview selection
         setLoadingInvoices(true);
         clientToken.get('invoice/?page_size=50&ordering=-date')
@@ -243,21 +276,43 @@ const InvoiceTemplateEditor = () => {
         setStagePos({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
     };
 
-    const handleSave = () => {
-        setSaving(true);
+    const handleSave = (isAuto = false) => {
+        if (!config || !lastSavedConfig) return Promise.resolve();
+
         const payload = JSON.parse(JSON.stringify(config));
+        payload.auto_save = autoSaveEnabled;
+
+        // Strip metadata that shouldn't trigger a save
+        const cleanPayload = { ...payload };
+        delete cleanPayload.versions_list;
+        delete cleanPayload.pdf_template; // Also ignore this as it's a server-side URL
+
+        const lastClean = { ...lastSavedConfig.config, auto_save: lastSavedConfig.autoSave };
+        delete lastClean.versions_list;
+        delete lastClean.pdf_template;
+
+        // Check if anything actually changed since last save
+        if (JSON.stringify(cleanPayload) === JSON.stringify(lastClean)) {
+            if (!isAuto) console.log("No changes detected, skipping save.");
+            return Promise.resolve();
+        }
+
+        if (!isAuto) setSaving(true);
         return clientToken.put(`yaml/`, payload).then((r) => {
             if (r.status === 200) {
+                setLastSavedConfig({ config: payload, autoSave: autoSaveEnabled });
                 if (r.data?.versions_list) {
                     setConfig(prev => ({ ...prev, versions_list: r.data.versions_list }));
                 }
-                alert("Template Saved Successfully ✅");
+                if (!isAuto) alert("Template Saved Successfully ✅");
                 return true;
             }
         }).catch(e => {
-            alert("Failed to save: " + (e.response?.data?.error || "Unknown error"));
+            if (!isAuto) alert("Failed to save: " + (e.response?.data?.error || "Unknown error"));
             return false;
-        }).finally(() => setSaving(false));
+        }).finally(() => {
+            if (!isAuto) setSaving(false);
+        });
     };
 
     const handleExport = async () => {
@@ -473,524 +528,471 @@ const InvoiceTemplateEditor = () => {
 
             {/* ── Sidebar ── */}
             <div style={{
-                width: '340px', background: 'white', borderRight: '1px solid #e2e8f0',
+                width: '420px', background: 'white', borderRight: '1px solid #e2e8f0',
                 display: Limited_access ? 'none' : 'flex', flexDirection: 'column',
                 boxShadow: '4px 0 24px rgba(0,0,0,0.03)', zIndex: 10,
+                transition: 'width 0.3s ease'
             }}>
-                {/* Header */}
-                <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                    {!Limited_access ? (
-                        <input
-                            type="text"
-                            value={config.template_name || 'Untitled Template'}
-                            onChange={(e) => setConfig({ ...config, template_name: e.target.value })}
+                {/* Tab Navigation */}
+                <div style={{ display: 'flex', borderBottom: '1px solid #f1f5f9', background: '#ffffff', padding: '12px 12px 0' }}>
+                    {[
+                        { id: 'blocks', label: 'Blocks', icon: <Layers size={16} /> },
+                        { id: 'editor', label: 'Editor', icon: <Move size={16} /> },
+                        { id: 'config', label: 'Settings', icon: <Settings size={16} /> }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setSidebarTab(tab.id)}
                             style={{
-                                fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.5px',
-                                background: 'transparent',
-                                border: '1px dashed transparent',
-                                borderBottom: '1px dashed #cbd5e1',
-                                borderRadius: '6px 6px 0 0',
-                                outline: 'none',
-                                color: '#4f46e5',
-                                width: '100%',
-                                padding: '4px 6px',
-                                margin: '0 -6px',
-                                transition: 'all 0.2s',
-                                boxSizing: 'border-box',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                fontFamily: 'inherit',
+                                flex: 1, padding: '10px 4px', border: 'none', borderRadius: '10px 10px 0 0',
+                                background: sidebarTab === tab.id ? '#f8fafc' : 'transparent',
+                                color: sidebarTab === tab.id ? '#4f46e5' : '#94a3b8',
+                                fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                borderBottom: sidebarTab === tab.id ? '2px solid #4f46e5' : '2px solid transparent',
+                                transition: 'all 0.2s'
                             }}
-                            onFocus={(e) => { e.target.style.borderColor = '#4f46e5'; e.target.style.background = '#f8fafc'; }}
-                            onBlur={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.borderBottomColor = '#cbd5e1'; e.target.style.background = 'transparent'; }}
-                            title="Edit Template Name"
-                        />
-                    ) : (
-                        <h2 style={{
-                            fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.5px',
-                            background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
-                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text', margin: 0,
-                        }}>{config.template_name || 'Invoice Editor'}</h2>
-                    )}
-                    <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', fontWeight: 500 }}>
-                        Select and configure layout elements
-                    </p>
-
-                    {config?.versions_list && config.versions_list.length > 0 && !Limited_access && (
-                        <div style={{ marginTop: '16px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Version History</label>
-                            <select
-                                value={selectedVersionId}
-                                onChange={(e) => {
-                                    if (window.confirm("Loading a previous version will replace your current unsaved edits. Continue?")) {
-                                        setSelectedVersionId(e.target.value);
-                                    }
-                                }}
-                                style={{
-                                    width: '100%', padding: '8px', marginTop: '6px',
-                                    borderRadius: '6px', border: '1px solid #cbd5e1',
-                                    fontSize: '13px', backgroundColor: '#f8fafc',
-                                    outline: 'none', cursor: 'pointer', fontFamily: 'inherit'
-                                }}
-                            >
-                                <option value="">Latest / Current Version</option>
-                                {config.versions_list.map(v => (
-                                    <option key={v.id} value={v.id}>Version from {v.created_at}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
+                        >
+                            {tab.icon} {tab.label}
+                        </button>
+                    ))}
                 </div>
 
-                {/* Add Element Section */}
-                {!Limited_access && (
-                    <div style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                        {!isAddMode ? (
-                            <button
-                                onClick={() => setIsAddMode(true)}
-                                style={{ width: '100%', padding: '10px', background: '#eef2ff', color: '#4f46e5', border: '1px dashed #a5b4fc', borderRadius: '10px', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
-                            >
-                                <Plus size={16} /> Add New Block
-                            </button>
-                        ) : (
-                            <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Section Group</label>
-                                    <select value={addSection} onChange={e => setAddSection(e.target.value)} style={{ ...inputStyle, padding: '6px 10px' }}>
-                                        <option value="bill_stretcher">Bill Header (bill_stretcher)</option>
-                                        <option value="my_company_details">Company Details</option>
-                                        <option value="harder">Header Info (harder)</option>
-                                        <option value="product_stretcher">Product Table Header</option>
-                                        <option value="product">Product List Item</option>
-                                        <option value="footer">Footer</option>
-                                    </select>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Element Type</label>
-                                    <select value={addElementType} onChange={e => setAddElementType(e.target.value)} style={{ ...inputStyle, padding: '6px 10px' }}>
-                                        <option value="text">Text Box</option>
-                                        <option value="rectangles">Rectangle/Square</option>
-                                        <option value="line">Line</option>
-                                    </select>
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button onClick={() => setIsAddMode(false)} style={{ flex: 1, padding: '8px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
-                                    <button onClick={() => addNewElement(addSection, addElementType)} style={{ flex: 1, padding: '8px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>Create</button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px' }}>
-                    {/* All Elements List */}
-                    <div style={{ marginTop: '20px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px' }}>
-                        <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>All Layout Blocks</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHieght: '300px', overflowY: 'auto' }}>
-                            {allElements.map(el => (
-                                <div
-                                    key={el.id}
-                                    onClick={() => setSelectedElementId(el.id)}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {/* ── DESIGN / CONFIG TAB ── */}
+                    {sidebarTab === 'config' && (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                            <div style={{ padding: '24px' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Template Name</label>
+                                <input
+                                    type="text"
+                                    value={config.template_name || 'Untitled Template'}
+                                    onChange={(e) => setConfig({ ...config, template_name: e.target.value })}
                                     style={{
-                                        padding: '8px 12px',
-                                        background: selectedElementId === el.id ? '#eef2ff' : 'white',
-                                        border: `1px solid ${selectedElementId === el.id ? '#a5b4fc' : '#e2e8f0'}`,
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        color: selectedElementId === el.id ? '#4f46e5' : '#475569',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        fontWeight: selectedElementId === el.id ? 600 : 400,
-                                        transition: 'all 0.1s'
+                                        ...inputStyle,
+                                        fontSize: '1rem', fontWeight: 700,
+                                        marginTop: '8px', marginBottom: '20px'
                                     }}
-                                >
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
-                                        {el.label || el.key}
-                                    </span>
-                                    <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'capitalize' }}>{el.type || 'text'}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                                    onFocus={focIn}
+                                    onBlur={focOut}
+                                />
 
-                    {/* Active Element Properties */}
-                    {activeEl ? (
-                        <div style={{
-                            background: '#f8fafc', border: '1.5px solid #e2e8f0',
-                            borderRadius: '16px', padding: '16px', marginTop: '20px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                                <div style={{ width: '4px', height: '16px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
-                                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }} title={activeEl.label || activeEl.key}>
-                                    {activeEl.label || activeEl.key || (activeEl.type === 'rectangles' ? 'Rectangle' : activeEl.type === 'line' ? 'Line' : 'Text')}
-                                </h3>
-                                <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-                                    <button
-                                        onClick={() => {
-                                            if (!isJsonEditMode) {
-                                                const elMeta = allElements.find(el => el.id === activeEl.id);
-                                                const sourceData = elMeta.section === 'product'
-                                                    ? config.Bill.product.product_list[elMeta.index][elMeta.key]
-                                                    : config.Bill[elMeta.section][elMeta.index][elMeta.key];
-                                                setJsonContent(JSON.stringify(sourceData, null, 2));
-                                            }
-                                            setIsJsonEditMode(!isJsonEditMode);
-                                        }}
-                                        style={{ padding: '6px', background: isJsonEditMode ? '#4f46e5' : '#f1f5f9', color: isJsonEditMode ? 'white' : '#64748b', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                                        title="Show Raw JSON"
-                                    >
-                                        <Code size={14} />
-                                    </button>
-                                    <button
-                                        onClick={() => duplicateElement(activeEl.id)}
-                                        style={{ padding: '6px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                                        title="Duplicate Element"
-                                    >
-                                        <Copy size={14} />
-                                    </button>
-                                    <button
-                                        onClick={() => deleteElement(activeEl.id)}
-                                        style={{ padding: '6px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                                        title="Delete Element"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            </div>
-                            {isJsonEditMode ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Edit Raw JSON Data</label>
-                                    <textarea
-                                        value={jsonContent}
-                                        onChange={(e) => setJsonContent(e.target.value)}
-                                        style={{
-                                            ...inputStyle,
-                                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                                            fontSize: '11px',
-                                            minHeight: '260px',
-                                            whiteSpace: 'pre',
-                                            padding: '12px',
-                                            lineHeight: '1.5',
-                                            backgroundColor: '#1e293b',
-                                            color: '#f8fafc',
-                                            borderColor: '#334155'
-                                        }}
-                                        spellCheck="false"
-                                        onFocus={focIn}
-                                        onBlur={focOut}
-                                    />
-                                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                        <button
-                                            onClick={() => setIsJsonEditMode(false)}
-                                            style={{ flex: 1, padding: '10px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
-                                        >
-                                            Discard
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                try {
-                                                    const updates = JSON.parse(jsonContent);
-                                                    updateElement(activeEl.id, updates);
-                                                    setIsJsonEditMode(false);
-                                                } catch (e) {
-                                                    alert("Invalid JSON format! Check your syntax.");
+                                {config?.versions_list && config.versions_list.length > 0 && (
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Version History</label>
+                                        <select
+                                            value={selectedVersionId}
+                                            onChange={(e) => {
+                                                if (window.confirm("Loading a previous version will replace your current unsaved edits. Continue?")) {
+                                                    setSelectedVersionId(e.target.value);
                                                 }
                                             }}
-                                            style={{ flex: 1, padding: '10px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(79,70,229,0.2)' }}
+                                            style={{ ...inputStyle, padding: '10px', marginTop: '8px' }}
                                         >
-                                            Apply Changes
+                                            <option value="">Latest / Current Version</option>
+                                            {config.versions_list.map(v => (
+                                                <option key={v.id} value={v.id}>Version from {v.created_at}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {/* Auto Save Toggle */}
+                                <div style={{
+                                    marginBottom: '24px', padding: '12px', background: '#f8fafc',
+                                    borderRadius: '10px', border: '1.5px solid #e2e8f0',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155', cursor: 'pointer' }} htmlFor="auto-save">Auto Save</label>
+                                        <span style={{ fontSize: '11px', color: '#64748b' }}>Saves changes automatically</span>
+                                    </div>
+                                    <input
+                                        id="auto-save"
+                                        type="checkbox"
+                                        checked={autoSaveEnabled}
+                                        onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4f46e5' }}
+                                    />
+                                </div>
+
+                                {/* Save & Export Block */}
+                                <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: '14px', border: '1px solid #bae6fd', marginBottom: '16px' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.05em' }}>
+                                        Preview Tool
+                                    </label>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <select
+                                            value={exportInvoiceId}
+                                            onChange={e => setExportInvoiceId(e.target.value)}
+                                            style={{ ...inputStyle, fontSize: '12px', border: '1.5px solid #7dd3fc' }}
+                                        >
+                                            <option value=""> {loadingInvoices ? 'Loading invoices...' : '-- Select Sample Data --'} </option>
+                                            {recentInvoices.map(inv => (
+                                                <option key={inv.id} value={inv.id}>
+                                                    #{inv.invoice_number} - {inv.receiver_name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            onClick={handleExport}
+                                            disabled={exporting || !exportInvoiceId}
+                                            style={{
+                                                width: '100%', padding: '10px', fontSize: '13px', fontWeight: 700, color: 'white',
+                                                background: (exporting || !exportInvoiceId) ? '#cbd5e1' : '#0ea5e9', borderRadius: '10px', border: 'none',
+                                                cursor: (exporting || !exportInvoiceId) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                            }}
+                                        >
+                                            <Eye size={16} /> {exporting ? "Generating..." : "Generate Preview PDF"}
                                         </button>
                                     </div>
                                 </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    {/* Block Label / Mapping ID */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Mapping Label (ID)</label>
-                                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>Key: {activeEl.key}</span>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            value={activeEl.label || activeEl.key || ''}
-                                            onChange={(e) => updateElement(activeEl.id, { label: e.target.value })}
-                                            placeholder="e.g. invoice_number, date..."
-                                            style={{ ...inputStyle, fontWeight: 600, color: '#4f46e5' }}
-                                            onFocus={focIn}
-                                            onBlur={focOut}
-                                            title="This ID is used by the API to inject data into this specific block."
-                                        />
-                                    </div>
 
-                                    {/* Shared X, Y Inputs */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X Pos</label>
-                                            <input type="number" value={Math.round(activeEl.x)} onChange={(e) => updateElement(activeEl.id, { x: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── BLOCKS TAB ── */}
+                    {sidebarTab === 'blocks' && (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            {/* Add Element Section */}
+                            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                                {!isAddMode ? (
+                                    <button
+                                        onClick={() => setIsAddMode(true)}
+                                        style={{ width: '100%', padding: '12px', background: 'white', color: '#4f46e5', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                                    >
+                                        <Plus size={16} /> New Element
+                                    </button>
+                                ) : (
+                                    <div style={{ background: 'white', border: '1.5px solid #4f46e5', borderRadius: '12px', padding: '14px', boxShadow: '0 8px 24px rgba(79,70,229,0.1)' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>Section</label>
+                                            <select value={addSection} onChange={e => setAddSection(e.target.value)} style={{ ...inputStyle, padding: '6px 10px' }}>
+                                                <option value="bill_stretcher">Bill Header Group</option>
+                                                <option value="my_company_details">Company Details</option>
+                                                <option value="harder">Primary Info</option>
+                                                <option value="product_stretcher">Table Headers</option>
+                                                <option value="product">Row Content</option>
+                                                <option value="footer">Footer Area</option>
+                                            </select>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y Pos (Canvas)</label>
-                                            <input type="number" value={Math.round(activeEl.canvasY)} onChange={(e) => updateElement(activeEl.id, { canvasY: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button onClick={() => setIsAddMode(false)} style={{ flex: 1, padding: '8px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+                                            <button onClick={() => addNewElement(addSection, addElementType)} style={{ flex: 1, padding: '8px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>Add Block</button>
                                         </div>
                                     </div>
+                                )}
+                            </div>
 
-                                    {/* Text Options */}
-                                    {(!activeEl.type || activeEl.type === 'text') && (
-                                        <>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+                                {['bill_stretcher', 'harder', 'product_stretcher', 'product', 'my_company_details', 'footer'].map(section => {
+                                    const sectionElements = allElements.filter(el => el.section === section);
+                                    if (sectionElements.length === 0) return null;
+                                    return (
+                                        <div key={section} style={{ marginBottom: '24px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                                <h3 style={{ margin: 0, fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                                    {section.replace(/_/g, ' ')}
+                                                </h3>
+                                                <div style={{ flex: 1, height: '1px', background: '#f1f5f9' }} />
+                                            </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Text Content</label>
+                                                {sectionElements.map(el => (
+                                                    <div
+                                                        key={el.id}
+                                                        onClick={() => setSelectedElementId(el.id)}
+                                                        style={{
+                                                            padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
+                                                            background: activeEl?.id === el.id ? '#eef2ff' : 'white',
+                                                            border: `1.5px solid ${activeEl?.id === el.id ? '#c7d2fe' : '#f1f5f9'}`,
+                                                            display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.1s',
+                                                        }}
+                                                    >
+                                                        {el.type === 'rectangles' ? <Square size={14} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />
+                                                            : el.type === 'line' ? <Minus size={14} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />
+                                                                : <Type size={14} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />}
+                                                        <div style={{ fontSize: '13px', fontWeight: activeEl?.id === el.id ? 700 : 500, color: activeEl?.id === el.id ? '#4f46e5' : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {el.label || el.key}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── EDITOR TAB ── */}
+                    {sidebarTab === 'editor' && (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+                                {activeEl ? (
+                                    <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '16px' }}>
+                                        {/* (Existing activeEl editor content starts here) */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                            <div style={{ width: '4px', height: '16px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
+                                            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }} title={activeEl.label || activeEl.key}>
+                                                {activeEl.label || activeEl.key || (activeEl.type === 'rectangles' ? 'Rectangle' : activeEl.type === 'line' ? 'Line' : 'Text')}
+                                            </h3>
+                                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+                                                <button
+                                                    onClick={() => {
+                                                        if (!isJsonEditMode) {
+                                                            const elMeta = allElements.find(el => el.id === activeEl.id);
+                                                            const sourceData = elMeta.section === 'product'
+                                                                ? config.Bill.product.product_list[elMeta.index][elMeta.key]
+                                                                : config.Bill[elMeta.section][elMeta.index][elMeta.key];
+                                                            setJsonContent(JSON.stringify(sourceData, null, 2));
+                                                        }
+                                                        setIsJsonEditMode(!isJsonEditMode);
+                                                    }}
+                                                    style={{ padding: '6px', background: isJsonEditMode ? '#4f46e5' : '#f1f5f9', color: isJsonEditMode ? 'white' : '#64748b', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                                    title="Show Raw JSON"
+                                                >
+                                                    <Code size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => duplicateElement(activeEl.id)}
+                                                    style={{ padding: '6px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                                    title="Duplicate Element"
+                                                >
+                                                    <Copy size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteElement(activeEl.id)}
+                                                    style={{ padding: '6px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                                                    title="Delete Element"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {isJsonEditMode ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Edit Raw JSON Data</label>
                                                 <textarea
-                                                    value={activeEl.value || ''}
-                                                    placeholder={getDummyValue(activeEl.label || activeEl.key)}
-                                                    onChange={(e) => updateElement(activeEl.id, { value: e.target.value })}
-                                                    style={{ ...inputStyle, resize: 'vertical', minHeight: '60px' }}
+                                                    value={jsonContent}
+                                                    onChange={(e) => setJsonContent(e.target.value)}
+                                                    style={{
+                                                        ...inputStyle,
+                                                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                                        fontSize: '11px',
+                                                        minHeight: '260px',
+                                                        whiteSpace: 'pre',
+                                                        padding: '12px',
+                                                        lineHeight: '1.5',
+                                                        backgroundColor: '#1e293b',
+                                                        color: '#f8fafc',
+                                                        borderColor: '#334155'
+                                                    }}
+                                                    spellCheck="false"
                                                     onFocus={focIn}
                                                     onBlur={focOut}
                                                 />
+                                                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                                    <button
+                                                        onClick={() => setIsJsonEditMode(false)}
+                                                        style={{ flex: 1, padding: '10px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+                                                    >
+                                                        Discard
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            try {
+                                                                const updates = JSON.parse(jsonContent);
+                                                                updateElement(activeEl.id, updates);
+                                                                setIsJsonEditMode(false);
+                                                            } catch (e) {
+                                                                alert("Invalid JSON format! Check your syntax.");
+                                                            }
+                                                        }}
+                                                        style={{ flex: 1, padding: '10px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(79,70,229,0.2)' }}
+                                                    >
+                                                        Apply Changes
+                                                    </button>
+                                                </div>
                                             </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                {/* Block Label / Mapping ID */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Mapping Label (ID)</label>
+                                                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>Key: {activeEl.key}</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={activeEl.label || activeEl.key || ''}
+                                                        onChange={(e) => updateElement(activeEl.id, { label: e.target.value })}
+                                                        placeholder="e.g. invoice_number, date..."
+                                                        style={{ ...inputStyle, fontWeight: 600, color: '#4f46e5' }}
+                                                        onFocus={focIn}
+                                                        onBlur={focOut}
+                                                        title="This ID is used by the API to inject data into this specific block."
+                                                    />
+                                                </div>
 
-                                            {/* Multiline / Wrap Settings */}
-                                            <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                <div style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Multi-line & Wrap Rules</div>
+                                                {/* Shared X, Y Inputs */}
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Char Limit / Line</label>
-                                                        <input type="number" value={activeEl.limit || ''} placeholder="e.g. 55" onChange={(e) => updateElement(activeEl.id, { limit: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X Pos</label>
+                                                        <input type="number" value={Math.round(activeEl.x)} onChange={(e) => updateElement(activeEl.id, { x: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
                                                     </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Max Lines</label>
-                                                        <input type="number" value={activeEl.no_lines || ''} placeholder="e.g. 2" onChange={(e) => updateElement(activeEl.id, { no_lines: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Distance down to next line">Line Gap (Y)</label>
-                                                        <input type="number" value={activeEl.next_line?.gap || ''} placeholder="e.g. 12" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), gap: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="X offset for text on next line">Next X</label>
-                                                        <input type="number" value={activeEl.next_line?.x || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), x: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Font size for wrapped lines">Next Font Pt</label>
-                                                        <input type="number" value={activeEl.next_line?.font_size || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), font_size: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y Pos (Canvas)</label>
+                                                        <input type="number" value={Math.round(activeEl.canvasY)} onChange={(e) => updateElement(activeEl.id, { canvasY: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Prefix</label>
-                                                    <input type="text" value={activeEl.prefix || ''} onChange={(e) => updateElement(activeEl.id, { prefix: e.target.value })} placeholder="e.g. Total: " style={inputStyle} onFocus={focIn} onBlur={focOut} />
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Suffix</label>
-                                                    <input type="text" value={activeEl.suffix || ''} onChange={(e) => updateElement(activeEl.id, { suffix: e.target.value })} placeholder="e.g. USD" style={inputStyle} onFocus={focIn} onBlur={focOut} />
-                                                </div>
-                                            </div>
+                                                {/* Text Options */}
+                                                {(!activeEl.type || activeEl.type === 'text') && (
+                                                    <>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Text Content</label>
+                                                            <textarea
+                                                                value={activeEl.value || ''}
+                                                                placeholder={getDummyValue(activeEl.label || activeEl.key)}
+                                                                onChange={(e) => updateElement(activeEl.id, { value: e.target.value })}
+                                                                style={{ ...inputStyle, resize: 'vertical', minHeight: '60px' }}
+                                                                onFocus={focIn}
+                                                                onBlur={focOut}
+                                                            />
+                                                        </div>
 
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Font Size</label>
-                                                    <input type="number" value={activeEl.font_size || 12} onChange={(e) => updateElement(activeEl.id, { font_size: parseInt(e.target.value) || 1 })} style={inputStyle} onFocus={focIn} onBlur={focOut} min="8" max="72" />
-                                                </div>
-                                                <button
-                                                    onClick={() => updateElement(activeEl.id, { font: activeEl.font === 'bold' ? 'normal' : 'bold' })}
-                                                    style={{ height: '37.5px', padding: '0 12px', borderRadius: '8px', border: `1.5px solid ${activeEl.font === 'bold' ? '#4f46e5' : '#cbd5e1'}`, background: activeEl.font === 'bold' ? '#4f46e5' : 'white', color: activeEl.font === 'bold' ? 'white' : '#475569', cursor: 'pointer' }}
-                                                >
-                                                    <Bold size={16} />
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
+                                                        {/* Multiline / Wrap Settings */}
+                                                        <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase' }}>Multi-line & Wrap Rules</div>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Char Limit / Line</label>
+                                                                    <input type="number" value={activeEl.limit || ''} placeholder="e.g. 55" onChange={(e) => updateElement(activeEl.id, { limit: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>Max Lines</label>
+                                                                    <input type="number" value={activeEl.no_lines || ''} placeholder="e.g. 2" onChange={(e) => updateElement(activeEl.id, { no_lines: parseInt(e.target.value) || undefined })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Distance down to next line">Line Gap (Y)</label>
+                                                                    <input type="number" value={activeEl.next_line?.gap || ''} placeholder="e.g. 12" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), gap: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="X offset for text on next line">Next X</label>
+                                                                    <input type="number" value={activeEl.next_line?.x || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), x: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }} title="Font size for wrapped lines">Next Font Pt</label>
+                                                                    <input type="number" value={activeEl.next_line?.font_size || ''} placeholder="Auto" onChange={(e) => updateElement(activeEl.id, { next_line: { ...(activeEl.next_line || {}), font_size: parseInt(e.target.value) || undefined } })} style={{ ...inputStyle, padding: '4px 8px' }} onFocus={focIn} onBlur={focOut} />
+                                                                </div>
+                                                            </div>
+                                                        </div>
 
-                                    {/* Rectangle Options */}
-                                    {activeEl.type === 'rectangles' && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Width</label>
-                                                <input
-                                                    type="number"
-                                                    value={Math.round(activeEl.width || 0)}
-                                                    onChange={(e) => {
-                                                        const newWidth = parseInt(e.target.value) || 0;
-                                                        if (activeEl.rectangles_type === 'image' && activeEl.src) {
-                                                            const img = new window.Image();
-                                                            img.src = activeEl.src;
-                                                            img.onload = () => {
-                                                                const ratio = img.height / img.width;
-                                                                updateElement(activeEl.id, { width: newWidth, height: newWidth * ratio });
-                                                            };
-                                                        } else {
-                                                            updateElement(activeEl.id, { width: newWidth });
-                                                        }
-                                                    }}
-                                                    style={inputStyle} onFocus={focIn} onBlur={focOut}
-                                                />
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
-                                                    Height {activeEl.rectangles_type === 'image' ? '(Auto)' : ''}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={Math.round(activeEl.height || 0)}
-                                                    onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })}
-                                                    style={{ ...inputStyle, background: activeEl.rectangles_type === 'image' ? '#f1f5f9' : 'white', cursor: activeEl.rectangles_type === 'image' ? 'not-allowed' : 'text' }}
-                                                    onFocus={focIn} onBlur={focOut}
-                                                    disabled={activeEl.rectangles_type === 'image'}
-                                                    title={activeEl.rectangles_type === 'image' ? "Height is automatically calculated to preserve aspect ratio" : ""}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Prefix</label>
+                                                                <input type="text" value={activeEl.prefix || ''} onChange={(e) => updateElement(activeEl.id, { prefix: e.target.value })} placeholder="e.g. Total: " style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                                            </div>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Suffix</label>
+                                                                <input type="text" value={activeEl.suffix || ''} onChange={(e) => updateElement(activeEl.id, { suffix: e.target.value })} placeholder="e.g. USD" style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                                            </div>
+                                                        </div>
 
-                                    {/* Line Options */}
-                                    {activeEl.type === 'line' && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X2 Pos</label>
-                                                <input type="number" value={Math.round(activeEl.x2 || 0)} onChange={(e) => updateElement(activeEl.id, { x2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y2 Pos (Backend)</label>
-                                                <input type="number" value={Math.round(activeEl.y2 || 0)} onChange={(e) => updateElement(activeEl.id, { y2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div style={{ padding: '40px 0', textAlign: 'center', color: '#94a3b8' }}>
-                            <div style={{ display: 'inline-flex', padding: '16px', background: '#f1f5f9', borderRadius: '50%', marginBottom: '16px' }}>
-                                <Move size={24} color="#64748b" />
-                            </div>
-                            <p style={{ fontSize: '13px', margin: 0, fontWeight: 600 }}>No element selected</p>
-                            <p style={{ fontSize: '12px', margin: '4px 0 0' }}>Click an element on the canvas.</p>
-                        </div>
-                    )}
+                                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Font Size</label>
+                                                                <input type="number" value={activeEl.font_size || 12} onChange={(e) => updateElement(activeEl.id, { font_size: parseInt(e.target.value) || 1 })} style={inputStyle} onFocus={focIn} onBlur={focOut} min="8" max="72" />
+                                                            </div>
+                                                            <button
+                                                                onClick={() => updateElement(activeEl.id, { font: activeEl.font === 'bold' ? 'normal' : 'bold' })}
+                                                                style={{ height: '37.5px', padding: '0 12px', borderRadius: '8px', border: `1.5px solid ${activeEl.font === 'bold' ? '#4f46e5' : '#cbd5e1'}`, background: activeEl.font === 'bold' ? '#4f46e5' : 'white', color: activeEl.font === 'bold' ? 'white' : '#475569', cursor: 'pointer' }}
+                                                            >
+                                                                <Bold size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
 
-                    {/* All Elements List */}
-                    <div style={{ marginTop: '24px', paddingBottom: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <div style={{ width: '4px', height: '16px', background: '#cbd5e1', borderRadius: '4px' }} />
-                            <h3 style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Component Tree</h3>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {allElements.map(el => (
-                                <div
-                                    key={el.id}
-                                    onClick={() => setSelectedElementId(el.id)}
-                                    style={{
-                                        padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
-                                        background: activeEl?.id === el.id ? '#eef2ff' : 'white',
-                                        border: `1.5px solid ${activeEl?.id === el.id ? '#c7d2fe' : '#e2e8f0'}`,
-                                        display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.1s',
-                                    }}
-                                    onMouseEnter={e => { if (activeEl?.id !== el.id) e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                                    onMouseLeave={e => { if (activeEl?.id !== el.id) e.currentTarget.style.borderColor = '#e2e8f0'; }}
-                                >
-                                    {el.type === 'rectangles' ? <Square size={16} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />
-                                        : el.type === 'line' ? <Minus size={16} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />
-                                            : <Type size={16} color={activeEl?.id === el.id ? "#4f46e5" : "#94a3b8"} />}
+                                                {/* Rectangle Options */}
+                                                {activeEl.type === 'rectangles' && (
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Width</label>
+                                                            <input
+                                                                type="number"
+                                                                value={Math.round(activeEl.width || 0)}
+                                                                onChange={(e) => {
+                                                                    const newWidth = parseInt(e.target.value) || 0;
+                                                                    if (activeEl.rectangles_type === 'image' && activeEl.src) {
+                                                                        const img = new window.Image();
+                                                                        img.src = activeEl.src;
+                                                                        img.onload = () => {
+                                                                            const ratio = img.height / img.width;
+                                                                            updateElement(activeEl.id, { width: newWidth, height: newWidth * ratio });
+                                                                        };
+                                                                    } else {
+                                                                        updateElement(activeEl.id, { width: newWidth });
+                                                                    }
+                                                                }}
+                                                                style={inputStyle} onFocus={focIn} onBlur={focOut}
+                                                            />
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                                                                Height {activeEl.rectangles_type === 'image' ? '(Auto)' : ''}
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                value={Math.round(activeEl.height || 0)}
+                                                                onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })}
+                                                                style={{ ...inputStyle, background: activeEl.rectangles_type === 'image' ? '#f1f5f9' : 'white', cursor: activeEl.rectangles_type === 'image' ? 'not-allowed' : 'text' }}
+                                                                onFocus={focIn} onBlur={focOut}
+                                                                disabled={activeEl.rectangles_type === 'image'}
+                                                                title={activeEl.rectangles_type === 'image' ? "Height is automatically calculated to preserve aspect ratio" : ""}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
 
-                                    <div style={{ overflow: 'hidden', flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                            <div style={{ fontSize: '12.5px', fontWeight: 600, color: activeEl?.id === el.id ? '#4f46e5' : '#334155', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                                {el.label || el.key || 'Unnamed'}
-                                            </div>
-                                            <div style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#64748b' }}>
-                                                {el.section}
-                                            </div>
-                                        </div>
-                                        {(!el.type || el.type === 'text') && (
-                                            <div style={{ fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                                                {el.prefix || ''}{el.value || 'null'}{el.suffix || ''}
+                                                {/* Line Options */}
+                                                {activeEl.type === 'line' && (
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>X2 Pos</label>
+                                                            <input type="number" value={Math.round(activeEl.x2 || 0)} onChange={(e) => updateElement(activeEl.id, { x2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Y2 Pos (Backend)</label>
+                                                            <input type="number" value={Math.round(activeEl.y2 || 0)} onChange={(e) => updateElement(activeEl.id, { y2: parseInt(e.target.value) || 0 })} style={inputStyle} onFocus={focIn} onBlur={focOut} />
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Save & Export Block */}
-                <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: 'white', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-                    {/* Export PDF Sub-section */}
-                    <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: '14px', border: '1px solid #bae6fd' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.05em' }}>
-                            Preview with Invoice Data
-                        </label>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <select
-                                value={exportInvoiceId}
-                                onChange={e => setExportInvoiceId(e.target.value)}
-                                style={{ ...inputStyle, fontSize: '12px', border: '1.5px solid #7dd3fc' }}
-                                onFocus={focIn}
-                                onBlur={focOut}
-                            >
-                                <option value=""> {loadingInvoices ? 'Loading invoices...' : '-- Select Invoice --'} </option>
-                                {recentInvoices.map(inv => (
-                                    <option key={inv.id} value={inv.id}>
-                                        #{inv.invoice_number} - {inv.receiver_name} ({inv.date})
-                                    </option>
-                                ))}
-                            </select>
-                            
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ flex: 1, height: '1px', background: '#bae6fd' }}></div>
-                                <span style={{ fontSize: '10px', fontWeight: 700, color: '#7dd3fc', textTransform: 'uppercase' }}>or enter id</span>
-                                <div style={{ flex: 1, height: '1px', background: '#bae6fd' }}></div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input
-                                    type="text"
-                                    placeholder="Invoice ID (e.g. 24)"
-                                    value={exportInvoiceId}
-                                    onChange={e => setExportInvoiceId(e.target.value)}
-                                    style={{ ...inputStyle, flex: 1, padding: '8px 10px', fontSize: '12px', border: '1.5px solid #e2e8f0' }}
-                                />
-                                <button
-                                    onClick={handleExport}
-                                    disabled={exporting || !exportInvoiceId}
-                                    style={{
-                                        padding: '10px 18px', fontSize: '13px', fontWeight: 700, color: 'white', whiteSpace: 'nowrap',
-                                        background: (exporting || !exportInvoiceId) ? '#cbd5e1' : '#0ea5e9', borderRadius: '10px', border: 'none',
-                                        cursor: (exporting || !exportInvoiceId) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                                        boxShadow: (exporting || !exportInvoiceId) ? 'none' : '0 4px 12px rgba(14,165,233,0.25)',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    <Eye size={16} />
-                                    {exporting ? "Wait..." : "Preview"}
-                                </button>
+                                ) : (
+                                    <div style={{ padding: '60px 0', textAlign: 'center', color: '#94a3b8' }}>
+                                        <div style={{ display: 'inline-flex', padding: '20px', background: '#f1f5f9', borderRadius: '50%', marginBottom: '16px' }}>
+                                            <Move size={32} color="#64748b" />
+                                        </div>
+                                        <p style={{ fontSize: '15px', fontWeight: 600, color: '#334155' }}>Editor Empty</p>
+                                        <p style={{ fontSize: '13px', marginTop: '4px', maxWidth: '200px', marginInline: 'auto' }}>Select an element from the canvas or Blocks tab to edit it.</p>
+                                        <button
+                                            onClick={() => setSidebarTab('blocks')}
+                                            style={{ marginTop: '20px', padding: '8px 16px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12px', fontWeight: 600, color: '#4f46e5', cursor: 'pointer' }}
+                                        >
+                                            View Blocks
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    </div>
-
-                    <button
-                        onClick={handleSave} disabled={saving}
-                        style={{
-                            width: '100%', padding: '12px', fontSize: '14px', fontWeight: 700, color: 'white',
-                            background: saving ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '12px', border: 'none',
-                            cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                            boxShadow: '0 4px 14px rgba(79,70,229,0.3)', transition: 'transform 0.15s, box-shadow 0.15s',
-                        }}
-                        onMouseEnter={e => { if (!saving) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(79,70,229,0.4)'; } }}
-                        onMouseLeave={e => { if (!saving) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(79,70,229,0.3)'; } }}
-                    >
-                        <Save size={18} />
-                        {saving ? "Saving..." : "Save Template"}
-                    </button>
+                    )}
                 </div>
             </div>
 
@@ -1006,19 +1008,41 @@ const InvoiceTemplateEditor = () => {
                     </div>
 
                     {!Limited_access && (
-                        <button
-                            onClick={() => setShapesLocked(!shapesLocked)}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1',
-                                background: shapesLocked ? '#f1f5f9' : 'white', cursor: 'pointer',
-                                fontSize: '13px', fontWeight: 600, color: shapesLocked ? '#64748b' : '#4f46e5',
-                                transition: 'all 0.2s', display: 'flex'
-                            }}
-                        >
-                            {shapesLocked ? <Lock size={16} /> : <Unlock size={16} />}
-                            {shapesLocked ? "Shapes Locked" : "Shapes Unlocked"}
-                        </button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                                onClick={() => setShapesLocked(!shapesLocked)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                                    background: shapesLocked ? '#f1f5f9' : 'white', cursor: 'pointer',
+                                    fontSize: '13px', fontWeight: 600, color: shapesLocked ? '#64748b' : '#4f46e5',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {shapesLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                                {shapesLocked ? "Shapes Locked" : "Shapes Unlocked"}
+                            </button>
+
+                            <button
+                                onClick={() => handleSave()}
+                                disabled={saving}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    padding: '8px 20px', borderRadius: '10px', border: 'none',
+                                    background: saving ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                                    color: 'white', cursor: saving ? 'not-allowed' : 'pointer',
+                                    fontSize: '13px', fontWeight: 700,
+                                    boxShadow: '0 4px 12px rgba(79,70,229,0.25)',
+                                    transition: 'all 0.2s',
+                                    transform: saving ? 'none' : 'translateY(0)'
+                                }}
+                                onMouseEnter={e => { if (!saving) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={e => { if (!saving) e.currentTarget.style.transform = 'translateY(0)'; }}
+                            >
+                                <Save size={16} />
+                                {saving ? "Saving..." : "Save Template"}
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -1031,7 +1055,7 @@ const InvoiceTemplateEditor = () => {
                 }}>
                     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
                         <Stage
-                            width={window.innerWidth - (Limited_access ? 48 : 388)}
+                            width={window.innerWidth - (Limited_access ? 48 : 468)}
                             height={window.innerHeight - 120}
                             onWheel={handleWheel}
                             scaleX={stageScale} scaleY={stageScale} x={stagePos.x} y={stagePos.y}
@@ -1059,14 +1083,14 @@ const InvoiceTemplateEditor = () => {
                                     <Group listening={false}>
                                         <Rect
                                             x={activeEl.x - 4}
-                                            // Selected box covers from top of rect to bottom. Display Y = bottom.
-                                            y={activeEl.canvasY - (activeEl.font_size || 12) - 4}
+                                            // Selected box starts at top.
+                                            y={activeEl.canvasY - 4}
                                             width={(activeEl.value?.toString()?.length || 5) * (activeEl.font_size || 12) * 0.6 + 8} // rough width estimate
                                             height={(activeEl.font_size || 12) + 8}
                                             stroke="#4f46e5" strokeWidth={1.5} fill="rgba(79, 70, 229, 0.08)" dash={[4, 4]}
                                         />
                                         <Rect
-                                            x={activeEl.x - 6} y={activeEl.canvasY - (activeEl.font_size || 12) - 6}
+                                            x={activeEl.x - 6} y={activeEl.canvasY - 6}
                                             width={6} height={6} fill="white" stroke="#4f46e5" strokeWidth={1.5}
                                         />
                                     </Group>
