@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Stage, Layer, Text, Rect, Group, Line, Image as KonvaImage } from 'react-konva';
+import { Stage, Layer, Text, Rect, Group, Line, Image as KonvaImage, Transformer } from 'react-konva';
 import { Trash2, Bold, Type, Save, Move, Square, Minus, Copy, Plus, DownloadCloud, Eye, Lock, Unlock, Code, Settings, Layers } from 'lucide-react';
 import { clientToken } from "@/axios";
 import useImage from "use-image";
 import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { jsPDF } from 'jspdf';
 
 const ReaderBackground = ({ pdf_template }) => {
     const [backgroundImage] = useImage(pdf_template);
-    return <KonvaImage image={backgroundImage} x={0} y={0} width={595} height={842} />;
+    return <KonvaImage image={backgroundImage} x={0} y={0} width={595} height={841.89} />;
 };
 
 /* ── UI Helpers ── */
@@ -33,6 +34,9 @@ const InvoiceTemplateEditor = () => {
     const [stageScale, setStageScale] = useState(1);
     const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
     const stageRef = useRef();
+    // Refs for Transformer on selected text
+    const transformerRef = useRef();
+    const textNodeRefs = useRef({});  // id → Konva Text node
 
     // Admins can edit if they are staff (superadmin) OR if they are an admin of a verified company
     const canEdit = userInfo?.is_staff || (userInfo?.is_company_admin && userInfo?.is_company_varified);
@@ -94,6 +98,26 @@ const InvoiceTemplateEditor = () => {
         setIsJsonEditMode(false);
     }, [selectedElementId]);
 
+    // Wire Transformer to the correct text node whenever selection changes.
+    // NOTE: we depend on selectedElementId (not activeEl) because activeEl is
+    // derived later in the component body and isn't available here yet.
+    useEffect(() => {
+        const tr = transformerRef.current;
+        if (!tr) return;
+
+        // A selected node is a "text" node if it exists in textNodeRefs
+        // (only text <Text> elements register themselves there)
+        const textNode = selectedElementId ? textNodeRefs.current[selectedElementId] : null;
+        if (textNode) {
+            tr.nodes([textNode]);
+            tr.getLayer()?.batchDraw();
+        } else {
+            // Shape or nothing selected — hide transformer
+            tr.nodes([]);
+            tr.getLayer()?.batchDraw();
+        }
+    }, [selectedElementId]);
+
     useEffect(() => {
         if (/Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent)) {
             setLimited_access(true);
@@ -111,38 +135,102 @@ const InvoiceTemplateEditor = () => {
             .finally(() => setLoadingInvoices(false));
     }, []);
 
+    const getDummyValue = (label) => {
+        if (!label) return 'Sample Text';
+        const l = label.toLowerCase();
+        if (l.includes('date')) return '15/08/2026';
+        if (l.includes('invoice_number')) return 'INV-2026-001';
+        if (l.includes('receiver,name') || l.includes('customer')) return 'Acme Solutions Ltd.';
+        if (l.includes('receiver,address')) return '123 Business Valley, Tech Park,\nCity, 400001';
+        if (l.includes('gst') && l.includes('number')) return '27AADCA2230EA1Z';
+        if (l.includes('description')) return 'Premium Software License';
+        if (l.includes('quantity')) return '10';
+        if (l.includes('rate')) return '150.00';
+        if (l.includes('amount') && !l.includes('total') && !l.includes('gst')) return '1500.00';
+        if (l.includes('total_amount_with_out_gst')) return '1500.00';
+        if (l.includes('total_amount_with_gst')) return '1770.00';
+        if (l.includes('state_gst_amount') || l.includes('center_gst_amount')) return '135.00';
+        if (l.includes('total_amount_in_text')) return 'One Thousand Seven Hundred Seventy Only';
+        if (l.includes('s.no') || l === 'sno') return '1';
+        if (l === '636' || l === 'title') return 'INVOICE';
+        return 'Sample Text';
+    };
+
     // Extract elements from config dynamically every render
     const extractElements = () => {
         if (!config?.Bill) return [];
         const extracted = [];
-        const sections = ['bill_stretcher', 'my_company_details', 'harder', 'footer', 'product_stretcher'];
 
+        const processElement = (key, element, section, index) => {
+            const rawValue = (element.value !== undefined && element.value !== '')
+                ? element.value
+                : (element.default_value !== undefined && element.default_value !== '')
+                    ? element.default_value
+                    : getDummyValue(element.label || key);
+
+            const displayText = `${element.prefix || ''}${rawValue}${element.suffix || ''}`;
+            let finalDisplay = displayText === '' ? 'X' : displayText;
+
+            const fontSize = element.font_size || (section === 'product' ? (config.Bill.product.font_size || 12) : 12);
+            let displayLines = 1;
+
+            if ((element.limit && finalDisplay.length > element.limit) || finalDisplay.includes('\n')) {
+                const rawLines = finalDisplay.split('\n');
+                let maxLines = element.no_lines || 100;
+                let currentLineCount = 0;
+                const processedLines = [];
+
+                for (const raw of rawLines) {
+                    let textLeft = raw;
+                    if (element.limit) {
+                        while (textLeft.length > 0 && currentLineCount < maxLines) {
+                            processedLines.push(textLeft.substring(0, element.limit));
+                            textLeft = textLeft.substring(element.limit);
+                            currentLineCount++;
+                        }
+                    } else if (currentLineCount < maxLines) {
+                        processedLines.push(raw);
+                        currentLineCount++;
+                    }
+                }
+                finalDisplay = processedLines.join('\n');
+                displayLines = processedLines.length;
+            }
+
+            const lineHeightMul = (element.next_line && element.next_line.gap) ? (element.next_line.gap / fontSize) : 1;
+            const totalHeight = element.type === 'rectangles' ? (element.height || 0) : (element.type === 'line' ? 0 : (displayLines * fontSize * lineHeightMul));
+
+            // Determine backend Y to use
+            let backendY = element.y;
+            if (section === 'product' && backendY === undefined) {
+                backendY = config.Bill.product.start || 0;
+            } else if (backendY === undefined) {
+                backendY = 0;
+            }
+
+            extracted.push({
+                ...element,
+                id: `${section}_${key}_${index}`,
+                section, key, index,
+                canvasY: 841.89 - backendY - totalHeight,
+                calculatedHeight: totalHeight,
+                finalDisplay,
+                lineHeightMul
+            });
+        };
+
+        const sections = ['bill_stretcher', 'my_company_details', 'harder', 'footer', 'product_stretcher'];
         sections.forEach(section => {
             if (config.Bill[section]) {
                 config.Bill[section].forEach((item, index) => {
-                    Object.entries(item).forEach(([key, element]) => {
-                        extracted.push({
-                            ...element,
-                            id: `${section}_${key}_${index}`,
-                            section, key, index,
-                            // Backend maps Y from bottom (A4 height = 842)
-                            canvasY: 842 - element.y
-                        });
-                    });
+                    Object.entries(item).forEach(([key, element]) => processElement(key, element, section, index));
                 });
             }
         });
 
         if (config.Bill.product?.product_list) {
             config.Bill.product.product_list.forEach((item, index) => {
-                Object.entries(item).forEach(([key, element]) => {
-                    extracted.push({
-                        ...element,
-                        canvasY: 842 - config.Bill.product.start,
-                        id: `product_${key}_${index}`,
-                        section: 'product', key, index
-                    });
-                });
+                Object.entries(item).forEach(([key, element]) => processElement(key, element, 'product', index));
             });
         }
         return extracted;
@@ -156,9 +244,14 @@ const InvoiceTemplateEditor = () => {
         const elMeta = allElements.find(el => el.id === elementId);
         if (!elMeta) return;
 
-        // Convert canvasY back to backend's Y coordinate (bottom-based)
-        if (updates.canvasY !== undefined) {
-            updates.y = 842 - updates.canvasY;
+        // If updating position or dimensions, we need to handle the Y anchor conversion
+        if (updates.canvasY !== undefined || updates.font_size !== undefined || updates.height !== undefined || updates.value !== undefined || updates.limit !== undefined) {
+            const nextCanvasY = updates.canvasY !== undefined ? updates.canvasY : elMeta.canvasY;
+            // Height is derived from multiple factors now
+            const nextHeight = updates.height !== undefined ? updates.height : elMeta.calculatedHeight;
+
+            // baseline = 841.89 - top - height
+            updates.y = 841.89 - nextCanvasY - nextHeight;
             delete updates.canvasY;
         }
 
@@ -204,7 +297,7 @@ const InvoiceTemplateEditor = () => {
             productItem[newKey] = {
                 ...originalObj,
                 x: (originalObj.x || 0) + 10,
-                y: (originalObj.y || 842) - 10,
+                y: (originalObj.y || 841.89) - 10,
             };
             setSelectedElementId(`product_${newKey}_${elMeta.index}`);
         } else {
@@ -215,7 +308,7 @@ const InvoiceTemplateEditor = () => {
             sectionItem[newKey] = {
                 ...originalObj,
                 x: (originalObj.x || 0) + 10,
-                y: (originalObj.y || 842) - 10,
+                y: (originalObj.y || 841.89) - 10,
             };
             setSelectedElementId(`${elMeta.section}_${newKey}_${elMeta.index}`);
         }
@@ -350,25 +443,128 @@ const InvoiceTemplateEditor = () => {
         }
     };
 
-    const getDummyValue = (label) => {
-        if (!label) return 'Sample Text';
-        const l = label.toLowerCase();
-        if (l.includes('date')) return '15/08/2026';
-        if (l.includes('invoice_number')) return 'INV-2026-001';
-        if (l.includes('receiver,name') || l.includes('customer')) return 'Acme Solutions Ltd.';
-        if (l.includes('receiver,address')) return '123 Business Valley, Tech Park,\nCity, 400001';
-        if (l.includes('gst') && l.includes('number')) return '27AADCA2230EA1Z';
-        if (l.includes('description')) return 'Premium Software License';
-        if (l.includes('quantity')) return '10';
-        if (l.includes('rate')) return '150.00';
-        if (l.includes('amount') && !l.includes('total') && !l.includes('gst')) return '1500.00';
-        if (l.includes('total_amount_with_out_gst')) return '1500.00';
-        if (l.includes('total_amount_with_gst')) return '1770.00';
-        if (l.includes('state_gst_amount') || l.includes('center_gst_amount')) return '135.00';
-        if (l.includes('total_amount_in_text')) return 'One Thousand Seven Hundred Seventy Only';
-        if (l.includes('s.no') || l === 'sno') return '1';
-        if (l === '636' || l === 'title') return 'INVOICE';
-        return 'Sample Text';
+
+    /* ── React-side PDF Generator (mirrors Python submit.py logic) ── */
+    const [reactPdfUrl, setReactPdfUrl]   = useState(null);
+    const [reactPdfBusy, setReactPdfBusy] = useState(false);
+
+    const generateReactPDF = async () => {
+        setReactPdfBusy(true);
+        try {
+            const PAGE_W = 595.28;
+            const PAGE_H = 841.89;
+            const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+
+            // ── Draw background template image (if available) ──
+            if (config.pdf_template) {
+                try {
+                    const imgData = await fetch(config.pdf_template)
+                        .then(r => r.blob())
+                        .then(blob => new Promise((res, rej) => {
+                            const reader = new FileReader();
+                            reader.onload  = () => res(reader.result);
+                            reader.onerror = rej;
+                            reader.readAsDataURL(blob);
+                        }));
+                    doc.addImage(imgData, 'JPEG', 0, 0, PAGE_W, PAGE_H);
+                } catch (imgErr) {
+                    console.warn('Could not load template image:', imgErr);
+                }
+            }
+
+            // ── Iterate every element — same order as submit.py collect_all_data ──
+            for (const el of allElements) {
+                const elY = el.y ?? 0;  // backend y (PDF bottom-left origin)
+
+                if (el.type === 'line') {
+                    // submit.py draw_line: path.moveTo(x1,y1) lineTo(x2,y2)
+                    // jsPDF origin is top-left, so flip y: jsPDF_y = PAGE_H - pdf_y
+                    doc.setLineWidth(el.line_width || 1);
+                    const stroke = el.stroke || 'black';
+                    if (stroke.startsWith('#')) {
+                        const r = parseInt(stroke.slice(1,3),16);
+                        const g = parseInt(stroke.slice(3,5),16);
+                        const b = parseInt(stroke.slice(5,7),16);
+                        doc.setDrawColor(r, g, b);
+                    } else {
+                        doc.setDrawColor(0, 0, 0);
+                    }
+                    doc.line(
+                        el.x,  PAGE_H - elY,
+                        el.x2, PAGE_H - (el.y2 ?? 0)
+                    );
+
+                } else if (el.type === 'rectangles') {
+                    // submit.py draw_polygon: points stored as bottom-left origin
+                    // jsPDF rect(x, y, w, h) — y is top-left origin
+                    const pts = el.points || [];
+                    if (pts.length >= 4) {
+                        const xs = pts.map(p => p[0]);
+                        const ys = pts.map(p => p[1]);
+                        const x  = Math.min(...xs);
+                        const y  = Math.min(...ys);   // bottom edge in PDF coords
+                        const w  = Math.max(...xs) - x;
+                        const h  = Math.max(...ys) - y; // height going upward
+                        // jsPDF top-left y = PAGE_H - (y + h)
+                        doc.setLineWidth(el.line_width || 1);
+                        doc.setDrawColor(0, 0, 0);
+                        doc.rect(x, PAGE_H - y - h, w, h, 'S');
+                    } else {
+                        // Fallback: use x/y/width/height fields directly
+                        const rx = el.x || 0;
+                        const ry = elY;
+                        const rw = el.width  || 0;
+                        const rh = Math.abs(el.height || 0);
+                        doc.setLineWidth(1);
+                        doc.setDrawColor(0, 0, 0);
+                        doc.rect(rx, PAGE_H - ry - rh, rw, rh, 'S');
+                    }
+
+                } else {
+                    // ── TEXT — mirrors submit.py draw_string ──
+                    const txt = el.finalDisplay || '';
+                    if (!txt || txt === 'X') continue;
+
+                    const fs = el.font_size || 12;
+                    doc.setFontSize(fs);
+
+                    // Font style
+                    const isBold = el.font === 'bold';
+                    doc.setFont('times', isBold ? 'bold' : 'normal');
+
+                    // ReportLab drawString(x, y) → y is baseline (bottom-left origin)
+                    // jsPDF text(str, x, y) → y is also baseline, but top-left origin
+                    // So: jsPDF_y = PAGE_H - pdf_baseline_y
+                    const lines = txt.split('\n');
+                    const gap   = (el.next_line && el.next_line.gap) ? el.next_line.gap : fs;
+
+                    let currentX = el.x || 0;
+                    let currentY = PAGE_H - elY;   // first line baseline in jsPDF coords
+
+                    for (let i = 0; i < lines.length; i++) {
+                        if (i > 0) {
+                            // Move down: in jsPDF y increases downward, same as gap going down
+                            currentY += gap;
+                            currentX = (el.next_line && el.next_line.x != null)
+                                ? el.next_line.x
+                                : (el.x || 0);
+                        }
+                        doc.text(lines[i], currentX, currentY);
+                    }
+                }
+            }
+
+            // ── Open in preview modal ──
+            const blob = doc.output('blob');
+            const url  = URL.createObjectURL(blob);
+            if (reactPdfUrl) URL.revokeObjectURL(reactPdfUrl);
+            setReactPdfUrl(url);
+        } catch (err) {
+            console.error('React PDF generation failed:', err);
+            alert('Failed to generate React PDF: ' + err.message);
+        } finally {
+            setReactPdfBusy(false);
+        }
     };
 
     /* ── Render Elements ── */
@@ -422,15 +618,15 @@ const InvoiceTemplateEditor = () => {
                 const [image] = useImage(shape.src);
                 return (
                     <Group {...commonProps} x={shape.x} y={shape.canvasY} onDragEnd={dragEnd}>
-                        {isSelected && <Rect width={shape.width} height={-shape.height} stroke="#4f46e5" strokeWidth={2} dash={[4, 4]} />}
-                        <KonvaImage image={image} width={shape.width} height={-shape.height} />
+                        {isSelected && <Rect width={shape.width} height={shape.height} stroke="#4f46e5" strokeWidth={2} dash={[4, 4]} />}
+                        <KonvaImage image={image} width={shape.width} height={shape.height} />
                     </Group>
                 );
             }
             return (
                 <Rect
                     {...commonProps}
-                    x={shape.x} y={shape.canvasY} width={shape.width} height={-shape.height}
+                    x={shape.x} y={shape.canvasY} width={shape.width} height={shape.height}
                     stroke={isSelected ? '#4f46e5' : (shape.stroke || 'black')}
                     strokeWidth={isSelected ? 2 : 1} dash={isSelected ? [4, 4] : []}
                     onDragEnd={dragEnd}
@@ -442,7 +638,7 @@ const InvoiceTemplateEditor = () => {
             return (
                 <Line
                     {...commonProps}
-                    points={[shape.x, shape.canvasY, shape.x2, 842 - shape.y2]}
+                    points={[shape.x, shape.canvasY, shape.x2, 841.89 - shape.y2]}
                     stroke={isSelected ? '#4f46e5' : (shape.stroke || 'black')}
                     strokeWidth={isSelected ? 2 : 1} hitStrokeWidth={10}
                     onDragEnd={(e) => {
@@ -495,19 +691,76 @@ const InvoiceTemplateEditor = () => {
         return (
             <Text
                 {...commonProps}
+                ref={(node) => {
+                    if (node) textNodeRefs.current[shape.id] = node;
+                    else delete textNodeRefs.current[shape.id];
+                }}
                 x={shape.x}
-                // Convert bottom-anchor "canvasY" to top-anchor via font offset
-                y={shape.canvasY - fontSize}
+                y={shape.canvasY}
+                padding={0}
                 text={finalDisplay}
-                fontSize={fontSize}
+                fontSize={shape.font_size * 0.75 || (shape.section === 'product' ? (config.Bill.product.font_size || 12) : 12)}
                 fontFamily={shape.font_family || 'Times New Roman'}
-                lineHeight={konvaLineHeight}
+                lineHeight={shape.lineHeightMul}
                 fontStyle={shape.font === 'bold' ? 'bold' : 'normal'}
                 fill={color}
+                wrap="none"
+                onDragMove={(e) => {
+                    const node = e.target;
+                    const nx = node.x();
+                    const ny = node.y();
+                    const w = node.width() * node.scaleX();
+                    const h = node.height() * node.scaleY();
+                    const PAGE_H = 841.89;
+
+                    // ── Canvas coords (top-left origin, y↓) ──
+                    const tl = { x: nx, y: ny };
+                    const tr = { x: nx + w, y: ny };
+                    const bl = { x: nx, y: ny + h };
+                    const br = { x: nx + w, y: ny + h };
+
+                    // ── PDF / backend coords (bottom-left origin, y↑) ──
+                    const toBackend = (cx, cy) => ({ x: cx, y: PAGE_H - cy });
+
+                    console.table({
+                        'Top-Left': { ...tl, ...toBackend(tl.x, tl.y) },
+                        'Top-Right': { ...tr, ...toBackend(tr.x, tr.y) },
+                        'Bottom-Left': { ...bl, ...toBackend(bl.x, bl.y) },
+                        'Bottom-Right': { ...br, ...toBackend(br.x, br.y) },
+                    });
+                }}
                 onDragEnd={(e) => {
                     const node = e.target;
-                    // convert node top Y back to canvas bottom Y
-                    updateElement(shape.id, { x: node.x(), canvasY: node.y() + fontSize });
+                    const nx = node.x();
+                    const ny = node.y();
+                    const w = node.width() * node.scaleX();
+                    const h = node.height() * node.scaleY();
+                    const PAGE_H = 841.89;
+
+                    // Bottom-right corner in canvas space
+                    const brCanvasX = nx + w;
+                    const brCanvasY = ny + h;
+
+                    // Convert bottom-right canvas → PDF backend y (bottom-left origin)
+                    // brCanvasY is the bottom of the text box on canvas.
+                    // In PDF coords that's simply: PAGE_H - brCanvasY
+                    const backendX = brCanvasX;
+                    const backendY = PAGE_H - brCanvasY;
+
+                    console.log('💾 Saving bottom-right →', { backendX, backendY, brCanvasX, brCanvasY });
+                    updateElement(shape.id, { x: node.x(), canvasY: ny });
+                }}
+                onTransformEnd={(e) => {
+                    const node = e.target;
+                    // Reset scale back to 1 — apply the scale as a width change instead
+                    const newWidth = Math.max(50, node.width() * node.scaleX());
+                    node.scaleX(1);
+                    node.scaleY(1);
+                    updateElement(shape.id, {
+                        x: node.x(),
+                        canvasY: node.y(),
+                        width: newWidth,
+                    });
                 }}
             />
         );
@@ -646,6 +899,30 @@ const InvoiceTemplateEditor = () => {
                                             <Eye size={16} /> {exporting ? "Generating..." : "Generate Preview PDF"}
                                         </button>
                                     </div>
+                                </div>
+
+                                {/* React-side PDF Generator */}
+                                <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '14px', border: '1px solid #bbf7d0', marginBottom: '16px' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.05em' }}>
+                                        ⚡ React PDF (client-side)
+                                    </label>
+                                    <p style={{ fontSize: '11px', color: '#4ade80', marginBottom: '10px', marginTop: 0, color: '#166534' }}>
+                                        Renders PDF entirely in the browser using the canvas layout — no backend needed.
+                                    </p>
+                                    <button
+                                        onClick={generateReactPDF}
+                                        disabled={reactPdfBusy}
+                                        style={{
+                                            width: '100%', padding: '10px', fontSize: '13px', fontWeight: 700, color: 'white',
+                                            background: reactPdfBusy ? '#cbd5e1' : 'linear-gradient(135deg, #16a34a, #15803d)',
+                                            borderRadius: '10px', border: 'none',
+                                            cursor: reactPdfBusy ? 'not-allowed' : 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                            boxShadow: reactPdfBusy ? 'none' : '0 4px 12px rgba(22,163,74,0.3)',
+                                        }}
+                                    >
+                                        <Eye size={16} /> {reactPdfBusy ? 'Generating...' : 'Generate React PDF'}
+                                    </button>
                                 </div>
 
 
@@ -1069,7 +1346,7 @@ const InvoiceTemplateEditor = () => {
                             <Layer>
                                 {/* A4 Paper Drop Shadow & Background */}
                                 <Rect
-                                    x={0} y={0} width={595} height={842} fill="white"
+                                    x={0} y={0} width={595} height={841.89} fill="white"
                                     shadowColor="rgba(0,0,0,0.15)" shadowBlur={20} shadowOffsetY={10}
                                 />
                                 <ReaderBackground pdf_template={config.pdf_template} />
@@ -1078,23 +1355,29 @@ const InvoiceTemplateEditor = () => {
                                 {allElements.filter(el => el.type === 'rectangles' || el.type === 'line').map(el => <RenderNode key={el.id} shape={el} />)}
                                 {allElements.filter(el => el.type !== 'rectangles' && el.type !== 'line').map(el => <RenderNode key={el.id} shape={el} />)}
 
-                                {/* Custom Outline around explicit text selections */}
-                                {activeEl && (!activeEl.type || activeEl.type === 'text') && (
-                                    <Group listening={false}>
-                                        <Rect
-                                            x={activeEl.x - 4}
-                                            // Selected box starts at top.
-                                            y={activeEl.canvasY - 4}
-                                            width={(activeEl.value?.toString()?.length || 5) * (activeEl.font_size || 12) * 0.6 + 8} // rough width estimate
-                                            height={(activeEl.font_size || 12) + 8}
-                                            stroke="#4f46e5" strokeWidth={1.5} fill="rgba(79, 70, 229, 0.08)" dash={[4, 4]}
-                                        />
-                                        <Rect
-                                            x={activeEl.x - 6} y={activeEl.canvasY - 6}
-                                            width={6} height={6} fill="white" stroke="#4f46e5" strokeWidth={1.5}
-                                        />
-                                    </Group>
-                                )}
+                                {/* Transformer for selected text elements */}
+                                <Transformer
+                                    ref={transformerRef}
+                                    boundBoxFunc={(oldBox, newBox) => ({
+                                        ...newBox,
+                                        width: Math.max(50, newBox.width),
+                                        height: Math.max(20, newBox.height),
+                                    })}
+                                    enabledAnchors={[
+                                        'middle-left', 'middle-right',
+                                        'top-left', 'top-right',
+                                        'bottom-left', 'bottom-right',
+                                    ]}
+                                    rotateEnabled={false}
+                                    borderStroke="#4f46e5"
+                                    borderStrokeWidth={1.5}
+                                    borderDash={[4, 4]}
+                                    anchorFill="white"
+                                    anchorStroke="#4f46e5"
+                                    anchorStrokeWidth={1.5}
+                                    anchorSize={8}
+                                    anchorCornerRadius={2}
+                                />
                             </Layer>
                         </Stage>
                     </div>
@@ -1152,6 +1435,72 @@ const InvoiceTemplateEditor = () => {
                             <iframe
                                 src={pdfPreviewUrl}
                                 title="PDF Preview"
+                                style={{ width: '100%', height: '100%', border: 'none' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal for React (client-side) PDF Preview */}
+            {reactPdfUrl && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.75)', zIndex: 9999,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', padding: '24px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white', borderRadius: '16px',
+                        width: '100%', maxWidth: '1000px', height: '100%',
+                        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                    }}>
+                        <div style={{
+                            padding: '16px 24px', borderBottom: '1px solid #d1fae5',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            backgroundColor: '#f0fdf4'
+                        }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#14532d' }}>
+                                    ⚡ React PDF Preview
+                                </h2>
+                                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#4b7a5a' }}>
+                                    Generated entirely in the browser using jsPDF — no backend call
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <a
+                                    href={reactPdfUrl}
+                                    download={`react_preview_${id || 'template'}.pdf`}
+                                    style={{
+                                        padding: '8px 16px', backgroundColor: '#dcfce7', color: '#16a34a',
+                                        border: '1px solid #86efac', borderRadius: '8px', cursor: 'pointer',
+                                        fontSize: '13px', fontWeight: 600, textDecoration: 'none',
+                                        display: 'flex', alignItems: 'center', gap: '6px'
+                                    }}
+                                >
+                                    <DownloadCloud size={16} /> Download
+                                </a>
+                                <button
+                                    onClick={() => {
+                                        URL.revokeObjectURL(reactPdfUrl);
+                                        setReactPdfUrl(null);
+                                    }}
+                                    style={{
+                                        padding: '8px 16px', backgroundColor: '#f1f5f9', color: '#475569',
+                                        border: 'none', borderRadius: '8px', cursor: 'pointer',
+                                        fontSize: '13px', fontWeight: 600
+                                    }}
+                                >
+                                    Close Preview
+                                </button>
+                            </div>
+                        </div>
+                        <div style={{ flex: 1, backgroundColor: '#cbd5e1' }}>
+                            <iframe
+                                src={reactPdfUrl}
+                                title="React PDF Preview"
                                 style={{ width: '100%', height: '100%', border: 'none' }}
                             />
                         </div>
