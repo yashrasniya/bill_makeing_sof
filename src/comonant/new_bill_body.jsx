@@ -35,7 +35,10 @@ function NewBillBody({ id }) {
     const [inventoryProducts, setInventoryProducts] = useState([]);
     const [selectedInventoryProductId, setSelectedInventoryProductId] = useState(null);
     let navigate = useNavigate()
+useEffect(()=>{
 
+    console.log("InvoiceData",InvoiceData)
+})
 
     // var checkbox={}
     let grandTotal = 0
