@@ -1,11 +1,56 @@
 import '../style/bill.css';
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { clientToken } from "@/axios";
 import { useNavigate } from "react-router-dom";
 import PdfOpener from "@/utility/pdf_opener";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
 import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
+
+/* ── Toast Notification Component ──────────────────────────────── */
+const ToastContainer = ({ toasts, onDismiss }) => (
+    <div style={{
+        position: 'fixed', top: '20px', right: '20px',
+        zIndex: 99999, display: 'flex', flexDirection: 'column', gap: '10px',
+        pointerEvents: 'none',
+    }}>
+        {toasts.map((t) => (
+            <div key={t.id} style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                background: t.type === 'error' ? '#fee2e2' : t.type === 'warning' ? '#fef9c3' : '#dcfce7',
+                border: `1px solid ${t.type === 'error' ? '#fca5a5' : t.type === 'warning' ? '#fde047' : '#86efac'}`,
+                borderLeft: `4px solid ${t.type === 'error' ? '#ef4444' : t.type === 'warning' ? '#eab308' : '#22c55e'}`,
+                color: t.type === 'error' ? '#991b1b' : t.type === 'warning' ? '#713f12' : '#14532d',
+                padding: '12px 16px', borderRadius: '10px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                minWidth: '260px', maxWidth: '360px',
+                animation: 'slideInToast 0.3s ease',
+                pointerEvents: 'all',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '14px', fontWeight: 500,
+            }}>
+                <span style={{ fontSize: '18px' }}>
+                    {t.type === 'error' ? '❌' : t.type === 'warning' ? '⚠️' : '✅'}
+                </span>
+                <span style={{ flex: 1 }}>{t.message}</span>
+                <button
+                    onClick={() => onDismiss(t.id)}
+                    style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        fontSize: '16px', opacity: 0.6, padding: '0 2px',
+                        color: 'inherit', lineHeight: 1,
+                    }}
+                >✕</button>
+            </div>
+        ))}
+        <style>{`
+            @keyframes slideInToast {
+                from { transform: translateX(110%); opacity: 0; }
+                to   { transform: translateX(0);    opacity: 1; }
+            }
+        `}</style>
+    </div>
+);
 
 
 
@@ -34,7 +79,18 @@ function NewBillBody({ id }) {
     const [invoiceNumber, setInvoiceNumber] = useState(InvoiceData?.invoice_number ?? "");
     const [inventoryProducts, setInventoryProducts] = useState([]);
     const [selectedInventoryProductId, setSelectedInventoryProductId] = useState(null);
+    const [toasts, setToasts] = useState([]);
     let navigate = useNavigate()
+
+    const showToast = useCallback((message, type = 'error') => {
+        const id = Date.now() + Math.random();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+    }, []);
+
+    const dismissToast = useCallback((id) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, []);
 useEffect(()=>{
 
     console.log("InvoiceData",InvoiceData)
@@ -50,7 +106,7 @@ useEffect(()=>{
             }
         }).catch((error) => {
             console.log(error)
-            alert(`error ${error.request.status}`)
+            showToast(`Error ${error?.request?.status ?? ''}: Failed to load companies`)
         })
 
         clientToken.get('/inventory/products/?limit=500').then((res) => {
@@ -87,15 +143,21 @@ useEffect(()=>{
             }
         }).catch((error) => {
             console.log(error)
-            alert(`error ${error?.request.status}`)
+            showToast(`Error ${error?.request?.status ?? ''}: Failed to load product fields`)
         })
     }, [refresh]);
     useEffect(() => {
         console.log(grandTotal)
         let form = new FormData()
         Object.keys(InvoiceData).map((obj) => {
+
             if (('products' !== obj) && (InvoiceData[obj])) {
-                form.append(obj, InvoiceData[obj])
+                if(obj == 'receiver' && typeof InvoiceData[obj] =='object'){
+                    form.append(obj, InvoiceData[obj].id)
+                }else{
+                    form.append(obj, InvoiceData[obj])
+                }
+
             }
 
         })
@@ -121,8 +183,8 @@ useEffect(()=>{
 
         }).catch((error) => {
             console.log(error)
-            alert(`error ${error?.request.status}`)
-            if (error.response.status === 404) {
+            showToast(`Error ${error?.request?.status ?? ''}: Failed to save invoice`)
+            if (error?.response?.status === 404) {
                 navigate('/')
             }
         })
@@ -147,7 +209,7 @@ useEffect(()=>{
                     }
                 }).catch((error) => {
                     console.log(error)
-                    alert(`error ${error?.request.status}`)
+                    showToast(`Error ${error?.request?.status ?? ''}: Failed to update product`)
                 })
             })
 
@@ -210,12 +272,12 @@ useEffect(()=>{
                                                 }
                                             }).catch((error) => {
                                                 console.log(error)
-                                                alert(`error ${error?.request.status}`)
+                                                showToast(`Error ${error?.request?.status ?? ''}: Failed to update product properties`)
                                             })
                                         }
                                     }).catch((error) => {
                                         console.log(error)
-                                        alert(`error ${error?.request.status}`)
+                                        showToast(`Error ${error?.request?.status ?? ''}: Failed to save product properties`)
                                     })
                                 })
 
@@ -225,15 +287,15 @@ useEffect(()=>{
                             }
                         }).catch((error) => {
                             console.log(error)
-                            alert(`error ${error?.request.status}`)
+                            showToast(`Error ${error?.request?.status ?? ''}: Failed to add product to invoice`)
                         })
                     } else {
-                        alert(`Fill details`)
+                        showToast('Please fill in the product details before saving', 'warning')
                     }
                 }
             }).catch((error) => {
                 console.log(error)
-                alert(`error ${error?.request.status}`)
+                showToast(`Error ${error?.request?.status ?? ''}: Failed to create product`)
             })
             console.log(new_product.product_properties)
 
@@ -316,7 +378,7 @@ useEffect(()=>{
             }
         }).catch((error) => {
             console.log(error)
-            alert(`error ${error?.request.status}`)
+            showToast(`Error ${error?.request?.status ?? ''}: Failed to delete product`)
         })
     }
     const handelDelete = (e) => {
@@ -457,12 +519,14 @@ useEffect(()=>{
 
     return (
         <div className={'container space'}>
+            <ToastContainer toasts={toasts} onDismiss={dismissToast} />
             <div className={'top_head'}>
                 <p>Bill</p>
                 {/*<div className={'button'} onClick={()=>InvoiceData["receiver"]?handelExport(InvoiceData?.id):alert("Receiver is not set")}>Export</div>*/}
                 <ExportDropdown
                     InvoiceData={InvoiceData}
-                    handelExport={(invoice_id, template_id) => InvoiceData["receiver"] ? handelExport(invoice_id, template_id) : alert("Receiver is not set")}
+                    handelExport={handelExport}
+                    showToast={showToast}
                 >
 
                 </ExportDropdown>
@@ -571,7 +635,7 @@ useEffect(()=>{
                 <input
                     placeholder="Auto"
                     id="invoice_number"
-                    type="number"
+                    type="text"
                     value={invoiceNumber}
                     onChange={(e) => setInvoiceNumber(e.target.value)}
                 />

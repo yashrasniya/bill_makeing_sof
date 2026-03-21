@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { clientToken } from "@/axios";
 import SendPopup from "@/comonant/Bill/SendPopup";
 
-const ExportDropdown = ({ InvoiceData, handelExport }) => {
+const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
   const [open, setOpen] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false); // loading state
@@ -20,17 +20,21 @@ const ExportDropdown = ({ InvoiceData, handelExport }) => {
         .finally(() => setLoading(false));
   }, []);
 
+  const notify = (message, type = 'error') => {
+    if (showToast) showToast(message, type);
+  };
+
   const handelWhatsapp = async (option) => {
     try {
       setLoading(true); // start loading
       const r = await clientToken.post("share_by_whatsapp/", { invoice: InvoiceData?.id,template_id:option });
       if (r.status === 201) {
-        alert("✅ Message has been sent to WhatsApp");
+        notify("Message has been sent to WhatsApp successfully!", 'success');
       }
     } catch (e) {
       console.log(e);
       if (e.response?.status === 400) {
-        alert(e.response?.data?.error);
+        notify(e.response?.data?.error || 'Failed to send WhatsApp message');
       }
     } finally {
       setLoading(false);
@@ -39,7 +43,7 @@ const ExportDropdown = ({ InvoiceData, handelExport }) => {
 
   const handleOptionClick = async (option, id = null) => {
     if (!InvoiceData?.receiver) {
-      alert("Receiver is not set");
+      notify("Receiver is not set. Please select a customer first.", 'warning');
       return;
     }
 
@@ -49,7 +53,7 @@ const ExportDropdown = ({ InvoiceData, handelExport }) => {
         break;
 
       case "email":
-        alert("Sharing via Email...");
+        notify("Email sharing is coming soon!", 'warning');
         break;
 
       case "pdf":
