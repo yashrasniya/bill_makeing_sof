@@ -25,7 +25,7 @@ import UIConfig from "@/pages/UIConfig";
 import InventoryPage from "./pages/inventory";
 import AvailableTemplates from "./pages/AvailableTemplates";
 import PrivacyPolicy from "./pages/privacy";
-
+import WeasyprintPreview from "./pages/WeasyprintPreview";
 // Private route wrapper
 
 
@@ -192,6 +192,15 @@ function App() {
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <AvailableTemplates />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/weasyprint-preview"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <WeasyprintPreview />
                     </PrivateRoute>
                 }
             />
