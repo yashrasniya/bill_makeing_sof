@@ -101,7 +101,23 @@ function QuickAction({ icon, label, onClick, accent }) {
 }
 
 function Home() {
-    const [filters] = useState({ page: 1 });
+    const [filters, setFilters] = useState({ page: 1 });
+    const [searchTerm, setSearchTerm] = useState("");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+    const [sortOrder, setSortOrder] = useState("");
+    
+    // debounce search
+    useEffect(() => {
+        const delayDebounce = setTimeout(() => {
+            setFilters(prev => ({ ...prev, search: searchTerm, page: 1 }));
+        }, 500);
+        return () => clearTimeout(delayDebounce);
+    }, [searchTerm]);
+
+    useEffect(() => {
+         setFilters(prev => ({ ...prev, date_from: dateFrom, date_to: dateTo, ordering: sortOrder, page: 1 }));
+    }, [dateFrom, dateTo, sortOrder]);
     const [info, setInfo] = useState({
         name: '',
         month_total_final_amount: 0,
@@ -205,7 +221,7 @@ function Home() {
                         icon="📄"
                         label="Bills This Month"
                         value={info.invoices_this_month_count || 0}
-                        color="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                        color="linear-gradient(135deg, #f43f5e 0%, #be123c 100%)"
                         delay={0.15}
                     />
                     <KpiCard
@@ -231,10 +247,99 @@ function Home() {
                         <QuickAction icon="➕" label="New Bill" onClick={() => navigate('/newBill')} accent="#4f46e5" />
                         <QuickAction icon="📋" label="Templates" onClick={() => navigate('/newBillWithTemplate')} accent="#7c3aed" />
                         <QuickAction icon="👥" label="Customers" onClick={() => navigate('/Customers')} accent="#0ea5e9" />
-                        <QuickAction icon="📂" label="All Bills" onClick={() => navigate('/bill_list')} accent="#10b981" />
+                        <QuickAction icon="📂" label="All Bills" onClick={() => navigate('/bill_list')} accent="#f43f5e" />
                         <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#f59e0b" />
                         <QuickAction icon="👤" label="Profile" onClick={() => navigate('/profile')} accent="#ec4899" />
                     </div>
+                </div>
+
+                {/* ── Filters ── */}
+                <div style={{
+                    background: 'white', borderRadius: '20px',
+                    padding: '20px 24px', marginBottom: '28px',
+                    boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
+                    animation: 'fadeUp 0.5s ease 0.25s both',
+                    display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end'
+                }}>
+                    <div style={{ flex: '1 1 200px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Search Invoices</label>
+                        <input
+                            type="text"
+                            placeholder="Search by invoice # or customer..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                border: '1.5px solid #e2e8f0', outline: 'none',
+                                fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s'
+                            }}
+                            onFocus={e => e.target.style.borderColor = '#4f46e5'}
+                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                        />
+                    </div>
+                    <div style={{ flex: '0 1 auto' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>From Date</label>
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={e => setDateFrom(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                border: '1.5px solid #e2e8f0', outline: 'none',
+                                fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s'
+                            }}
+                            onFocus={e => e.target.style.borderColor = '#4f46e5'}
+                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                        />
+                    </div>
+                    <div style={{ flex: '0 1 auto' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>To Date</label>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={e => setDateTo(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                border: '1.5px solid #e2e8f0', outline: 'none',
+                                fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s'
+                            }}
+                            onFocus={e => e.target.style.borderColor = '#4f46e5'}
+                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                        />
+                    </div>
+                    <div style={{ flex: '0 1 auto' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Sort By</label>
+                        <select
+                            value={sortOrder}
+                            onChange={e => setSortOrder(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 30px 10px 14px', borderRadius: '12px',
+                                border: '1.5px solid #e2e8f0', outline: 'none',
+                                fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s',
+                                appearance: 'none',
+                                background: 'white url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E") no-repeat right 12px center'
+                            }}
+                            onFocus={e => e.target.style.borderColor = '#4f46e5'}
+                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                        >
+                            <option value="">Default (Newest)</option>
+                            <option value="date">Date (Oldest First)</option>
+                            <option value="-total_final_amount">Amount (High to Low)</option>
+                            <option value="total_final_amount">Amount (Low to High)</option>
+                        </select>
+                    </div>
+                    <button
+                        onClick={() => { setSearchTerm(''); setDateFrom(''); setDateTo(''); setSortOrder(''); }}
+                        style={{
+                            padding: '10px 20px', borderRadius: '12px', background: '#f1f5f9',
+                            color: '#64748b', border: 'none', fontWeight: 700, cursor: 'pointer',
+                            fontSize: '14px', height: '41px', transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={e => e.target.style.background = '#e2e8f0'}
+                        onMouseLeave={e => e.target.style.background = '#f1f5f9'}
+                    >
+                        Clear
+                    </button>
                 </div>
 
                 {/* ── Recent Invoices ── */}

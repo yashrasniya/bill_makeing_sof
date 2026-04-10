@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { clientToken } from "../axios";
 import PdfOpener from "@/utility/pdf_opener";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // Simple loader component
 const Loader = () => (
@@ -279,17 +280,39 @@ function History({ show_header = true, filters = {} }) {
                     {invoice_data.length === 0 ? (
                         <p className="text-center w-full">No Data</p>
                     ) : (
-                        <div className="flex justify-between mt-4">
-                            <p
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '20px', paddingBottom: '10px' }}>
+                            <button
                                 onClick={() => page > 1 && setPage(page - 1)}
-                                className="cursor-pointer"
+                                disabled={page === 1}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '36px', height: '36px', borderRadius: '10px',
+                                    border: '1.5px solid #e2e8f0', background: page > 1 ? 'white' : '#f8fafc',
+                                    cursor: page > 1 ? 'pointer' : 'not-allowed', color: page > 1 ? '#4f46e5' : '#cbd5e1',
+                                    transition: 'all 0.2s', boxShadow: page > 1 ? '0 2px 4px rgba(0,0,0,0.02)' : 'none'
+                                }}
+                                onMouseEnter={e => { if (page > 1) { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#eef2ff'; } }}
+                                onMouseLeave={e => { if (page > 1) { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; } }}
                             >
-                                {"<<"}
-                            </p>
-                            <p className="cursor-pointer">Page {current_page}</p>
-                            <p onClick={() => setPage(page + 1)} className="cursor-pointer">
-                                {">>"}
-                            </p>
+                                <ChevronLeft size={18} />
+                            </button>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                PAGE {current_page}
+                            </span>
+                            <button
+                                onClick={() => setPage(page + 1)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '36px', height: '36px', borderRadius: '10px',
+                                    border: '1.5px solid #e2e8f0', background: 'white',
+                                    cursor: 'pointer', color: '#4f46e5',
+                                    transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#eef2ff'; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; }}
+                            >
+                                <ChevronRight size={18} />
+                            </button>
                         </div>
                     )}
                 </div>

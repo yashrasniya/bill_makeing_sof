@@ -54,7 +54,7 @@ function Login() {
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
             {/* ─────── LEFT PANEL ─────── */}
-            <div style={{
+            <div className="login-left-panel" style={{
                 flex: '0 0 46%', position: 'relative', overflow: 'hidden',
                 background: 'linear-gradient(145deg, #312e81 0%, #4f46e5 45%, #7c3aed 100%)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -127,7 +127,7 @@ function Login() {
             </div>
 
             {/* ─────── RIGHT PANEL ─────── */}
-            <div style={{
+            <div className="login-right-panel" style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
                 background: '#f8fafc', padding: '40px 32px', overflowY: 'auto',

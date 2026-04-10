@@ -465,11 +465,12 @@ useEffect(()=>{
         let gstAmount = 0;
         if (
             obj.product_properties.length > 0 &&
-            bill_body_items.map((o) => o.input_title).indexOf('GST') !== -1
+            bill_body_items.some((o) => o.input_title === 'GST')
         ) {
-            const gstIndex = bill_body_items.map((o) => o.input_title).indexOf('GST');
-            const gst = obj.product_properties[gstIndex]?.value;
-            gstAmount = gst ? total * (gst / 100) : 0;
+            const gstItem = bill_body_items.find((o) => o.input_title === 'GST');
+            const gstProp = obj.product_properties.find(p => p.new_product_in_frontend.id === gstItem.id);
+            const gst = gstProp ? gstProp.value : 0;
+            gstAmount = gst ? total * (parseFloat(gst) / 100) : 0;
         }
 
         // update totals (assuming grandTotal & grandGstTotal are state/outer scope)

@@ -155,7 +155,7 @@ const STATS = [
 
 /* ─── Hero floating badges ─── */
 const HeroBadge = ({ style, children }) => (
-    <div style={{
+    <div className="hero-badge" style={{
         position: 'absolute', background: 'white', borderRadius: '14px',
         boxShadow: '0 8px 32px rgba(79,70,229,0.13)', padding: '10px 16px',
         fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
@@ -181,7 +181,7 @@ function FeatureSection({ feature }) {
                 transition: 'opacity 0.7s ease, transform 0.7s ease',
             }}
         >
-            <div style={{
+            <div className="feature-row" style={{
                 maxWidth: '1100px', margin: '0 auto', padding: '0 24px',
                 display: 'flex', flexDirection: flip ? 'row-reverse' : 'row',
                 alignItems: 'center', gap: '64px', flexWrap: 'wrap',
@@ -301,7 +301,7 @@ function LandingPage() {
                                 <path d="M4 5h12M4 10h8M4 15h5" stroke="white" strokeWidth="2" strokeLinecap="round" />
                             </svg>
                         </div>
-                        <span style={{
+                        <span className="header-logo-text" style={{
                             fontSize: '20px', fontWeight: 800,
                             background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
@@ -312,7 +312,7 @@ function LandingPage() {
                     {/* Nav links */}
                     <nav style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {['template-builder', 'inventory', 'reports'].map(id => (
-                            <a key={id} href={`#${id}`} style={{
+                            <a key={id} className="desktop-only" href={`#${id}`} style={{
                                 fontSize: '14px', fontWeight: 500, color: '#64748b',
                                 textDecoration: 'none', padding: '6px 12px', borderRadius: '8px',
                                 transition: 'color 0.2s, background 0.2s',
@@ -352,7 +352,7 @@ function LandingPage() {
                 minHeight: '100vh', display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', textAlign: 'center',
                 padding: '120px 24px 80px',
-                background: 'linear-gradient(160deg, #f0f4ff 0%, #faf5ff 40%, #f0fdf4 100%)',
+                background: 'linear-gradient(160deg, #f0f4ff 0%, #faf5ff 40%, #f8fafc 100%)',
                 position: 'relative', overflow: 'hidden',
             }}>
                 {/* Background decorations */}
@@ -371,7 +371,7 @@ function LandingPage() {
                 <div style={{
                     position: 'absolute', top: '35%', right: '5%',
                     width: '200px', height: '200px', borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(5,150,105,0.08) 0%, transparent 70%)',
+                    background: 'radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%)',
                     pointerEvents: 'none',
                 }} />
 
@@ -394,10 +394,17 @@ function LandingPage() {
                   @keyframes floatB { 0%,100% { transform: translateY(-8px);} 50% { transform: translateY(4px);} }
                   @keyframes floatC { 0%,100% { transform: translateY(4px);} 50% { transform: translateY(-10px);} }
                   @keyframes pulse-ring { 0%,100% { transform: scale(1); opacity:.5; } 50% { transform: scale(1.08); opacity:.2; } }
+                  .mock-dashboard { transform-origin: top center; }
                   @media (max-width: 768px) {
                     .hero-badge { display: none !important; }
-                    .feature-row { flex-direction: column !important; }
-                    .stat-grid { grid-template-columns: 1fr 1fr !important; }
+                    .feature-row { flex-direction: column !important; text-align: center; }
+                    .feature-row ul { align-items: center; }
+                    .stat-grid { grid-template-columns: 1fr 1fr !important; gap: 24px !important; }
+                    .desktop-only { display: none !important; }
+                    .header-logo-text { display: none !important; }
+                    .hero-buttons { flex-direction: column !important; width: 100%; gap: 12px !important; }
+                    .hero-buttons button { width: 100%; justify-content: center; }
+                    .mock-dashboard { transform: scale(0.65) !important; margin-left: -15% !important; margin-right: -15% !important; margin-top: -10px !important; }
                   }
                 `}</style>
 
@@ -442,7 +449,7 @@ function LandingPage() {
                         and get detailed sales reports — all from one beautiful dashboard.
                     </p>
 
-                    <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <div className="hero-buttons" style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button onClick={() => navigate('/SignUp')} style={{
                             padding: '15px 34px', fontSize: '16px', fontWeight: 700,
                             color: 'white', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
@@ -472,7 +479,7 @@ function LandingPage() {
                 </div>
 
                 {/* Hero visual — mock invoice */}
-                <div style={{
+                <div className="mock-dashboard" style={{
                     marginTop: '72px', maxWidth: '860px', width: '100%', position: 'relative', zIndex: 1,
                     opacity: heroVisible ? 1 : 0,
                     transform: heroVisible ? 'translateY(0)' : 'translateY(60px)',

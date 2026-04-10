@@ -145,7 +145,7 @@ function SignUp() {
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
       {/* ─────── LEFT PANEL ─────── */}
-      <div style={{
+      <div className="signup-left" style={{
         flex: '0 0 40%', position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(145deg, #312e81 0%, #4f46e5 45%, #7c3aed 100%)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -204,7 +204,7 @@ function SignUp() {
       </div>
 
       {/* ─────── RIGHT PANEL (scrollable) ─────── */}
-      <div style={{
+      <div className="signup-right" style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'flex-start',
         background: '#f8fafc', padding: '32px 24px',
@@ -264,13 +264,13 @@ function SignUp() {
               <div style={{ width: '4px', height: '16px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Account Details</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div className="signup-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <Field label="First Name" name="first_name" placeholder="John" value={user_details.first_name} errorMsg={error?.first_name} onChange={handelChange} />
               <Field label="Last Name" name="last_name" placeholder="Doe" value={user_details.last_name} errorMsg={error?.last_name} onChange={handelChange} />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+          <div className="signup-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
             <Field label="Username" name="username" placeholder="johndoe" value={user_details.username} errorMsg={error?.username} onChange={handelChange} />
             <Field label="Mobile Number" name="mobile_number" type="tel" placeholder="9876543210" value={user_details.mobile_number} errorMsg={error?.mobile_number} onChange={handelChange} />
           </div>
@@ -379,6 +379,8 @@ function SignUp() {
                     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                     @media (max-width: 700px) {
                         .signup-left { display: none !important; }
+                        .signup-right { padding: 24px 16px !important; }
+                        .signup-grid { grid-template-columns: 1fr !important; }
                     }
                 `}</style>
       </div>
