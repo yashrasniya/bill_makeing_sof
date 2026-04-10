@@ -20,6 +20,8 @@ function CompanysTable() {
     const [update, set_update] = useState(false);
     const [SearchValue, set_SearchValue] = useState('');
     const [popupOpen, setPopupOpen] = useState(false);
+    const [pageError, setPageError] = useState('');
+    const [errorInfo, setErrorInfo] = useState('');
 
     useEffect(() => {
         clientToken.get(url).then(response => {
@@ -32,24 +34,33 @@ function CompanysTable() {
             }
         }).catch(error => {
             console.log(error);
-            alert(`Error ${error.request?.status}`);
+            setPageError(`Failed to load customers. ${error.message || ''}`);
         });
     }, [url, refresh]);
 
     const closePopup = () => {
         setPopupOpen(false);
         set_company_data(EMPTY);
+        setErrorInfo('');
     };
 
     const handelsave = (u = 'companies/') => {
         const form = new FormData();
         Object.keys(company_data).forEach(k => form.append(k, company_data[k]));
         clientToken.post(u, form).then(response => {
-            if (response.status === 200) {
+            if (response.status === 200 || response.status === 201) {
                 closePopup();
                 set_refresh(r => !r);
             }
-        }).catch(e => alert(e.request?.status));
+        }).catch(e => {
+            const errData = e.response?.data;
+            if (errData && typeof errData === 'object') {
+                const msgs = Object.entries(errData).map(([k, v]) => `${k.replace('_', ' ')}: ${Array.isArray(v) ? v[0] : v}`).join(' | ');
+                setErrorInfo(msgs);
+            } else {
+                setErrorInfo("Failed to save customer. Please check your inputs.");
+            }
+        });
     };
 
     const handelUpdate = () => handelsave(`companies/${company_data.id}/`);
@@ -60,7 +71,11 @@ function CompanysTable() {
                 closePopup();
                 set_refresh(r => !r);
             }
-        }).catch(e => alert(e?.request?.status));
+        }).catch(e => {
+            const msg = "Failed to delete customer. They might be linked to existing invoices.";
+            if (popupOpen) setErrorInfo(msg);
+            else setPageError(msg);
+        });
     };
 
     const handelMultiDelete = () => {
@@ -132,6 +147,16 @@ function CompanysTable() {
                     </div>
                 </div>
             </div>
+
+            {pageError && (
+                <div style={{ margin: '16px 24px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', color: '#dc2626', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-9V7a1 1 0 10-2 0v2a1 1 0 102 0zm0 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
+                    </svg>
+                    {pageError}
+                    <button onClick={() => setPageError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}>✕</button>
+                </div>
+            )}
 
             {/* ── Customer Table ── */}
             <div className="companys_table_raper">
@@ -232,6 +257,13 @@ function CompanysTable() {
                                 </p>
                             </div>
                         </div>
+
+                        {/* Form Error */}
+                        {errorInfo && (
+                            <div style={{ marginBottom: '20px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '13px', fontWeight: 500 }}>
+                                ⚠ {errorInfo}
+                            </div>
+                        )}
 
                         {/* Form fields */}
                         <div className="pop-up-box_inputs">

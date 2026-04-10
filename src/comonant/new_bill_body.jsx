@@ -745,8 +745,8 @@ useEffect(()=>{
                         </thead>
                         <tbody>
                             <tr className="font-semibold">
-                                <td className="p-2">{parseFloat(grandGstTotal).toFixed(2)}/-</td>
-                                <td className="p-2">{parseFloat(grandTotal).toFixed(2)}/-</td>
+                                <td className="p-2">₹{Number(grandGstTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td className="p-2">₹{Number(grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -757,11 +757,11 @@ useEffect(()=>{
 
                     <div className="flex justify-between text-white font-semibold text-lg mb-1 ">
                         <span>Total Amount</span>
-                        <span>{parseFloat(grandTotal).toFixed(2)}/-</span>
+                        <span>₹{Number(grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between text-white font-semibold text-xs">
                         <span>Total GST Amount</span>
-                        <span>{parseFloat(grandGstTotal).toFixed(2)}/-</span>
+                        <span>₹{Number(grandGstTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                 </div>
 

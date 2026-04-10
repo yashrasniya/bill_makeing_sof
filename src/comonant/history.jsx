@@ -29,7 +29,7 @@ const TableRow = ({ obj, index, refresh, setRefresh }) => {
             </td>
             <td onClick={() => navigate(`/bill/${obj.id}`)} >{obj.date}</td>
             <td onClick={() => navigate(`/bill/${obj.id}`)}>{obj.receiver_name || "-"}</td>
-            <td onClick={() => navigate(`/bill/${obj.id}`)} className={'font-bold '}>₹{obj.total_final_amount ?? 0}/-</td>
+            <td onClick={() => navigate(`/bill/${obj.id}`)} className={'font-bold '}>₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}</td>
 
             <td className="relative">
                 <button
@@ -93,7 +93,7 @@ const CardRow = ({ obj, index, refresh, setRefresh }) => {
                     Receiver: {obj.receiver_name || "-"}
                 </p>
                 <p className="text-sm text-gray-600">
-                    Amount: ₹{obj.total_final_amount ?? 0}
+                    Amount: ₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}
                 </p>
             </div>
 
