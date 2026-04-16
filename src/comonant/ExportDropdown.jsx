@@ -42,6 +42,12 @@ export default function ExportDropdown({ onExport }) {
                     >
                         Export as PDF
                     </button>
+                    <button
+                        onClick={() => handleSelect("pdf_data")}
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                    >
+                        Export Data as PDF
+                    </button>
                     {/*<button*/}
                     {/*    onClick={() => handleSelect("xlsx")}*/}
                     {/*    className="block w-full text-left px-4 py-2 hover:bg-gray-100"*/}
