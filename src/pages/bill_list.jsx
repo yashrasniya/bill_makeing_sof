@@ -104,6 +104,25 @@ const Bill_list = ({ setLoading }) => {
             });
     };
 
+    const handelExportPDFData = () => {
+        filters.type = "PDF_DATA"
+        clientToken.post('bulk_export/', filters, { responseType: 'blob' })
+            .then((response) => {
+                const blob = new Blob([response.data], { type: 'application/pdf' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'invoices_export_data.pdf');
+                document.body.appendChild(link);
+                link.click();
+                link.parentNode.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch((error) => {
+                console.error("Error exporting PDF data:", error);
+            });
+    };
+
     const DateRangeFilter = ({ value, onChange, label = "Date" }) => (
         <div className="min-w-[260px]">
             <label className="block text-sm font-medium mb-1">{label}</label>
@@ -126,7 +145,7 @@ const Bill_list = ({ setLoading }) => {
     );
 
     return (
-        <div className="p-4 space-y-4 pt-20">
+        <div className="p-4 space-y-4 pt-20 bg-white min-h-screen">
             {/* Search + Filters */}
             <div className="border border-gray-300 rounded-lg p-4 flex flex-wrap gap-4 items-end shadow-sm">
                 {/* Search Input */}
@@ -198,6 +217,7 @@ const Bill_list = ({ setLoading }) => {
                         onExport={(format) => {
                             if (format === "csv") handelExportCSV();
                             if (format === "pdf") handelExportPDF();
+                            if (format === "pdf_data") handelExportPDFData();
                             if (format === "xlsx") handelExportExcel();
                         }}
                     />
