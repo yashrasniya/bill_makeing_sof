@@ -145,7 +145,7 @@ const Bill_list = ({ setLoading }) => {
     );
 
     return (
-        <div className="p-4 space-y-4 pt-20">
+        <div className="p-4 space-y-4 pt-20 bg-white min-h-screen">
             {/* Search + Filters */}
             <div className="border border-gray-300 rounded-lg p-4 flex flex-wrap gap-4 items-end shadow-sm">
                 {/* Search Input */}

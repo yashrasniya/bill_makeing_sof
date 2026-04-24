@@ -55,6 +55,7 @@ const InvoiceTemplateEditor = () => {
     const [sidebarTab, setSidebarTab] = useState('blocks'); // 'blocks', 'editor', 'config'
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
     const [lastSavedConfig, setLastSavedConfig] = useState(null);
+    const [uploadingImg, setUploadingImg] = useState(false);
 
     useEffect(() => {
         if (autoSaveEnabled && config && lastSavedConfig) {
@@ -1197,43 +1198,76 @@ const InvoiceTemplateEditor = () => {
 
                                                 {/* Rectangle Options */}
                                                 {activeEl.type === 'rectangles' && (
-                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Width</label>
-                                                            <input
-                                                                type="number"
-                                                                value={Math.round(activeEl.width || 0)}
-                                                                onChange={(e) => {
-                                                                    const newWidth = parseInt(e.target.value) || 0;
-                                                                    if (activeEl.rectangles_type === 'image' && activeEl.src) {
-                                                                        const img = new window.Image();
-                                                                        img.src = activeEl.src;
-                                                                        img.onload = () => {
-                                                                            const ratio = img.height / img.width;
-                                                                            updateElement(activeEl.id, { width: newWidth, height: newWidth * ratio });
-                                                                        };
-                                                                    } else {
-                                                                        updateElement(activeEl.id, { width: newWidth });
-                                                                    }
-                                                                }}
-                                                                style={inputStyle} onFocus={focIn} onBlur={focOut}
-                                                            />
+                                                    <>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Width</label>
+                                                                <input
+                                                                    type="number"
+                                                                    value={Math.round(activeEl.width || 0)}
+                                                                    onChange={(e) => {
+                                                                        const newWidth = parseInt(e.target.value) || 0;
+                                                                        if (activeEl.rectangles_type === 'image' && activeEl.src) {
+                                                                            const img = new window.Image();
+                                                                            img.src = activeEl.src;
+                                                                            img.onload = () => {
+                                                                                const ratio = img.height / img.width;
+                                                                                updateElement(activeEl.id, { width: newWidth, height: newWidth * ratio });
+                                                                            };
+                                                                        } else {
+                                                                            updateElement(activeEl.id, { width: newWidth });
+                                                                        }
+                                                                    }}
+                                                                    style={inputStyle} onFocus={focIn} onBlur={focOut}
+                                                                />
+                                                            </div>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                                                                    Height {activeEl.rectangles_type === 'image' ? '(Auto)' : ''}
+                                                                </label>
+                                                                <input
+                                                                    type="number"
+                                                                    value={Math.round(activeEl.height || 0)}
+                                                                    onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })}
+                                                                    style={{ ...inputStyle, background: activeEl.rectangles_type === 'image' ? '#f1f5f9' : 'white', cursor: activeEl.rectangles_type === 'image' ? 'not-allowed' : 'text' }}
+                                                                    onFocus={focIn} onBlur={focOut}
+                                                                    disabled={activeEl.rectangles_type === 'image'}
+                                                                    title={activeEl.rectangles_type === 'image' ? "Height is automatically calculated to preserve aspect ratio" : ""}
+                                                                />
+                                                            </div>
                                                         </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
-                                                                Height {activeEl.rectangles_type === 'image' ? '(Auto)' : ''}
-                                                            </label>
-                                                            <input
-                                                                type="number"
-                                                                value={Math.round(activeEl.height || 0)}
-                                                                onChange={(e) => updateElement(activeEl.id, { height: parseInt(e.target.value) || 0 })}
-                                                                style={{ ...inputStyle, background: activeEl.rectangles_type === 'image' ? '#f1f5f9' : 'white', cursor: activeEl.rectangles_type === 'image' ? 'not-allowed' : 'text' }}
-                                                                onFocus={focIn} onBlur={focOut}
-                                                                disabled={activeEl.rectangles_type === 'image'}
-                                                                title={activeEl.rectangles_type === 'image' ? "Height is automatically calculated to preserve aspect ratio" : ""}
-                                                            />
-                                                        </div>
-                                                    </div>
+                                                        {activeEl.rectangles_type === 'image' && (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                                                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Upload Image</label>
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    disabled={uploadingImg}
+                                                                    onChange={async (e) => {
+                                                                        const file = e.target.files[0];
+                                                                        if (!file) return;
+                                                                        setUploadingImg(true);
+                                                                        const formData = new FormData();
+                                                                        formData.append('image', file);
+                                                                        try {
+                                                                            const res = await clientToken.post('upload_image/', formData, {
+                                                                                headers: { 'Content-Type': 'multipart/form-data' }
+                                                                            });
+                                                                            if (res.data && res.data.url) {
+                                                                                updateElement(activeEl.id, { src: res.data.url });
+                                                                            }
+                                                                        } catch (err) {
+                                                                            alert('Image upload failed!');
+                                                                        } finally {
+                                                                            setUploadingImg(false);
+                                                                        }
+                                                                    }}
+                                                                    style={{ ...inputStyle, padding: '4px' }}
+                                                                />
+                                                                {uploadingImg && <span style={{ fontSize: '10px', color: '#4f46e5' }}>Uploading...</span>}
+                                                            </div>
+                                                        )}
+                                                    </>
                                                 )}
 
                                                 {/* Line Options */}
