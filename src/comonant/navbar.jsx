@@ -1,5 +1,6 @@
 import "../style/navbar.css"
 import logo from "../assets/bill_ninja_logo.png"
+import orvineLogo from "../assets/orvine_logo.svg"
 import profle from "../assets/user.jpg"
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -135,6 +136,9 @@ function Navbar() {
     let navItemsDropdown = [
         { title: "Profile", link: "/profile" },
         { title: "UI Config", link: "/UIConfig", },
+        { title: "WhatsApp Settings", link: "/whatsapp-settings", },
+        { title: "WhatsApp Connect", link: "/whatsapp-connect", },
+        { title: "WhatsApp Templates", link: "/whatsapp-templates", },
         { title: "logout", link: "/logout" },
     ];
 
@@ -157,18 +161,16 @@ function Navbar() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => navigate("/home")}>
                     <div style={{
                         width: '36px', height: '36px', borderRadius: '10px',
-                        background: 'rgba(255,255,255,0.18)',
-                        border: '1px solid rgba(255,255,255,0.3)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        // background: 'rgba(255,255,255,0.18)',
+                        // border: '1px solid rgba(255,255,255,0.3)',
+                        // display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        // boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                         flexShrink: 0,
                     }}>
-                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                            <path d="M4 5h12M4 10h8M4 15h5" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                        </svg>
+                        <img className="w-full h-full object-contain" src={orvineLogo} alt="Orvine Logo" style={{ borderRadius: '8px' }} />
                     </div>
                     <span style={{ fontSize: '16px', fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>
-                        Invoice App
+                        Invoice Orvine
                     </span>
                 </div>
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { clientToken } from "@/axios";
+import orvineLogo from "../assets/orvine_logo.svg";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser } from "@/store/userSlice";
@@ -225,7 +226,7 @@ export default function CompanyForm() {
                     .cf-grid, .cf-grid-bank { grid-template-columns: 1fr; }
                 }
             `}</style>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
             <div className="cf-split">
 
                 {/* ─────────────── LEFT PANEL ─────────────── */}
@@ -241,13 +242,11 @@ export default function CompanyForm() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         marginBottom: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
                     }}>
-                        <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
-                            <path d="M6 8h20M6 16h14M6 24h9" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                        </svg>
+                        <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
                     </div>
 
                     <h2 style={{ fontSize: '26px', fontWeight: 900, color: 'white', letterSpacing: '-0.8px', textAlign: 'center', marginBottom: '10px' }}>
-                        Invoice App
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span>
                     </h2>
                     <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 1.7, maxWidth: '260px', marginBottom: '36px' }}>
                         Set up your company profile to start creating professional invoices.
@@ -313,12 +312,10 @@ export default function CompanyForm() {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     boxShadow: '0 4px 10px rgba(79,70,229,0.3)',
                                 }}>
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                                        <path d="M4 5h12M4 10h8M4 15h5" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                                    </svg>
+                                    <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
                                 </div>
                                 <span style={{ fontSize: '15px', fontWeight: 800, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                    Invoice App
+                                    <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span>
                                 </span>
                             </div>
                             <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.6px', marginBottom: '4px' }}>
