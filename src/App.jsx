@@ -26,6 +26,9 @@ import InventoryPage from "./pages/inventory";
 import AvailableTemplates from "./pages/AvailableTemplates";
 import PrivacyPolicy from "./pages/privacy";
 import WeasyprintPreview from "./pages/WeasyprintPreview";
+import WhatsAppSettings from "./pages/WhatsAppSettings";
+import WhatsAppTemplates from "./pages/WhatsAppTemplates";
+import WhatsAppConnect from "./pages/WhatsAppConnect";
 // Private route wrapper
 
 
@@ -201,6 +204,30 @@ function App() {
                     <PrivateRoute isLogin={isLogin}>
                         <Navbar />
                         <WeasyprintPreview />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/whatsapp-settings"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <WhatsAppSettings />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/whatsapp-connect"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <WhatsAppConnect />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/whatsapp-templates"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <WhatsAppTemplates />
                     </PrivateRoute>
                 }
             />

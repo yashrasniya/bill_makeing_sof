@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import orvineLogo from "../assets/orvine_logo.svg";
 import { clientToken } from "@/axios";
 import { fetchUser } from "@/store/userSlice";
 import { useDispatch } from "react-redux";
@@ -51,7 +52,7 @@ function Login() {
             fontFamily: "'Inter', 'Segoe UI', sans-serif",
         }}>
             {/* ── Google Font ── */}
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
             {/* ─────── LEFT PANEL ─────── */}
             <div className="login-left-panel" style={{
@@ -86,15 +87,13 @@ function Login() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     marginBottom: '28px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
                 }}>
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                        <path d="M6 8h20M6 16h14M6 24h9" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                    </svg>
+                    <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
                 </div>
 
                 <h1 style={{
                     fontSize: '32px', fontWeight: 900, color: 'white',
                     letterSpacing: '-1px', textAlign: 'center', marginBottom: '12px',
-                }}>Invoice App</h1>
+                }}><span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span></h1>
                 <p style={{
                     fontSize: '16px', color: 'rgba(255,255,255,0.75)',
                     textAlign: 'center', lineHeight: 1.7, maxWidth: '300px',
@@ -166,15 +165,13 @@ function Login() {
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 boxShadow: '0 4px 12px rgba(79,70,229,0.3)',
                             }}>
-                                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                                    <path d="M4 5h12M4 10h8M4 15h5" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                                </svg>
+                                <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
                             </div>
                             <span style={{
                                 fontSize: '16px', fontWeight: 800,
                                 background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                            }}>Invoice App</span>
+                            }}><span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span></span>
                         </div>
 
                         <h2 style={{

@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import orvineLogo from "../assets/orvine_logo.svg"
+
 
 /* ─── tiny hook: fade-in when element enters viewport ─── */
 function useFadeIn() {
@@ -273,7 +275,7 @@ function LandingPage() {
         <div style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif", background: '#f8fafc', minHeight: '100vh', overflowX: 'hidden' }}>
             {/* ── Google Font ── */}
             <link rel="preconnect" href="https://fonts.googleapis.com" />
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
             {/* ─────────────── NAVBAR ─────────────── */}
             <header style={{
@@ -297,16 +299,14 @@ function LandingPage() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             boxShadow: '0 4px 12px rgba(79,70,229,0.3)',
                         }}>
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                                <path d="M4 5h12M4 10h8M4 15h5" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
+                            <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
                         </div>
                         <span className="header-logo-text" style={{
                             fontSize: '20px', fontWeight: 800,
                             background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                             letterSpacing: '-0.5px',
-                        }}>Invoice App</span>
+                        }}> <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span></span>
                     </div>
 
                     {/* Nav links */}
@@ -495,7 +495,7 @@ function LandingPage() {
                             <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fbbf24' }} />
                             <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#34d399' }} />
                             <div style={{ flex: 1, margin: '0 16px', background: '#e2e8f0', borderRadius: '6px', height: '24px', display: 'flex', alignItems: 'center', paddingLeft: '10px' }}>
-                                <span style={{ fontSize: '12px', color: '#94a3b8' }}>invoiceapp.com/dashboard</span>
+                                <span>  <span style={{ fontSize: '12px', color: '#94a3b8' }}>invoice.orvine</span>.com/dashboard</span>
                             </div>
                         </div>
                         {/* Mock dashboard content */}
@@ -557,10 +557,11 @@ function LandingPage() {
                         </div>
                     </div>
                 </div>
-            </section>
+            </section >
 
             {/* ─────────────── STATS ─────────────── */}
-            <section style={{ background: 'white', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9' }}>
+            < section style={{ background: 'white', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9' }
+            }>
                 <div ref={statsRef} style={{
                     maxWidth: '900px', margin: '0 auto', padding: '64px 24px',
                     display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '32px',
@@ -580,10 +581,10 @@ function LandingPage() {
                         </div>
                     ))}
                 </div>
-            </section>
+            </section >
 
             {/* ─────────────── FEATURES HEADER ─────────────── */}
-            <section style={{ padding: '100px 24px 0', textAlign: 'center' }}>
+            < section style={{ padding: '100px 24px 0', textAlign: 'center' }}>
                 <div style={{ display: 'inline-block', background: '#eef2ff', borderRadius: '99px', padding: '6px 18px', marginBottom: '20px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 700, color: '#4f46e5', letterSpacing: '0.05em' }}>✦ EVERYTHING YOU NEED</span>
                 </div>
@@ -600,7 +601,7 @@ function LandingPage() {
                 <p style={{ fontSize: '18px', color: '#64748b', maxWidth: '520px', margin: '0 auto', lineHeight: 1.75 }}>
                     From crafting your first invoice to analysing yearly revenue — we have every workflow covered.
                 </p>
-            </section>
+            </section >
 
             {/* ─────────────── FEATURE SECTIONS ─────────────── */}
             {FEATURES.map(f => <FeatureSection key={f.id} feature={f} />)}
@@ -625,7 +626,7 @@ function LandingPage() {
                         Ready to transform<br />your billing?
                     </h2>
                     <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.8)', marginBottom: '36px', maxWidth: '460px', margin: '0 auto 36px' }}>
-                        Join hundreds of businesses already using Invoice App to save time and look professional.
+                        Join hundreds of businesses already using <span style={{ fontFamily: "'JetBrains Mono', monospace" }}> Invoice Orvine</span> to save time and look professional.
                     </p>
                     <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button onClick={() => navigate('/SignUp')} style={{
@@ -665,13 +666,11 @@ function LandingPage() {
                             background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                                <path d="M4 5h12M4 10h8M4 15h5" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
+                            <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
                         </div>
-                        <span style={{ fontWeight: 700, color: 'white', fontSize: '16px' }}>Invoice App</span>
+                        <span style={{ fontWeight: 700, color: 'white', fontSize: '16px' }}> <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span></span>
                     </div>
-                    <p style={{ fontSize: '13px' }}>© {new Date().getFullYear()} Invoice App. All rights reserved.</p>
+                    <p style={{ fontSize: '13px' }}>© {new Date().getFullYear()} Invoice <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Orvine</span>. All rights reserved.</p>
                     <div style={{ display: 'flex', gap: '20px' }}>
                         {['Templates', 'Inventory', 'Reports', 'Login', 'Privacy'].map(item => (
                             <span key={item} style={{ fontSize: '13px', cursor: 'pointer', transition: 'color 0.2s' }}
@@ -689,7 +688,7 @@ function LandingPage() {
                     </div>
                 </div>
             </footer>
-        </div>
+        </div >
     );
 }
 

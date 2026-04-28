@@ -274,9 +274,15 @@ const InvoiceTemplateEditor = () => {
         if (!elMeta) return;
 
         if (elMeta.section === 'product') {
-            newConfig.Bill.product.product_list.splice(elMeta.index, 1);
+            delete newConfig.Bill.product.product_list[elMeta.index][elMeta.key];
+            if (Object.keys(newConfig.Bill.product.product_list[elMeta.index]).length === 0) {
+                newConfig.Bill.product.product_list.splice(elMeta.index, 1);
+            }
         } else {
-            newConfig.Bill[elMeta.section].splice(elMeta.index, 1);
+            delete newConfig.Bill[elMeta.section][elMeta.index][elMeta.key];
+            if (Object.keys(newConfig.Bill[elMeta.section][elMeta.index]).length === 0) {
+                newConfig.Bill[elMeta.section].splice(elMeta.index, 1);
+            }
         }
 
         setConfig(newConfig);

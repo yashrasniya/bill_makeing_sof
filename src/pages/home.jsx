@@ -245,7 +245,7 @@ function Home() {
                     </p>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         <QuickAction icon="➕" label="New Bill" onClick={() => navigate('/newBill')} accent="#4f46e5" />
-                        <QuickAction icon="📋" label="Templates" onClick={() => navigate('/newBillWithTemplate')} accent="#7c3aed" />
+                        <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />
                         <QuickAction icon="👥" label="Customers" onClick={() => navigate('/Customers')} accent="#0ea5e9" />
                         <QuickAction icon="📂" label="All Bills" onClick={() => navigate('/bill_list')} accent="#f43f5e" />
                         <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#f59e0b" />
