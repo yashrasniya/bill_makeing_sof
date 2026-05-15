@@ -58,7 +58,13 @@ export default function AvailableTemplates() {
                             <div
                                 key={template.id}
                                 className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer flex flex-col"
-                                onClick={() => navigate(`/invoice_editor?id=${template.id}`)}
+                                onClick={() => {
+                                    if (template.is_html) {
+                                        navigate(`/weasyprint-preview`);
+                                    } else {
+                                        navigate(`/invoice_editor?id=${template.id}`);
+                                    }
+                                }}
                             >
 
                                 {/* Visual Thumbnail Area (Mocking a document preview) */}

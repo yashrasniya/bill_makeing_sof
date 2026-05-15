@@ -1,220 +1,185 @@
 /* ═══════════════════════════════════════╗
-   NAVBAR — Indigo / Purple theme         ║
-   matches landing · login · signup pages ║
+   SIDEBAR NAVBAR
 ╚═══════════════════════════════════════ */
 
-/* ── Base bar ── */
-.nav {
-    background: linear-gradient(110deg, #312e81 0%, #4f46e5 55%, #6d28d9 100%);
-    box-shadow: 0 4px 24px rgba(79, 70, 229, 0.3);
-    width: 100%;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1.25rem;
+.sidebar {
     position: fixed;
     top: 0;
     left: 0;
+    height: 100vh;
+    background: #1e1b4b; /* dark indigo */
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
     z-index: 1000;
-    gap: 1rem;
-    box-sizing: border-box;
-    backdrop-filter: blur(12px);
-}
-
-/* ── Logo area ── */
-.img-css,
-.logo {
     display: flex;
-    align-items: center;
-    cursor: pointer;
+    flex-direction: column;
+    transition: width 0.3s ease;
+    overflow-y: auto;
+    overflow-x: hidden;
+    color: white;
 }
 
-.img-css img,
-.logo img {
-    height: 40px;
-    width: auto;
-    display: block;
-    filter: brightness(0) invert(1);
-    /* force white on dark bg */
-    border-radius: 8px;
+.sidebar::-webkit-scrollbar {
+    width: 4px;
 }
-
-/* ── Right side links container ── */
-.links {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1;
-    justify-content: flex-end;
-    min-width: 0;
-}
-
-/* ── Desktop nav items wrapper ── */
-.items {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-right: 0.5rem;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 2px;
-    min-width: 0;
-}
-
-.items::-webkit-scrollbar {
-    height: 4px;
-}
-
-.items::-webkit-scrollbar-thumb {
+.sidebar::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
 }
 
-.items::-webkit-scrollbar-track {
+.sidebar.expanded {
+    width: 250px;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+/* ── Header ── */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    height: 70px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.logo-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
     background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* ── Single nav item ── */
-.text-raper,
-.text-raper-dropdown {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 14px;
-    border-radius: 10px;
+.logo-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.brand-text {
+    font-size: 16px;
+    font-weight: 800;
     white-space: nowrap;
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 600;
-    font-size: 14px;
-    transition: background 0.18s ease, color 0.18s ease, transform 0.1s ease;
+    letter-spacing: -0.3px;
+}
+
+.toggle-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
     cursor: pointer;
-    letter-spacing: 0.01em;
-}
-
-.text-raper p,
-.text-raper-dropdown p {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0;
-    color: inherit;
-}
-
-/* ── Hover state ── */
-.text-raper:hover,
-.text-raper-dropdown:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-/* ── Profile ring ── */
-.profile-raper {
-    position: relative;
     display: flex;
     align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    transition: all 0.2s;
 }
 
-.profile-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin-left: 6px;
-    margin-right: 4px;
-    background-position: center;
-    background-size: cover;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15), 0 0 0 3px rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-    flex: 0 0 40px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+.toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
-.profile-icon:hover {
-    border-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 0 0 3px rgba(255, 255, 255, 0.25);
+.sidebar.collapsed .toggle-btn {
+    margin: 0 auto;
 }
 
-/* ── Dropdown menu ── */
-.items-raper {
-    position: absolute;
-    top: 60px;
-    right: 20px;
-    z-index: 2000;
-    display: flex;
-    justify-content: flex-end;
+.sidebar.collapsed .brand {
+    display: none;
 }
 
-.items-responsive {
-    background: white;
-    color: #0f172a;
-    width: 200px;
-    text-align: left;
-    border-radius: 14px;
-    padding: 8px;
-    box-shadow: 0 16px 48px rgba(79, 70, 229, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(79, 70, 229, 0.1);
+/* ── Content ── */
+.sidebar-content {
+    padding: 16px 12px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    flex: 1;
+    gap: 24px;
 }
 
-/* items inside the responsive dropdown */
-.items-responsive .text-raper,
-.items-responsive .text-raper-dropdown {
-    color: #374151;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 9px 12px;
-    border-radius: 9px;
-    width: 100%;
+.nav-section {
     display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.items-responsive .text-raper:hover,
-.items-responsive .text-raper-dropdown:hover {
-    background: #eef2ff;
-    color: #4f46e5;
-    transform: none;
-    box-shadow: none;
+.section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    padding-left: 12px;
 }
 
-/* Logout item stands out */
-.items-responsive .text-raper-dropdown:last-child p {
-    color: #dc2626;
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
-.items-responsive .text-raper-dropdown:last-child:hover {
-    background: #fef2f2;
-    color: #dc2626;
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
 }
 
-/* ── Responsive ── */
-@media (max-width: 900px) {
-    .items {
-        display: none;
-    }
-
-    .links {
-        justify-content: flex-end;
-    }
+.nav-item.active {
+    background: rgba(79, 70, 229, 0.4);
+    color: white;
+    font-weight: 600;
 }
 
-@media (max-width: 420px) {
-    .items-raper {
-        right: 8px;
-        left: 8px;
-    }
-
-    .items-responsive {
-        width: 100%;
-    }
+.nav-item.danger:hover {
+    background: rgba(239, 68, 68, 0.15);
 }
 
-@media (max-width: 700px) {
-    .items {
-        display: none;
+.nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    flex-shrink: 0;
+}
+
+.nav-text {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 12px;
+}
+
+.mt-auto {
+    margin-top: auto;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        z-index: 2000;
     }
 }

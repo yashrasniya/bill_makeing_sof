@@ -100,13 +100,18 @@ useEffect(()=>{
     let grandTotal = 0
     let grandGstTotal = 0
     useEffect(() => {
-        clientToken.get('companies/?page_size=999').then((response) => {
+        let endpoint = 'companies/?page_size=999';
+        if (InvoiceData?.invoice_type === 'purchase') {
+            endpoint = 'vendors/?page_size=999';
+        }
+        
+        clientToken.get(endpoint).then((response) => {
             if (response.status === 200) {
                 setCompany_name(response.data.results)
             }
         }).catch((error) => {
             console.log(error)
-            showToast(`Error ${error?.request?.status ?? ''}: Failed to load companies`)
+            showToast(`Error ${error?.request?.status ?? ''}: Failed to load companies/vendors`)
         })
 
         clientToken.get('/inventory/products/?limit=500').then((res) => {
@@ -147,12 +152,15 @@ useEffect(()=>{
         })
     }, [refresh]);
     useEffect(() => {
-        console.log(grandTotal)
+        // Only auto-save/create if there is actual data or an existing ID
+        const hasData = Object.keys(InvoiceData).some(k => k !== 'invoice_type' && InvoiceData[k]);
+        if (!id && !hasData) return;
+
         let form = new FormData()
         Object.keys(InvoiceData).map((obj) => {
 
             if (('products' !== obj) && (InvoiceData[obj])) {
-                if(obj == 'receiver' && typeof InvoiceData[obj] =='object'){
+                if((obj == 'receiver' || obj == 'vendor') && typeof InvoiceData[obj] =='object'){
                     form.append(obj, InvoiceData[obj].id)
                 }else{
                     form.append(obj, InvoiceData[obj])
@@ -409,35 +417,38 @@ useEffect(()=>{
                 console.error('Error downloading the PDF:', error);
             });
     }
-
     const Rows = (obj) => {
         const key = obj.id;
         let total = 1;
         let extraCal = 0;
-
+        let calculatedValues = {};
         // inner calculator
         function calculate(abc) {
             const item = abc.new_product_in_frontend;
+            let currentCalculatedVal = abc.value;
 
             if (item.is_calculable) {
                 if (item.formula) {
                     const val = parseFloat(abc.value) || 0;
                     if (item.formula === '+') {
+                        currentCalculatedVal = val;
                         if (item.on_with_out_gst_amount) extraCal += val;
                         else total += val;
                     } else if (item.formula === '-') {
+                        currentCalculatedVal = val;
                         if (item.on_with_out_gst_amount) extraCal -= val;
                         else total -= val;
                     } else if (item.formula === '/') {
+                        currentCalculatedVal = val;
                         total /= val || 1;
                     } else if (item.formula === '%+') {
-                        const calculatedVal = (val / 100) * total;
-                        if (item.on_with_out_gst_amount) extraCal += calculatedVal;
-                        else total += calculatedVal;
+                        currentCalculatedVal = (val / 100) * total;
+                        if (item.on_with_out_gst_amount) extraCal += currentCalculatedVal
+                        else total += currentCalculatedVal;
                     } else if (item.formula === '%-') {
-                        const calculatedVal = (val / 100) * total;
-                        if (item.on_with_out_gst_amount) extraCal -= calculatedVal;
-                        else total -= calculatedVal;
+                        currentCalculatedVal = (val / 100) * total;
+                        if (item.on_with_out_gst_amount) extraCal -= currentCalculatedVal;
+                        else total -= currentCalculatedVal;
                     } else {
                         total = 'error';
                     }
@@ -445,9 +456,11 @@ useEffect(()=>{
                     // multiply if not GST
                     if (abc.value && item.input_title !== 'GST') {
                         total *= parseFloat(abc.value);
+                        currentCalculatedVal = abc.value;
                     }
                 }
             }
+            calculatedValues[item.id] = currentCalculatedVal;
         }
 
         // run calculations - process non-formula fields first to get base total
@@ -503,7 +516,9 @@ useEffect(()=>{
                     .map((headObj, idx) =>
                         headObj.new_product_in_frontend.is_show ? (
                             <td key={idx} onClick={handelOpen}>
-                                {headObj.value}
+                                {headObj.new_product_in_frontend.show_calculated_value 
+                                    ? (parseFloat(calculatedValues[headObj.new_product_in_frontend.id]) || 0).toFixed(2)
+                                    : headObj.value}
                             </td>
                         ) : (
                             ''
@@ -655,6 +670,27 @@ useEffect(()=>{
                         setRefresh(r => !r);
                     }}
                 />
+
+                {/* Invoice Type */}
+                <p style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, marginTop: '16px' }}>
+                    Invoice Type
+                </p>
+                <select
+                    id="invoice_type"
+                    value={InvoiceData?.invoice_type || 'sales'}
+                    onChange={(e) => {
+                        setInvoiceData({ ...InvoiceData, invoice_type: e.target.value });
+                        setRefresh(r => !r);
+                    }}
+                    style={{
+                        padding: '10px 14px', borderRadius: '12px',
+                        border: '1.5px solid #e2e8f0', outline: 'none',
+                        fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s', width: '100%', marginBottom: '16px', background: 'white'
+                    }}
+                >
+                    <option value="sales">Sales</option>
+                    <option value="purchase">Purchase</option>
+                </select>
 
             </div>
             <div className={'header-button '}>

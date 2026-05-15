@@ -14,37 +14,45 @@ const CollapsibleRowCard = ({
     let total = 1;
     let extraCal = 0;
 
+    let calculatedValues = {};
     // Inner calculator
     function calculate(abc) {
         const item = abc.new_product_in_frontend;
+        let currentCalculatedVal = abc.value;
+
         if (item.is_calculable) {
             if (item.formula) {
                 const val = parseFloat(abc.value) || 0;
                 if (item.formula === "+") {
+                    currentCalculatedVal = val;
                     if (item.on_with_out_gst_amount) extraCal += val;
                     else total += val;
                 } else if (item.formula === "-") {
+                    currentCalculatedVal = val;
                     if (item.on_with_out_gst_amount) extraCal -= val;
                     else total -= val;
                 } else if (item.formula === "/") {
+                    currentCalculatedVal = val;
                     total /= val || 1;
                 } else if (item.formula === "%+") {
-                    const calculatedVal = (val / 100) * total;
-                    if (item.on_with_out_gst_amount) extraCal += calculatedVal;
-                    else total += calculatedVal;
+                    currentCalculatedVal = (val / 100) * total;
+                    if (item.on_with_out_gst_amount) extraCal += currentCalculatedVal;
+                    else total += currentCalculatedVal;
                 } else if (item.formula === "%-") {
-                    const calculatedVal = (val / 100) * total;
-                    if (item.on_with_out_gst_amount) extraCal -= calculatedVal;
-                    else total -= calculatedVal;
+                    currentCalculatedVal = (val / 100) * total;
+                    if (item.on_with_out_gst_amount) extraCal -= currentCalculatedVal;
+                    else total -= currentCalculatedVal;
                 } else {
                     total = "error";
                 }
             } else {
                 if (abc.value && item.input_title !== "GST") {
                     total *= parseFloat(abc.value);
+                    currentCalculatedVal = abc.value;
                 }
             }
         }
+        calculatedValues[item.id] = currentCalculatedVal;
     }
     // Run calculations - process non-formula fields first to get base total
     [...rowData.product_properties]
@@ -116,7 +124,11 @@ const CollapsibleRowCard = ({
                     <span className="font-medium">
                       {headObj.new_product_in_frontend.input_title}
                     </span>
-                                        <span>{headObj.value}</span>
+                                        <span>
+                                            {headObj.new_product_in_frontend.show_calculated_value 
+                                                ? (parseFloat(calculatedValues[headObj.new_product_in_frontend.id]) || 0).toFixed(2)
+                                                : headObj.value}
+                                        </span>
                                     </div>
                                 )
                         )}

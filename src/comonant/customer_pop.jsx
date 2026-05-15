@@ -17,14 +17,19 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
     const [newCustomer, setNewCustomer] = useState({ name: '', phone_number: '', address: '' });
     const [saving, setSaving] = useState(false);
 
+    const isPurchase = InvoiceData?.invoice_type === 'purchase';
+    const endpoint = isPurchase ? 'vendors/' : 'companies/';
+    const label = isPurchase ? 'Vendor' : 'Customer';
+    const idKey = isPurchase ? 'vendor' : 'receiver';
+
     const handleAdd = () => {
         setSaving(true);
         const form = new FormData();
         Object.keys(newCustomer).forEach(key => form.append(key, newCustomer[key]));
 
-        clientToken.post('companies/', form)
+        clientToken.post(endpoint, form)
             .then(res => {
-                if (res.status === 200) {
+                if (res.status === 200 || res.status === 201) {
                     setNewCustomer({ name: '', phone_number: '', address: '' });
                     setRefresh(e => !e);
                     setShowPopup(false);
@@ -39,25 +44,25 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
             {/* ── Inline selector row ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <p style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                    Customer
+                    {label}
                 </p>
                 <div style={{ display: 'flex', background: '#f8fafc', borderRadius: '10px', border: '1.5px solid #e2e8f0', overflow: 'hidden', minWidth: '220px' }}>
                     <select
-                        id="receiver"
-                        value={InvoiceData?.receiver || ""}
+                        id={idKey}
+                        value={InvoiceData?.[idKey] || ""}
                         style={{
                             flex: 1, padding: '9px 12px', border: 'none', outline: 'none',
                             background: 'transparent', fontFamily: 'Inter, sans-serif',
                             fontSize: '14px', fontWeight: 700, color: '#0f172a', cursor: 'pointer',
                         }}
                         onChange={e => {
-                            if (e.target.value) {
-                                setInvoiceData({ ...InvoiceData, receiver: e.target.value });
+                            if (e.target.value !== undefined) {
+                                setInvoiceData({ ...InvoiceData, [idKey]: e.target.value });
                                 setRefresh(p => !p);
                             }
                         }}
                     >
-                        <option value="">— Select customer —</option>
+                        <option value="">— Select {label.toLowerCase()} —</option>
                         {companyName.map(obj => (
                             <option key={obj.id} value={obj.id}>{obj.name}</option>
                         ))}
@@ -67,7 +72,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                     <button
                         type="button"
                         onClick={() => setShowPopup(true)}
-                        title="Add new customer"
+                        title={`Add new ${label.toLowerCase()}`}
                         style={{
                             padding: '0 14px', border: 'none',
                             borderLeft: '1.5px solid #e2e8f0',
@@ -123,8 +128,8 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                                 fontSize: '18px',
                             }}>👥</div>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Add New Customer</h2>
-                                <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>Fill in customer details below</p>
+                                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Add New {label}</h2>
+                                <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>Fill in {label.toLowerCase()} details below</p>
                             </div>
                         </div>
 
@@ -132,7 +137,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
                                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
-                                    Customer Name *
+                                    {label} Name *
                                 </label>
                                 <input
                                     type="text"
@@ -213,7 +218,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                                         </svg>
                                         Saving...
                                     </>
-                                ) : '+ Add Customer'}
+                                ) : `+ Add ${label}`}
                             </button>
                         </div>
                     </div>

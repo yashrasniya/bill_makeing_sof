@@ -913,7 +913,7 @@ const InvoiceTemplateEditor = () => {
                                     <label style={{ fontSize: '11px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.05em' }}>
                                         ⚡ React PDF (client-side)
                                     </label>
-                                    <p style={{ fontSize: '11px', color: '#4ade80', marginBottom: '10px', marginTop: 0, color: '#166534' }}>
+                                    <p style={{ fontSize: '11px', marginBottom: '10px', marginTop: 0, color: '#166534' }}>
                                         Renders PDF entirely in the browser using the canvas layout — no backend needed.
                                     </p>
                                     <button

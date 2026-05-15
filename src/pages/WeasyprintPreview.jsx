@@ -59,11 +59,12 @@ const WeasyprintPreview = () => {
     const saveTemplateToCloud = async () => {
         setIsSaving(true);
         try {
+            const htmlContent = generateHTMLString();
             if (templateId) {
-                await clientToken.put('/yaml/', { id: templateId, is_html: true, elements });
+                await clientToken.put('/yaml/', { id: templateId, is_html: true, elements, html_content: htmlContent });
                 alert("Template successfully saved to cloud!");
             } else {
-                const response = await clientToken.post('/yaml/', { template_name: "Web Editor Layout", is_html: true, elements });
+                const response = await clientToken.post('/yaml/', { template_name: "Web Editor Layout", is_html: true, elements, html_content: htmlContent });
                 if (response.data && response.data.id) {
                     setTemplateId(response.data.id);
                     alert("Template successfully saved to cloud!");
@@ -110,7 +111,7 @@ const WeasyprintPreview = () => {
     <meta charset="UTF-8">
     <title>Generated PDF</title>
     <style>
-        @page { size: A4 portrait; margin: 0; }
+        @page { size: 595px 842px; margin: 0; }
         body { margin: 0; padding: 0; width: 595px; height: 842px; position: relative; background: white; }
         * { box-sizing: border-box; }
     </style>

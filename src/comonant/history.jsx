@@ -28,7 +28,12 @@ const TableRow = ({ obj, index, refresh, setRefresh }) => {
                 {obj?.invoice_number ?? "No-number"}
             </td>
             <td onClick={() => navigate(`/bill/${obj.id}`)} >{obj.date}</td>
-            <td onClick={() => navigate(`/bill/${obj.id}`)}>{obj.receiver_name || "-"}</td>
+            <td
+                className="px-2 py-4 cursor-pointer hover:bg-gray-50"
+                onClick={() => navigate(`/bill/${obj.id}`)}
+            >
+                {obj.invoice_type === 'purchase' ? obj.vendor_name || "-" : obj.receiver_name || "-"}
+            </td>
             <td onClick={() => navigate(`/bill/${obj.id}`)} className={'font-bold '}>₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}</td>
 
             <td className="relative">
@@ -90,7 +95,7 @@ const CardRow = ({ obj, index, refresh, setRefresh }) => {
                 </p>
                 <p className="text-sm text-gray-600">Date: {obj.date}</p>
                 <p className="text-sm text-gray-600">
-                    Receiver: {obj.receiver_name || "-"}
+                    {obj.invoice_type === 'purchase' ? 'Vendor: ' + (obj.vendor_name || "-") : 'Receiver: ' + (obj.receiver_name || "-")}
                 </p>
                 <p className="text-sm text-gray-600">
                     Amount: ₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}
@@ -241,12 +246,12 @@ function History({ show_header = true, filters = {} }) {
       text-center
     "
                     >
-                        <thead style={{ background: 'linear-gradient(110deg,#312e81,#4f46e5)', color: 'white' }}>
+                        <thead>
                             <tr>
-                                <td className="w-1/4 px-2 py-2 font-bold">Invoice No.</td>
-                                <td className="px-2 py-2 font-bold">Date</td>
-                                <td className="px-2 py-2 font-bold">Customer</td>
-                                <td className="px-2 py-2 font-bold ">Amount</td>
+                                <td className="w-1/4 px-2 py-2">INVOICE NO.</td>
+                                <td className="px-2 py-2">DATE</td>
+                                <td className="px-2 py-2">CUSTOMER / VENDOR</td>
+                                <td className="px-2 py-2">AMOUNT</td>
                             </tr>
                         </thead>
                         <tbody>

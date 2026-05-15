@@ -289,6 +289,10 @@ const UIConfig = () => {
                                             <input type="checkbox" name="on_with_out_gst_amount" checked={formData.on_with_out_gst_amount || false} onChange={handleChange} style={{ width: '18px', height: '18px', accentColor: '#4f46e5', cursor: 'pointer' }} />
                                             On Without GST Amount
                                         </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: '#334155' }}>
+                                            <input type="checkbox" name="show_calculated_value" checked={formData.show_calculated_value || false} onChange={handleChange} style={{ width: '18px', height: '18px', accentColor: '#4f46e5', cursor: 'pointer' }} />
+                                            Show Calculated Value
+                                        </label>
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>

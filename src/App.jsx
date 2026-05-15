@@ -26,9 +26,12 @@ import InventoryPage from "./pages/inventory";
 import AvailableTemplates from "./pages/AvailableTemplates";
 import PrivacyPolicy from "./pages/privacy";
 import WeasyprintPreview from "./pages/WeasyprintPreview";
+import PurchaseInvoices from "./pages/PurchaseInvoices";
+import Vendors from "./pages/Vendors";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import WhatsAppTemplates from "./pages/WhatsAppTemplates";
 import WhatsAppConnect from "./pages/WhatsAppConnect";
+import Reports from "./pages/reports";
 // Private route wrapper
 
 
@@ -228,6 +231,30 @@ function App() {
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <WhatsAppTemplates />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/cashflow"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Reports />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/purchase_invoices"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <PurchaseInvoices />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/vendors"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Vendors />
                     </PrivateRoute>
                 }
             />
