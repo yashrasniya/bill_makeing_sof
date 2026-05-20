@@ -37,19 +37,43 @@ function KpiCard({ icon, label, value, sub, color, delay = 0 }) {
 const PurchaseInvoices = () => {
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [pendingJobs, setPendingJobs] = useState([]);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        clientToken.get('purchase-summary/')
-            .then(res => {
-                setSummary(res.data);
+    const fetchData = () => {
+        const fetchSummary = clientToken.get('purchase-summary/').then(res => res.data);
+        const fetchPending = clientToken.get('purchase/pending-jobs/').then(res => res.data);
+        
+        Promise.all([fetchSummary, fetchPending])
+            .then(([summaryData, pendingData]) => {
+                setSummary(summaryData);
+                setPendingJobs(pendingData);
                 setLoading(false);
             })
             .catch(err => {
-                console.error("Error fetching purchase summary:", err);
+                console.error("Error fetching dashboard data:", err);
                 setLoading(false);
             });
+    };
+
+    useEffect(() => {
+        fetchData();
     }, []);
+
+    const handleRefreshStatus = (job_id) => {
+        clientToken.get(`purchase/status/${job_id}/`)
+            .then(res => {
+                const newStatus = res.data.status;
+                if (newStatus === "success" || newStatus === "done") {
+                    setPendingJobs(prev => prev.filter(job => job.job_id !== job_id));
+                    fetchData(); // Refetch summary to show new invoice
+                } else {
+                    setPendingJobs(prev => prev.map(job => job.job_id === job_id ? { ...job, status: newStatus } : job));
+                }
+            })
+            .catch(err => console.error("Error refreshing status:", err));
+    };
 
     return (
         <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
@@ -62,6 +86,8 @@ const PurchaseInvoices = () => {
                     justifyContent: 'space-between',
                     marginBottom: '28px',
                     animation: 'fadeUp 0.4s ease both',
+                    position: 'relative',
+                    zIndex: 100,
                 }}>
                     <div>
                         <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px', marginBottom: '6px' }}>
@@ -92,8 +118,8 @@ const PurchaseInvoices = () => {
                                 .then(res => {
                                     setLoading(false);
                                     if (res.status === 200 || res.status === 201) {
-                                        alert("Invoice uploaded and processed successfully!");
-                                        window.location.reload();
+                                        alert("Invoice uploaded and sent for background processing!");
+                                        fetchData();
                                     }
                                 })
                                 .catch(err => {
@@ -143,6 +169,86 @@ const PurchaseInvoices = () => {
                             </svg>
                             Add Manually
                         </button>
+
+                        {/* Pending Jobs Dropdown */}
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setDropdownOpen(!dropdownOpen)}
+                                style={{
+                                    background: '#f8fafc', color: '#475569',
+                                    fontWeight: 700, fontSize: '14px',
+                                    padding: '10px 16px', borderRadius: '14px',
+                                    border: '2px solid #e2e8f0', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    position: 'relative',
+                                    transition: 'all 0.15s',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.background = '#f1f5f9'; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                {pendingJobs.length > 0 && (
+                                    <span style={{
+                                        background: '#ef4444', color: 'white', fontSize: '11px',
+                                        padding: '2px 6px', borderRadius: '10px',
+                                        position: 'absolute', top: '-8px', right: '-8px'
+                                    }}>
+                                        {pendingJobs.length}
+                                    </span>
+                                )}
+                            </button>
+                            
+                            {dropdownOpen && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                                    width: '320px', background: 'white', borderRadius: '16px',
+                                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)', zIndex: 9999,
+                                    padding: '12px', border: '1px solid #e2e8f0'
+                                }}>
+                                    <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 12px 4px' }}>
+                                        Pending Extractions
+                                    </h3>
+                                    {pendingJobs.length === 0 ? (
+                                        <p style={{ color: '#64748b', fontSize: '13px', margin: '4px' }}>No pending tasks.</p>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {pendingJobs.map(job => (
+                                                <div key={job.job_id} style={{
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                    padding: '10px', background: '#f8fafc', borderRadius: '10px'
+                                                }}>
+                                                    <div style={{ overflow: 'hidden', marginRight: '8px' }}>
+                                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={job.file_name}>
+                                                            {job.file_name}
+                                                        </div>
+                                                        <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, marginTop: '2px' }}>
+                                                            Status: {job.status}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleRefreshStatus(job.job_id)}
+                                                        style={{
+                                                            background: '#e0e7ff', color: '#4f46e5', border: 'none',
+                                                            borderRadius: '8px', padding: '6px', cursor: 'pointer',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}
+                                                        title="Refresh Status"
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polyline points="23 4 23 10 17 10" />
+                                                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
