@@ -125,7 +125,8 @@ const PurchaseInvoices = () => {
                                 .catch(err => {
                                     setLoading(false);
                                     console.error("Upload failed:", err);
-                                    alert("Failed to upload/process invoice. Please try again.");
+                                    const errorMessage = err.response?.data?.error || "Failed to upload/process invoice. Please try again.";
+                                    alert(errorMessage);
                                 });
                             }}
                         />
