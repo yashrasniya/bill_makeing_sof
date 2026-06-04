@@ -7,6 +7,14 @@ import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
 import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
 
+const formatHeaderTitle = (title) => {
+    if (!title) return '';
+    let formatted = title.replace(/_/g, ' ');
+    return formatted.replace(/\w\S*/g, (txt) => {
+        return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
+    });
+};
+
 /* ── Toast Notification Component ──────────────────────────────── */
 const ToastContainer = ({ toasts, onDismiss }) => (
     <div style={{
@@ -231,22 +239,36 @@ function NewBillBody({ id }) {
         var temp_opj = { product_properties: [] }
         console.log(table_content)
         if (update_data) {
-            new_product.product_properties.map((obj) => {
-                const form = new FormData()
-                form.append('value', obj.value)
-                clientToken.post(`product/properties/${obj.id}/update/`, form).then((response) => {
-                    if (response.status === 200) {
-                        setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
-                        setPop_up_properties('none')
-                        setRefresh(!refresh)
-                    }
-                }).catch((error) => {
-                    console.log(error)
-                    showToast(`Error ${error?.request?.status ?? ''}: Failed to update product`)
-                })
+            const promises = new_product.product_properties.map((obj) => {
+                if (obj.id !== undefined) {
+                    const form = new FormData()
+                    form.append('value', obj.value)
+                    return clientToken.post(`product/properties/${obj.id}/update/`, form)
+                } else {
+                    const productPropertiesForm = new FormData()
+                    productPropertiesForm.append('new_product_in_frontend', obj.new_product_in_frontend.id)
+                    productPropertiesForm.append('value', obj.value)
+                    return clientToken.post('product/properties/', productPropertiesForm).then((response) => {
+                        if (response.status === 200) {
+                            const productUpdateForm = new FormData()
+                            productUpdateForm.append('product_properties', response.data.id)
+                            productUpdateForm.append('gst_amount', 0)
+                            productUpdateForm.append('total_amount', 0)
+                            return clientToken.post(`product/${new_product.id}/update/`, productUpdateForm)
+                        }
+                    })
+                }
             })
 
-
+            Promise.all(promises).then(() => {
+                setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
+                setPop_up_properties('none')
+                setRefresh(r => !r)
+            }).catch((error) => {
+                console.error(error)
+                showToast("Some product properties failed to update/create", "error")
+                setRefresh(r => !r)
+            })
         }
         else {
             let id = -1
@@ -773,7 +795,7 @@ function NewBillBody({ id }) {
                                 return (
                                     <div className={'form_box'} id={obj.input_title} key={obj.id}
                                         style={{ flexBasis: `${+obj.size * 10}%` }}>
-                                        {obj.input_title}
+                                        {formatHeaderTitle(obj.input_title)}
                                         {obj.presets ? (
                                             <select 
                                                 id={obj.id} 
@@ -781,7 +803,7 @@ function NewBillBody({ id }) {
                                                 value={value}
                                                 style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                                             >
-                                                <option value="">-- Select {obj.input_title} --</option>
+                                                <option value="">-- Select {formatHeaderTitle(obj.input_title)} --</option>
                                                 {obj.presets.split(',').map(preset => (
                                                     <option key={preset.trim()} value={preset.trim()}>
                                                         {preset.trim()}
@@ -920,7 +942,7 @@ function NewBillBody({ id }) {
                                         />
                                     </td>
                                     {bill_body_items.map((obj) =>
-                                        obj.is_show ? <td key={obj.input_title}>{obj.input_title}</td> : null
+                                        obj.is_show ? <td key={obj.input_title}>{formatHeaderTitle(obj.input_title)}</td> : null
                                     )}
                                     <td>GST Amount</td>
                                     <td>Total Amount</td>

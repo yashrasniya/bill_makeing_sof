@@ -1,5 +1,13 @@
 import React, { useState } from "react";
 
+const formatHeaderTitle = (title) => {
+    if (!title) return '';
+    let formatted = title.replace(/_/g, ' ');
+    return formatted.replace(/\w\S*/g, (txt) => {
+        return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
+    });
+};
+
 const CollapsibleRowCard = ({
                                 rowData,
                                 key,
@@ -95,7 +103,7 @@ const CollapsibleRowCard = ({
                     id={key}
                     checked={checkbox[key]}
                     onChange={handelCheckBox}
-                /> <span className={'font-bold'}>{rowData.product_properties[0]?.new_product_in_frontend.input_title}:</span> {rowData.product_properties[0]?.value}</span>
+                /> <span className={'font-bold'}>{formatHeaderTitle(rowData.product_properties[0]?.new_product_in_frontend.input_title)}:</span> {rowData.product_properties[0]?.value}</span>
                 <span className={'text-xs'}>{isOpen ? "▲" : "▼"}</span>
             </div>
             <div className="flex justify-between text-sm border-b border-[#5d9a9a] pb-1">
@@ -122,7 +130,7 @@ const CollapsibleRowCard = ({
                                         className="flex justify-between text-sm border-b border-[#5d9a9a] py-1"
                                     >
                     <span className="font-medium">
-                      {headObj.new_product_in_frontend.input_title}
+                      {formatHeaderTitle(headObj.new_product_in_frontend.input_title)}
                     </span>
                                         <span>
                                             {headObj.new_product_in_frontend.show_calculated_value 

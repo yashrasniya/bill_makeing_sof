@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { clientToken } from "@/axios";
 
+const formatHeaderTitle = (title) => {
+    if (!title) return '';
+    let formatted = title.replace(/_/g, ' ');
+    return formatted.replace(/\w\S*/g, (txt) => {
+        return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
+    });
+};
+
 const inputStyle = {
     width: '100%', padding: '10px 13px', fontSize: '14px',
     border: '1.5px solid #e2e8f0', borderRadius: '10px',
@@ -44,7 +52,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
             {/* ── Inline selector row ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 220px', minWidth: '220px' }}>
             <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {label}
+                {formatHeaderTitle(label)}
             </label>
             <div style={{ display: 'flex', background: '#f8fafc', borderRadius: '12px', border: '1.5px solid #e2e8f0', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
                 <select
@@ -63,9 +71,9 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                         }
                     }}
                 >
-                    <option value="">— Select {label.toLowerCase()} —</option>
+                    <option value="">— Select {formatHeaderTitle(label).toLowerCase()} —</option>
                     {companyName.map(obj => (
-                        <option key={obj.id} value={obj.id}>{obj.name}</option>
+                        <option key={obj.id} value={obj.id}>{formatHeaderTitle(obj.name)}</option>
                     ))}
                 </select>
 
@@ -129,8 +137,8 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                                 fontSize: '18px',
                             }}>👥</div>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Add New {label}</h2>
-                                <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>Fill in {label.toLowerCase()} details below</p>
+                                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Add New {formatHeaderTitle(label)}</h2>
+                                <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>Fill in {formatHeaderTitle(label).toLowerCase()} details below</p>
                             </div>
                         </div>
 
@@ -138,7 +146,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
                                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
-                                    {label} Name *
+                                    {formatHeaderTitle(label)} Name *
                                 </label>
                                 <input
                                     type="text"
@@ -152,7 +160,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                             </div>
                             <div>
                                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
-                                    Mobile Number
+                                    {formatHeaderTitle("Mobile Number")}
                                 </label>
                                 <input
                                     type="text"
@@ -166,7 +174,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                             </div>
                             <div>
                                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
-                                    Address
+                                    {formatHeaderTitle("Address")}
                                 </label>
                                 <input
                                     type="text"
@@ -219,7 +227,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                                         </svg>
                                         Saving...
                                     </>
-                                ) : `+ Add ${label}`}
+                                ) : `+ Add ${formatHeaderTitle(label)}`}
                             </button>
                         </div>
                     </div>
