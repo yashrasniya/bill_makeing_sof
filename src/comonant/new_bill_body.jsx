@@ -80,6 +80,9 @@ function NewBillBody({ id }) {
     const [inventoryProducts, setInventoryProducts] = useState([]);
     const [selectedInventoryProductId, setSelectedInventoryProductId] = useState(null);
     const [toasts, setToasts] = useState([]);
+    const [customFields, setCustomFields] = useState([]);
+    const [showCFPopup, setShowCFPopup] = useState(false);
+    const [cfValues, setCFValues] = useState({});
     let navigate = useNavigate()
 
     const showToast = useCallback((message, type = 'error') => {
@@ -91,10 +94,30 @@ function NewBillBody({ id }) {
     const dismissToast = useCallback((id) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     }, []);
-useEffect(()=>{
+    useEffect(() => {
+        console.log("InvoiceData", InvoiceData);
+    });
 
-    console.log("InvoiceData",InvoiceData)
-})
+    useEffect(() => {
+        clientToken.get("custom-fields/").then((response) => {
+            const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+            setCustomFields(data.filter(cf => !cf.hidden));
+        }).catch(err => console.error("Failed to load custom fields:", err));
+    }, []);
+
+    useEffect(() => {
+        if (InvoiceData?.custom_header_field) {
+            try {
+                const val = typeof InvoiceData.custom_header_field === 'string'
+                    ? JSON.parse(InvoiceData.custom_header_field)
+                    : InvoiceData.custom_header_field;
+                setCFValues(val || {});
+            } catch (e) {
+                console.error("Failed to parse custom_header_field:", e);
+            }
+        }
+    }, [InvoiceData?.custom_header_field]);
+
 
     // var checkbox={}
     let grandTotal = 0
@@ -162,7 +185,9 @@ useEffect(()=>{
             if (('products' !== obj) && (InvoiceData[obj])) {
                 if((obj == 'receiver' || obj == 'vendor') && typeof InvoiceData[obj] =='object'){
                     form.append(obj, InvoiceData[obj].id)
-                }else{
+                } else if (obj === 'custom_header_field') {
+                    form.append(obj, typeof InvoiceData[obj] === 'object' ? JSON.stringify(InvoiceData[obj]) : InvoiceData[obj])
+                } else {
                     form.append(obj, InvoiceData[obj])
                 }
 
@@ -536,6 +561,144 @@ useEffect(()=>{
     return (
         <div className={'container space'}>
             <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+            {/* Custom Header Fields Popup */}
+            {showCFPopup && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <div style={{
+                        background: 'white', borderRadius: '20px', padding: '28px',
+                        width: 'min(500px, 92vw)', boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+                        position: 'relative', maxHeight: '90vh', overflowY: 'auto',
+                        fontFamily: 'Inter, system-ui, sans-serif'
+                    }}>
+                        {/* Close button */}
+                        <button 
+                            onClick={() => setShowCFPopup(false)}
+                            style={{
+                                position: 'absolute', top: '20px', right: '20px',
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+
+                        <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Header Options</h3>
+                        <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#64748b' }}>Configure custom header details for this invoice</p>
+
+                        {customFields.length === 0 ? (
+                            <div style={{ padding: '20px 10px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#f8fafc', borderRadius: '12px' }}>
+                                No custom fields defined. You can add them under UI Configuration.
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                                {customFields.map((cf) => {
+                                    const cfKey = Object.keys(cfValues).find(k => k.toLowerCase() === cf.name.toLowerCase()) || cf.name;
+                                    const val = cfValues[cfKey] !== undefined ? cfValues[cfKey] : (cf.default_value || "");
+                                    return (
+                                        <div key={cf.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>
+                                                {cf.name}
+                                            </label>
+                                            
+                                            {cf.field_type === 'select' || cf.field_type === 'multiselect' ? (
+                                                <select
+                                                    value={val}
+                                                    onChange={(e) => setCFValues({ ...cfValues, [cfKey]: e.target.value })}
+                                                    style={{
+                                                        width: '100%', padding: '10px 12px', fontSize: '14px',
+                                                        border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                                                        outline: 'none', background: 'white'
+                                                    }}
+                                                >
+                                                    <option value="">Select option...</option>
+                                                    {Array.isArray(cf.multioption_value) ? (
+                                                        cf.multioption_value.map(opt => (
+                                                            <option key={opt} value={opt}>{opt}</option>
+                                                        ))
+                                                    ) : (
+                                                        typeof cf.multioption_value === 'string' && 
+                                                        cf.multioption_value.split(',').map(opt => (
+                                                            <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>
+                                                        ))
+                                                    )}
+                                                </select>
+                                            ) : cf.field_type === 'date' ? (
+                                                <input
+                                                    type="date"
+                                                    value={val}
+                                                    onChange={(e) => setCFValues({ ...cfValues, [cfKey]: e.target.value })}
+                                                    style={{
+                                                        width: '100%', padding: '10px 12px', fontSize: '14px',
+                                                        border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                                                        outline: 'none', background: 'white'
+                                                    }}
+                                                />
+                                            ) : cf.field_type === 'number' ? (
+                                                <input
+                                                    type="number"
+                                                    value={val}
+                                                    onChange={(e) => setCFValues({ ...cfValues, [cfKey]: e.target.value })}
+                                                    style={{
+                                                        width: '100%', padding: '10px 12px', fontSize: '14px',
+                                                        border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                                                        outline: 'none', background: 'white'
+                                                    }}
+                                                />
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    value={val}
+                                                    onChange={(e) => setCFValues({ ...cfValues, [cfKey]: e.target.value })}
+                                                    style={{
+                                                        width: '100%', padding: '10px 12px', fontSize: '14px',
+                                                        border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                                                        outline: 'none', background: 'white'
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                            <button
+                                onClick={() => setShowCFPopup(false)}
+                                style={{
+                                    padding: '8px 16px', fontSize: '14px', fontWeight: 600, color: '#64748b',
+                                    background: 'none', border: 'none', cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setInvoiceData({ ...InvoiceData, custom_header_field: cfValues });
+                                    setShowCFPopup(false);
+                                    setRefresh(r => !r);
+                                }}
+                                style={{
+                                    padding: '8px 24px', fontSize: '14px', fontWeight: 700, color: 'white',
+                                    background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', border: 'none',
+                                    borderRadius: '10px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(79,70,229,0.2)'
+                                }}
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className={'top_head'}>
                 <p>Bill</p>
                 {/*<div className={'button'} onClick={()=>InvoiceData["receiver"]?handelExport(InvoiceData?.id):alert("Receiver is not set")}>Export</div>*/}
@@ -547,7 +710,7 @@ useEffect(()=>{
 
                 </ExportDropdown>
             </div>
-            <div className={'bill_head'}>
+            <div className={'bill_head'} style={{ alignItems: 'flex-end' }}>
                 <div
                     id={'new_company_box'}
                     style={{
@@ -645,52 +808,82 @@ useEffect(()=>{
                     </div>
                 </div>
                 {/* Header */}
-                <p style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                    Invoice No.
-                </p>
-                <input
-                    placeholder="Auto"
-                    id="invoice_number"
-                    type="text"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 140px', minWidth: '140px' }}>
+                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Invoice No.
+                    </label>
+                    <input
+                        placeholder="Auto"
+                        id="invoice_number"
+                        type="text"
+                        value={invoiceNumber}
+                        onChange={(e) => setInvoiceNumber(e.target.value)}
+                        style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                </div>
+                
                 <CustomerDropdown companyName={company_name} InvoiceData={InvoiceData} setRefresh={setRefresh} setInvoiceData={setInvoiceData} />
 
                 {/* Invoice Date */}
-                <p style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                    Invoice Date
-                </p>
-                <input
-                    id="date"
-                    type="date"
-                    value={InvoiceData?.date || ''}
-                    onChange={(e) => {
-                        setInvoiceData({ ...InvoiceData, date: e.target.value });
-                        setRefresh(r => !r);
-                    }}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 160px', minWidth: '160px' }}>
+                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Invoice Date
+                    </label>
+                    <input
+                        id="date"
+                        type="date"
+                        value={InvoiceData?.date || ''}
+                        onChange={(e) => {
+                            setInvoiceData({ ...InvoiceData, date: e.target.value });
+                            setRefresh(r => !r);
+                        }}
+                        style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                </div>
 
                 {/* Invoice Type */}
-                <p style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, marginTop: '16px' }}>
-                    Invoice Type
-                </p>
-                <select
-                    id="invoice_type"
-                    value={InvoiceData?.invoice_type || 'sales'}
-                    onChange={(e) => {
-                        setInvoiceData({ ...InvoiceData, invoice_type: e.target.value });
-                        setRefresh(r => !r);
-                    }}
-                    style={{
-                        padding: '10px 14px', borderRadius: '12px',
-                        border: '1.5px solid #e2e8f0', outline: 'none',
-                        fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s', width: '100%', marginBottom: '16px', background: 'white'
-                    }}
-                >
-                    <option value="sales">Sales</option>
-                    <option value="purchase">Purchase</option>
-                </select>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 140px', minWidth: '140px' }}>
+                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Invoice Type
+                    </label>
+                    <select
+                        id="invoice_type"
+                        value={InvoiceData?.invoice_type || 'sales'}
+                        onChange={(e) => {
+                            setInvoiceData({ ...InvoiceData, invoice_type: e.target.value });
+                            setRefresh(r => !r);
+                        }}
+                        style={{
+                            padding: '10px 14px', borderRadius: '12px',
+                            border: '1.5px solid #e2e8f0', outline: 'none',
+                            fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s', width: '100%', background: 'white',
+                            boxSizing: 'border-box'
+                        }}
+                    >
+                        <option value="sales">Sales</option>
+                        <option value="purchase">Purchase</option>
+                    </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto', minWidth: '160px' }}>
+                    <button
+                        onClick={() => setShowCFPopup(true)}
+                        style={{
+                            padding: '10px 14px', borderRadius: '12px',
+                            background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: 'white',
+                            border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 700,
+                            boxShadow: '0 4px 14px rgba(79,70,229,0.25)', width: '100%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                            transition: 'transform 0.15s, box-shadow 0.15s',
+                            boxSizing: 'border-box',
+                            height: '40px',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(79,70,229,0.35)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(79,70,229,0.25)'; }}
+                    >
+                        ⚙️ Header Options
+                    </button>
+                </div>
 
             </div>
             <div className={'header-button '}>

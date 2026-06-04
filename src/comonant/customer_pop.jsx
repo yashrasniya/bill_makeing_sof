@@ -42,52 +42,53 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
     return (
         <>
             {/* ── Inline selector row ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <p style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                    {label}
-                </p>
-                <div style={{ display: 'flex', background: '#f8fafc', borderRadius: '10px', border: '1.5px solid #e2e8f0', overflow: 'hidden', minWidth: '220px' }}>
-                    <select
-                        id={idKey}
-                        value={InvoiceData?.[idKey] || ""}
-                        style={{
-                            flex: 1, padding: '9px 12px', border: 'none', outline: 'none',
-                            background: 'transparent', fontFamily: 'Inter, sans-serif',
-                            fontSize: '14px', fontWeight: 700, color: '#0f172a', cursor: 'pointer',
-                        }}
-                        onChange={e => {
-                            if (e.target.value !== undefined) {
-                                setInvoiceData({ ...InvoiceData, [idKey]: e.target.value });
-                                setRefresh(p => !p);
-                            }
-                        }}
-                    >
-                        <option value="">— Select {label.toLowerCase()} —</option>
-                        {companyName.map(obj => (
-                            <option key={obj.id} value={obj.id}>{obj.name}</option>
-                        ))}
-                    </select>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 220px', minWidth: '220px' }}>
+            <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {label}
+            </label>
+            <div style={{ display: 'flex', background: '#f8fafc', borderRadius: '12px', border: '1.5px solid #e2e8f0', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+                <select
+                    id={idKey}
+                    value={InvoiceData?.[idKey] || ""}
+                    style={{
+                        flex: 1, padding: '10px 12px', border: 'none', outline: 'none',
+                        background: 'transparent', fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px', fontWeight: 700, color: '#0f172a', cursor: 'pointer',
+                        width: '100%', boxSizing: 'border-box'
+                    }}
+                    onChange={e => {
+                        if (e.target.value !== undefined) {
+                            setInvoiceData({ ...InvoiceData, [idKey]: e.target.value });
+                            setRefresh(p => !p);
+                        }
+                    }}
+                >
+                    <option value="">— Select {label.toLowerCase()} —</option>
+                    {companyName.map(obj => (
+                        <option key={obj.id} value={obj.id}>{obj.name}</option>
+                    ))}
+                </select>
 
-                    {/* + Add button */}
-                    <button
-                        type="button"
-                        onClick={() => setShowPopup(true)}
-                        title={`Add new ${label.toLowerCase()}`}
-                        style={{
-                            padding: '0 14px', border: 'none',
-                            borderLeft: '1.5px solid #e2e8f0',
-                            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                            color: 'white', fontWeight: 900, fontSize: '18px',
-                            cursor: 'pointer', lineHeight: 1, flexShrink: 0,
-                            transition: 'opacity 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                    >
-                        +
-                    </button>
-                </div>
+                {/* + Add button */}
+                <button
+                    type="button"
+                    onClick={() => setShowPopup(true)}
+                    title={`Add new ${label.toLowerCase()}`}
+                    style={{
+                        padding: '0 16px', border: 'none',
+                        borderLeft: '1.5px solid #e2e8f0',
+                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                        color: 'white', fontWeight: 900, fontSize: '18px',
+                        cursor: 'pointer', lineHeight: 1, flexShrink: 0,
+                        transition: 'opacity 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                    +
+                </button>
             </div>
+        </div>
 
             {/* ── Add Customer Popup ── */}
             {showPopup && (
