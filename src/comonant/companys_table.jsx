@@ -160,52 +160,54 @@ function CompanysTable() {
 
             {/* ── Customer Table ── */}
             <div className="companys_table_raper">
-                <table className="table">
-                    <thead>
-                        <tr>
-                            <td style={{ width: '40px' }}>
-                                <input type="checkbox" className="check-box"
-                                    onChange={e => {
-                                        const list = {};
-                                        Object.keys(checkbox).forEach(id => { list[id] = e.target.checked; });
-                                        setCheckBox(list);
-                                    }}
-                                />
-                            </td>
-                            <td>Name</td>
-                            <td>GST Number</td>
-                            <td>State</td>
-                            <td>State Code</td>
-                            <td>Phone</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {table_content.length === 0 ? (
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)', background: 'white' }}>
+                    <table className="table" style={{ boxShadow: 'none', borderRadius: 0, minWidth: '700px' }}>
+                        <thead>
                             <tr>
-                                <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontSize: '15px', fontWeight: 600 }}>
-                                    No customers found
-                                </td>
-                            </tr>
-                        ) : table_content.map((obj, key) => (
-                            <tr key={obj.id}>
-                                <td>
+                                <td style={{ width: '40px' }}>
                                     <input type="checkbox" className="check-box"
-                                        checked={!!checkbox[obj.id]}
-                                        onChange={e => setCheckBox({ ...checkbox, [e.target.id]: e.target.checked })}
-                                        id={obj.id}
+                                        onChange={e => {
+                                            const list = {};
+                                            Object.keys(checkbox).forEach(id => { list[id] = e.target.checked; });
+                                            setCheckBox(list);
+                                        }}
                                     />
                                 </td>
-                                <td onClick={() => handelItemsOpen(key)} style={{ cursor: 'pointer' }}>
-                                    {obj.name || '—'}
-                                </td>
-                                <td>{obj.gst_number || '—'}</td>
-                                <td>{obj.state || '—'}</td>
-                                <td>{obj.state_code || '—'}</td>
-                                <td>{obj.phone_number || '—'}</td>
+                                <td>Name</td>
+                                <td>GST Number</td>
+                                <td>State</td>
+                                <td>State Code</td>
+                                <td>Phone</td>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {table_content.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontSize: '15px', fontWeight: 600 }}>
+                                        No customers found
+                                    </td>
+                                </tr>
+                            ) : table_content.map((obj, key) => (
+                                <tr key={obj.id}>
+                                    <td>
+                                        <input type="checkbox" className="check-box"
+                                            checked={!!checkbox[obj.id]}
+                                            onChange={e => setCheckBox({ ...checkbox, [e.target.id]: e.target.checked })}
+                                            id={obj.id}
+                                        />
+                                    </td>
+                                    <td onClick={() => handelItemsOpen(key)} style={{ cursor: 'pointer' }}>
+                                        {obj.name || '—'}
+                                    </td>
+                                    <td>{obj.gst_number || '—'}</td>
+                                    <td>{obj.state || '—'}</td>
+                                    <td>{obj.state_code || '—'}</td>
+                                    <td>{obj.phone_number || '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
 
                 {/* Pagination */}
                 <div className="paging">

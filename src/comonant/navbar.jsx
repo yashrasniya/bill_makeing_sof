@@ -21,14 +21,17 @@ import {
     ChevronLeft,
     ChevronDown,
     ChevronRight,
-    Menu
+    Menu,
+    Home,
+    Plus,
+    ShoppingCart
 } from "lucide-react";
 
 function Navbar() {
     const { userInfo } = useSelector((state) => state.user);
     const navigate = useNavigate();
     const location = useLocation();
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(window.innerWidth > 768);
     const [openMenus, setOpenMenus] = useState({ "Reports": false, "Purchases": false });
 
     const toggleMenu = (title) => {
@@ -36,13 +39,38 @@ function Navbar() {
         setOpenMenus(prev => ({ ...prev, [title]: !prev[title] }));
     };
 
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+    const handleNavigate = (path) => {
+        navigate(path);
+        if (window.innerWidth <= 768) {
+            setIsExpanded(false);
+        }
+    };
+
     useEffect(() => {
-        document.body.style.marginLeft = isExpanded ? '250px' : '70px';
+        const handleResize = () => {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            if (mobile && isExpanded) {
+                setIsExpanded(false);
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [isExpanded]);
+
+    useEffect(() => {
+        if (isMobile) {
+            document.body.style.marginLeft = '0';
+        } else {
+            document.body.style.marginLeft = isExpanded ? '250px' : '70px';
+        }
         document.body.style.transition = 'margin-left 0.3s ease';
         return () => {
             document.body.style.marginLeft = '0';
         };
-    }, [isExpanded]);
+    }, [isExpanded, isMobile]);
 
     let navItems = [
         { title: "Dashboard", link: "/home", icon: <LayoutDashboard size={20} /> },
@@ -84,10 +112,41 @@ function Navbar() {
     ];
 
     return (
-        <div className={`sidebar ${isExpanded ? 'expanded' : 'collapsed'}`}>
+        <>
+            {isMobile && !isExpanded && (
+                <div className="mobile-bottom-bar">
+                    <button className="bottom-nav-item" onClick={() => handleNavigate("/home")}>
+                        <Home size={22} />
+                        <span style={{ fontSize: '11px', marginTop: '4px', fontWeight: 500 }}>Home</span>
+                    </button>
+                    <button className="bottom-nav-item" onClick={() => handleNavigate("/purchase_invoices")}>
+                        <ShoppingCart size={22} />
+                        <span style={{ fontSize: '11px', marginTop: '4px', fontWeight: 500 }}>Purchases</span>
+                    </button>
+                    <div className="fab-wrapper">
+                        <button className="fab-button" onClick={() => handleNavigate("/newBill")}>
+                            <Plus size={28} />
+                        </button>
+                    </div>
+                    <button className="bottom-nav-item" onClick={() => handleNavigate("/inventory")}>
+                        <Package size={22} />
+                        <span style={{ fontSize: '11px', marginTop: '4px', fontWeight: 500 }}>Inventory</span>
+                    </button>
+                    <button className="bottom-nav-item" onClick={() => setIsExpanded(true)}>
+                        <Menu size={22} />
+                        <span style={{ fontSize: '11px', marginTop: '4px', fontWeight: 500 }}>Menu</span>
+                    </button>
+                </div>
+            )}
+
+            {isMobile && isExpanded && (
+                <div className="sidebar-overlay" onClick={() => setIsExpanded(false)}></div>
+            )}
+
+            <div className={`sidebar ${isExpanded ? 'expanded' : 'collapsed'} ${isMobile ? 'mobile' : ''}`}>
             {/* Header */}
             <div className="sidebar-header">
-                <div className="brand" onClick={() => navigate("/home")}>
+                <div className="brand" onClick={() => handleNavigate("/home")}>
                     <div className="logo-icon">
                         <img src={orvineLogo} alt="Orvine Logo" />
                     </div>
@@ -106,7 +165,7 @@ function Navbar() {
                         <div key={i}>
                             <div
                                 className={`nav-item ${!item.subItems && location.pathname === item.link ? 'active' : ''}`}
-                                onClick={() => item.subItems ? toggleMenu(item.title) : navigate(item.link)}
+                                onClick={() => item.subItems ? toggleMenu(item.title) : handleNavigate(item.link)}
                                 title={!isExpanded ? item.title : ""}
                             >
                                 <div className="nav-icon">{item.icon}</div>
@@ -124,7 +183,7 @@ function Navbar() {
                                     {item.subItems.map((sub, j) => (
                                         <div 
                                             key={j}
-                                            onClick={() => navigate(sub.link)}
+                                            onClick={() => handleNavigate(sub.link)}
                                             style={{
                                                 padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
                                                 fontSize: '13px', color: location.pathname === sub.link ? '#4f46e5' : '#64748b',
@@ -150,7 +209,7 @@ function Navbar() {
                         <div
                             key={i}
                             className={`nav-item ${item.danger ? 'danger' : ''} ${location.pathname === item.link ? 'active' : ''}`}
-                            onClick={() => navigate(item.link)}
+                            onClick={() => handleNavigate(item.link)}
                             title={!isExpanded ? item.title : ""}
                         >
                             <div className="nav-icon">{item.icon}</div>
@@ -160,6 +219,7 @@ function Navbar() {
                 </div>
             </div>
         </div>
+        </>
     );
 }
 

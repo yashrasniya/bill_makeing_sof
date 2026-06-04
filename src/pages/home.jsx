@@ -77,6 +77,7 @@ function QuickAction({ icon, label, onClick, accent }) {
     return (
         <button
             onClick={onClick}
+            className="quick-action-btn"
             style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
                 background: 'white', border: `2px solid ${accent}18`,
@@ -125,16 +126,12 @@ function Home() {
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
             <Navbar />
 
-            <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '28px 24px 60px' }}>
+            <div className="home-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
 
                 {/* ── Welcome strip ── */}
-                <div style={{
+                <div className="welcome-strip" style={{
                     background: 'linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #7c3aed 100%)',
                     borderRadius: '24px',
-                    padding: '28px 36px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
                     marginBottom: '28px',
                     position: 'relative',
                     overflow: 'hidden',
@@ -159,6 +156,7 @@ function Home() {
 
                     <button
                         onClick={() => navigate('/newBill')}
+                        className="welcome-strip-btn"
                         style={{
                             background: 'white', color: '#4f46e5',
                             fontWeight: 800, fontSize: '14px',
@@ -242,8 +240,34 @@ function Home() {
                     from { opacity: 0; transform: translateY(18px); }
                     to   { opacity: 1; transform: translateY(0); }
                 }
-                @media (max-width: 700px) {
-                    .kpi-row { flex-direction: column !important; }
+
+                .home-container {
+                    padding: 28px 24px 60px;
+                }
+                .welcome-strip {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 28px 36px;
+                }
+                
+                @media (max-width: 768px) {
+                    .home-container {
+                        padding: 20px 16px 80px;
+                    }
+                    .welcome-strip {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        padding: 24px 20px;
+                        gap: 20px;
+                    }
+                    .welcome-strip-btn {
+                        width: 100%;
+                        justify-content: center;
+                    }
+                    .quick-action-btn {
+                        flex: 1 1 calc(50% - 12px);
+                    }
                 }
             `}</style>
         </div>

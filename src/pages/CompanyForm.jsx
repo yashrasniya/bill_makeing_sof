@@ -46,7 +46,7 @@ const onFocusOut = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.sty
 ───────────────────────────────────────────────── */
 function SectionHeader({ title }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0 16px', gridColumn: 'span 2' }}>
+        <div className="field-span-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0 16px' }}>
             <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {title}
@@ -58,7 +58,7 @@ function SectionHeader({ title }) {
 function Field({ field, value, logoPreview, onChange }) {
     if (field.type === 'file') {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', gridColumn: 'span 2' }}>
+            <div className="field-span-2" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.02em' }}>
                     {field.label}
                 </label>
@@ -104,9 +104,8 @@ function Field({ field, value, logoPreview, onChange }) {
     }
 
     return (
-        <div style={{
+        <div className={field.col === 2 ? "field-span-2" : "field-span-1"} style={{
             display: 'flex', flexDirection: 'column', gap: '5px',
-            gridColumn: field.col === 2 ? 'span 2' : 'span 1',
         }}>
             <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.02em' }}>
                 {field.label} <span style={{ color: '#ef4444' }}>*</span>
@@ -220,10 +219,13 @@ export default function CompanyForm() {
                               padding: 32px 24px; overflow-y: auto; position: relative; }
                 .cf-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
                 .cf-grid-bank { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+                .field-span-2 { grid-column: span 2; }
+                .field-span-1 { grid-column: span 1; }
                 @media (max-width: 768px) {
                     .cf-left  { display: none; }
-                    .cf-right { padding: 20px 16px; }
+                    .cf-right { padding: 20px 16px 80px; }
                     .cf-grid, .cf-grid-bank { grid-template-columns: 1fr; }
+                    .field-span-2, .field-span-1 { grid-column: 1 / -1 !important; }
                 }
             `}</style>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />

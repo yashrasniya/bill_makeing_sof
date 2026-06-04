@@ -79,11 +79,8 @@ const PurchaseInvoices = () => {
         <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
             <Navbar />
 
-            <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '28px 24px 60px' }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+            <div className="main-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
+                <div className="purchase-header" style={{
                     marginBottom: '28px',
                     animation: 'fadeUp 0.4s ease both',
                     position: 'relative',
@@ -98,7 +95,7 @@ const PurchaseInvoices = () => {
                         </p>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div className="header-actions">
                         <input
                             type="file"
                             id="invoice-upload"
@@ -132,6 +129,7 @@ const PurchaseInvoices = () => {
                         />
                         <button
                             onClick={() => document.getElementById('invoice-upload').click()}
+                            className="action-btn"
                             style={{
                                 background: '#f8fafc', color: '#4f46e5',
                                 fontWeight: 800, fontSize: '14px',
@@ -153,6 +151,7 @@ const PurchaseInvoices = () => {
 
                         <button
                             onClick={() => navigate('/newBill')}
+                            className="action-btn"
                             style={{
                                 background: '#4f46e5', color: 'white',
                                 fontWeight: 800, fontSize: '14px',
@@ -303,7 +302,7 @@ const PurchaseInvoices = () => {
                             </div>
 
                             {summary?.recent_purchases?.length > 0 ? (
-                                <div className="overflow-x-auto">
+                                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                                         <thead>
                                             <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
@@ -337,6 +336,42 @@ const PurchaseInvoices = () => {
                 @keyframes fadeUp {
                     from { opacity: 0; transform: translateY(18px); }
                     to   { opacity: 1; transform: translateY(0); }
+                }
+
+                .main-container {
+                    padding: 28px 24px 60px;
+                }
+                
+                .purchase-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+                
+                .header-actions {
+                    display: flex;
+                    gap: 12px;
+                    align-items: center;
+                }
+
+                @media (max-width: 768px) {
+                    .main-container {
+                        padding: 20px 16px 60px;
+                    }
+                    .purchase-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 20px;
+                    }
+                    .header-actions {
+                        width: 100%;
+                        flex-wrap: wrap;
+                    }
+                    .action-btn {
+                        flex: 1;
+                        justify-content: center;
+                        min-width: 140px;
+                    }
                 }
             `}</style>
         </div>
