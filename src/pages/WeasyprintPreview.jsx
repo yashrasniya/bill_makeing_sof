@@ -118,6 +118,14 @@ const WeasyprintPreview = () => {
     const [selectedId, setSelectedId] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [isResizing, setIsResizing] = useState(false);
+    const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });
+    const [resizeStartPointer, setResizeStartPointer] = useState({ x: 0, y: 0 });
+
+    const [isRotating, setIsRotating] = useState(false);
+    const [rotateCenter, setRotateCenter] = useState({ x: 0, y: 0 });
+    const [rotateStartAngle, setRotateStartAngle] = useState(0);
+    const [rotateStartElementAngle, setRotateStartElementAngle] = useState(0);
 
     // ── PDF State ──
     const [pdfUrl, setPdfUrl] = useState(null);
@@ -332,8 +340,9 @@ const WeasyprintPreview = () => {
                 const td = el.textDecoration || 'none';
                 const lh = el.lineHeight || 1.2;
                 const ls = el.letterSpacing ? `letter-spacing: ${el.letterSpacing}px; ` : '';
+                const rot = el.rotate ? `transform: rotate(${el.rotate}deg); transform-origin: center; ` : '';
                 const formattedContent = (el.content || '').replace(/\n/g, '<br>');
-                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; font-size: ${fs}px; color: ${c}; font-weight: ${fw}; font-family: ${ff}; text-align: ${ta}; font-style: ${fst}; text-decoration: ${td}; line-height: ${lh}; ${ls}white-space: pre-wrap;">${formattedContent}</div>\n`;
+                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; font-size: ${fs}px; color: ${c}; font-weight: ${fw}; font-family: ${ff}; text-align: ${ta}; font-style: ${fst}; text-decoration: ${td}; line-height: ${lh}; ${ls}${rot}white-space: pre-wrap;">${formattedContent}</div>\n`;
             } else if (el.type === 'line') {
                 const w = el.width || 100;
                 const h = el.height || 2;
@@ -342,16 +351,19 @@ const WeasyprintPreview = () => {
                 const bw = el.borderWidth ? `border-width: ${el.borderWidth}px; ` : '';
                 const bc = el.borderColor ? `border-color: ${el.borderColor}; ` : '';
                 const bs = el.borderStyle && el.borderStyle !== 'none' ? `border-style: ${el.borderStyle}; ` : '';
-                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${w}px; height: ${h}px; background-color: ${bg}; ${br}${bw}${bc}${bs}"></div>\n`;
+                const rot = el.rotate ? `transform: rotate(${el.rotate}deg); transform-origin: center; ` : '';
+                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${w}px; height: ${h}px; background-color: ${bg}; ${br}${bw}${bc}${bs}${rot}"></div>\n`;
             } else if (el.type === 'html' || el.type === 'product_table') {
                 const w = el.width || 200;
                 const h = el.height || 100;
-                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${w}px; height: ${h}px;">${el.content || ''}</div>\n`;
+                const rot = el.rotate ? `transform: rotate(${el.rotate}deg); transform-origin: center; ` : '';
+                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${w}px; height: ${h}px; ${rot}">${el.content || ''}</div>\n`;
             } else if (el.type === 'image') {
                 const w = el.width || 100;
                 const h = el.height || 100;
                 const src = el.url || 'https://via.placeholder.com/150';
-                innerHtml += `<img src="${src}" style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${w}px; height: ${h}px; object-fit: contain;" />\n`;
+                const rot = el.rotate ? `transform: rotate(${el.rotate}deg); transform-origin: center; ` : '';
+                innerHtml += `<img src="${src}" style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${w}px; height: ${h}px; object-fit: contain; ${rot}" />\n`;
             }
         });
 
@@ -416,6 +428,36 @@ ${innerHtml}
     };
 
     const handlePointerMove = (e) => {
+        if (isRotating && selectedId) {
+            const currentRad = Math.atan2(e.clientY - rotateCenter.y, e.clientX - rotateCenter.x);
+            const currentDeg = currentRad * (180 / Math.PI) + 90;
+            const deltaAngle = currentDeg - rotateStartAngle;
+            let newAngle = Math.round(rotateStartElementAngle + deltaAngle) % 360;
+            if (newAngle < 0) newAngle += 360;
+
+            setElements(elements.map(el => el.id === selectedId ? { ...el, rotate: newAngle } : el));
+            return;
+        }
+
+        if (isResizing && selectedId) {
+            const deltaX = e.clientX - resizeStartPointer.x;
+            const deltaY = e.clientY - resizeStartPointer.y;
+            const newWidth = Math.max(10, resizeStartSize.width + deltaX);
+            const newHeight = Math.max(10, resizeStartSize.height + deltaY);
+            
+            setElements(elements.map(el => {
+                if (el.id === selectedId) {
+                    const updated = { ...el, width: Math.round(newWidth), height: Math.round(newHeight) };
+                    if (el.type === 'product_table') {
+                        updated.content = generateTableHtml(updated);
+                    }
+                    return updated;
+                }
+                return el;
+            }));
+            return;
+        }
+
         if (!isDragging || !selectedId || !canvasRef.current) return;
         const canvasRect = canvasRef.current.getBoundingClientRect();
 
@@ -432,6 +474,65 @@ ${innerHtml}
                 e.target.releasePointerCapture(e.pointerId);
             }
         }
+        if (isResizing) {
+            setIsResizing(false);
+            if (e.target.releasePointerCapture) {
+                e.target.releasePointerCapture(e.pointerId);
+            }
+        }
+        if (isRotating) {
+            setIsRotating(false);
+            if (e.target.releasePointerCapture) {
+                e.target.releasePointerCapture(e.pointerId);
+            }
+        }
+    };
+
+    const handleResizeStart = (e, id) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedId(id);
+
+        const el = elements.find(el => el.id === id);
+        if (!el) return;
+
+        setIsResizing(true);
+        setResizeStartSize({
+            width: el.width || 100,
+            height: el.height || 100
+        });
+        setResizeStartPointer({
+            x: e.clientX,
+            y: e.clientY
+        });
+
+        e.target.setPointerCapture(e.pointerId);
+    };
+
+    const handleRotateStart = (e, id) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedId(id);
+
+        const el = elements.find(el => el.id === id);
+        if (!el) return;
+
+        const domEl = document.getElementById(`canvas-el-${id}`);
+        if (!domEl) return;
+
+        const rect = domEl.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        setIsRotating(true);
+        setRotateCenter({ x: centerX, y: centerY });
+
+        const startRad = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+        const startDeg = startRad * (180 / Math.PI) + 90;
+        setRotateStartAngle(startDeg);
+        setRotateStartElementAngle(el.rotate || 0);
+
+        e.target.setPointerCapture(e.pointerId);
     };
 
     // Deselect if clicking the empty canvas
@@ -584,6 +685,7 @@ ${innerHtml}
                                 return (
                                     <div
                                         key={el.id}
+                                        id={`canvas-el-${el.id}`}
                                         onPointerDown={(e) => handlePointerDown(e, el.id)}
                                         onPointerMove={handlePointerMove}
                                         onPointerUp={handlePointerUp}
@@ -615,7 +717,9 @@ ${innerHtml}
                                             // Visual aid to make dragging shapes easier if they are thin
                                             padding: el.type === 'line' && el.height <= 2 ? '5px 0' : '0',
                                             backgroundClip: 'content-box',
-                                            overflow: el.type === 'html' ? 'hidden' : 'visible'
+                                            overflow: el.type === 'html' ? 'hidden' : 'visible',
+                                            transform: el.rotate ? `rotate(${el.rotate}deg)` : undefined,
+                                            transformOrigin: 'center'
                                         }}
                                     >
                                         {el.type === 'html' || el.type === 'product_table' ? (
@@ -629,6 +733,31 @@ ${innerHtml}
                                         ) : el.type === 'image' ? (
                                             <img src={showPreviewData && el.url && el.url.includes('{{ company.company_logo }}') ? (companyInfo?.company_logo || 'https://via.placeholder.com/150') : el.url} className="w-full h-full object-contain pointer-events-none" alt="element" />
                                         ) : null}
+                                        {/* Resize Handle */}
+                                        {isSelected && el.type !== 'text' && (
+                                            <div
+                                                onPointerDown={(e) => handleResizeStart(e, el.id)}
+                                                className="absolute bottom-0 right-0 w-3 h-3 bg-indigo-600 border border-white cursor-se-resize z-20 hover:scale-125 transition-transform"
+                                                style={{ transform: 'translate(50%, 50%)', borderRadius: '50%' }}
+                                            />
+                                        )}
+                                        {/* Rotate Handle */}
+                                        {isSelected && (
+                                            <div 
+                                                className="absolute left-1/2 -top-7 flex flex-col items-center -translate-x-1/2 z-20 pointer-events-auto select-none touch-none"
+                                            >
+                                                <div className="w-[1px] h-3 bg-indigo-500" />
+                                                <div
+                                                    onPointerDown={(e) => handleRotateStart(e, el.id)}
+                                                    className="w-[20px] h-[20px] bg-white border border-indigo-600 rounded-full cursor-grab active:cursor-grabbing hover:scale-110 active:scale-95 transition-all flex items-center justify-center shadow-lg hover:shadow-indigo-100"
+                                                    title="Drag to rotate"
+                                                >
+                                                    <svg className="w-2.5 h-2.5 text-indigo-600 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -688,14 +817,47 @@ ${innerHtml}
                                         </div>
 
                                         {/* Common Properties */}
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-2 gap-3 mb-2">
                                             <div>
-                                                <label className="block text-xs font-semibold text-gray-500 mb-1">X Position</label>
-                                                <input type="number" value={selectedEl.x} onChange={e => updateSelected('x', Number(e.target.value))} className="w-full text-sm p-2 border rounded-md" />
+                                                <label className="block text-xs font-semibold text-gray-500 mb-1">X Position (px)</label>
+                                                <input type="number" value={selectedEl.x} onChange={e => updateSelected('x', Number(e.target.value))} className="w-full text-sm p-2 border rounded-md shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-semibold text-gray-500 mb-1">Y Position</label>
-                                                <input type="number" value={selectedEl.y} onChange={e => updateSelected('y', Number(e.target.value))} className="w-full text-sm p-2 border rounded-md" />
+                                                <label className="block text-xs font-semibold text-gray-500 mb-1">Y Position (px)</label>
+                                                <input type="number" value={selectedEl.y} onChange={e => updateSelected('y', Number(e.target.value))} className="w-full text-sm p-2 border rounded-md shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 space-y-3 mb-4">
+                                            <div className="flex justify-between items-center">
+                                                <label className="block text-xs font-bold text-gray-700">Rotation</label>
+                                                <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-100">{selectedEl.rotate || 0}°</span>
+                                            </div>
+                                            
+                                            <div className="flex items-center gap-3">
+                                                <input 
+                                                    type="range" 
+                                                    min="0" 
+                                                    max="360" 
+                                                    value={selectedEl.rotate || 0} 
+                                                    onChange={e => updateSelected('rotate', Number(e.target.value))} 
+                                                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none" 
+                                                />
+                                                <input 
+                                                    type="number" 
+                                                    min="0" 
+                                                    max="360" 
+                                                    value={selectedEl.rotate || 0} 
+                                                    onChange={e => updateSelected('rotate', Number(e.target.value))} 
+                                                    className="w-16 text-center text-sm p-1.5 border rounded-md shadow-sm bg-white" 
+                                                />
+                                            </div>
+
+                                            <div className="flex gap-1.5 justify-between">
+                                                <button onClick={() => updateSelected('rotate', 0)} className="flex-1 py-1 text-[11px] bg-white border border-gray-200 rounded text-gray-600 hover:bg-gray-50 transition font-medium">0°</button>
+                                                <button onClick={() => updateSelected('rotate', 90)} className="flex-1 py-1 text-[11px] bg-white border border-gray-200 rounded text-gray-600 hover:bg-gray-50 transition font-medium">90°</button>
+                                                <button onClick={() => updateSelected('rotate', 180)} className="flex-1 py-1 text-[11px] bg-white border border-gray-200 rounded text-gray-600 hover:bg-gray-50 transition font-medium">180°</button>
+                                                <button onClick={() => updateSelected('rotate', 270)} className="flex-1 py-1 text-[11px] bg-white border border-gray-200 rounded text-gray-600 hover:bg-gray-50 transition font-medium">270°</button>
                                             </div>
                                         </div>
 
