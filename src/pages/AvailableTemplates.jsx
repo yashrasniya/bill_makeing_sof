@@ -6,6 +6,7 @@ import Navbar from "../comonant/navbar";
 export default function AvailableTemplates() {
     const [templates, setTemplates] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -24,6 +25,57 @@ export default function AvailableTemplates() {
             });
     }, []);
 
+    const hasHtmlTemplate = templates.some(t => t.is_html);
+
+    const handleCreateHtmlTemplate = async () => {
+        setIsCreating(true);
+        try {
+            const defaultHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Generated PDF</title>
+    <style>
+        @page { size: 595px 842px; margin: 0; }
+        body { margin: 0; padding: 0; width: 595px; height: 842px; position: relative; background: white; }
+        * { box-sizing: border-box; }
+    </style>
+</head>
+<body>
+<div style="position: absolute; left: 40px; top: 40px; font-size: 32px; color: #4F46E5; font-weight: bold; white-space: pre-wrap; font-family: Arial, sans-serif;">INVOICE</div>
+<div style="position: absolute; left: 40px; top: 80px; font-size: 14px; color: #333333; font-weight: normal; white-space: pre-wrap; font-family: Arial, sans-serif;">Date: Oct 25, 2026</div>
+<div style="position: absolute; left: 40px; top: 140px; font-size: 13px; color: #000000; font-weight: normal; white-space: pre-wrap; font-family: Arial, sans-serif;">Billed To:<br>Acme Corp</div>
+<div style="position: absolute; left: 40px; top: 110px; width: 515px; height: 2px; background-color: #eeeeee;"></div>
+<div style="position: absolute; left: 400px; top: 200px; font-size: 18px; color: #000000; font-weight: bold; white-space: pre-wrap; font-family: Arial, sans-serif;">Total: $500.00</div>
+</body>
+</html>`;
+
+            const initialElements = [
+                { id: '1', type: 'text', content: 'INVOICE', x: 40, y: 40, fontSize: 32, color: '#4F46E5', fontWeight: 'bold' },
+                { id: '2', type: 'text', content: 'Date: Oct 25, 2026', x: 40, y: 80, fontSize: 14, color: '#333333', fontWeight: 'normal' },
+                { id: '3', type: 'text', content: 'Billed To:\nAcme Corp', x: 40, y: 140, fontSize: 13, color: '#000000', fontWeight: 'normal' },
+                { id: '4', type: 'line', x: 40, y: 110, width: 515, height: 2, backgroundColor: '#eeeeee' },
+                { id: '5', type: 'text', content: 'Total: $500.00', x: 400, y: 200, fontSize: 18, color: '#000000', fontWeight: 'bold' },
+            ];
+
+            const response = await clientToken.post('/yaml/', {
+                template_name: "Web Editor Layout",
+                is_html: true,
+                elements: initialElements,
+                html_content: defaultHtml
+            });
+
+            if (response.status === 201) {
+                navigate('/weasyprint-preview');
+            }
+        } catch (error) {
+            console.error("Failed to create HTML template:", error);
+            alert("Failed to create HTML template. Please try again.");
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             <Navbar />
@@ -37,6 +89,32 @@ export default function AvailableTemplates() {
                     <p className="mt-4 max-w-2xl text-lg text-gray-500 mx-auto">
                         Choose from our premium collection of professionally designed invoice templates to start billing your clients in style.
                     </p>
+                    {!isLoading && !hasHtmlTemplate && (
+                        <div className="mt-6 flex justify-center">
+                            <button
+                                onClick={handleCreateHtmlTemplate}
+                                disabled={isCreating}
+                                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50"
+                            >
+                                {isCreating ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        Creating HTML Template...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="-ml-1 mr-2.5 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Create Custom HTML Template
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Content Section */}
