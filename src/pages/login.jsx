@@ -4,6 +4,7 @@ import orvineLogo from "../assets/orvine_logo.svg";
 import { clientToken } from "@/axios";
 import { fetchUser } from "@/store/userSlice";
 import { useDispatch } from "react-redux";
+import GoogleLoginButton from "../components/GoogleLoginButton";
 
 function Login() {
     const navigate = useNavigate();
@@ -320,6 +321,17 @@ function Login() {
                         <div style={{ flex: 1, height: '1px', background: '#f1f5f9' }} />
                         <span style={{ fontSize: '12px', color: '#cbd5e1', fontWeight: 500 }}>OR</span>
                         <div style={{ flex: 1, height: '1px', background: '#f1f5f9' }} />
+                    </div>
+
+                    {/* Google Login button */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                        <GoogleLoginButton
+                            onSuccess={(data) => {
+                                dispatch(fetchUser());
+                                navigate('/home');
+                            }}
+                            onError={(msg) => setError(msg)}
+                        />
                     </div>
 
                     {/* Sign up link */}
