@@ -31,7 +31,12 @@ import {
 
 function Navbar() {
     const { userInfo } = useSelector((state) => state.user);
-    const { isTenantAdmin, isProductOwner } = useSelector((state) => state.access);
+    const { isTenantAdmin, isProductOwner, features, status: accessStatus } = useSelector((state) => state.access);
+
+    // Plan-based feature gating. While access info is still loading we show
+    // everything to avoid a menu flash; once loaded, items whose feature is
+    // not in the company's plan are hidden.
+    const hasFeature = (code) => accessStatus !== 'succeeded' || features.includes(code);
     const navigate = useNavigate();
     const location = useLocation();
     const [isExpanded, setIsExpanded] = useState(window.innerWidth > 768);
@@ -79,17 +84,18 @@ function Navbar() {
         { title: "Dashboard", link: "/home", icon: <LayoutDashboard size={20} /> },
         { title: "Invoices", link: "/bill_list", icon: <FileText size={20} /> },
         { title: "Customers", link: "/Customers", icon: <Users size={20} /> },
-        { title: "Inventory", link: "/inventory", icon: <Package size={20} /> },
+        { title: "Inventory", link: "/inventory", icon: <Package size={20} />, feature: "inventory" },
         { title: "Template Gallery", link: "/available-templates", icon: <LayoutTemplate size={20} /> },
-        { 
-            title: "Reports", 
+        {
+            title: "Reports",
             icon: <FileText size={20} />,
+            feature: "advanced_reports",
             subItems: [
                 { title: "Cashflow", link: "/cashflow" }
             ]
         },
-        { 
-            title: "Purchases", 
+        {
+            title: "Purchases",
             icon: <Package size={20} />,
             subItems: [
                 { title: "Purchase Dashboard", link: "/purchase_invoices" },
@@ -97,6 +103,7 @@ function Navbar() {
             ]
         },
     ];
+    navItems = navItems.filter(item => !item.feature || hasFeature(item.feature));
 
     if (userInfo?.is_company_admin) {
         navItems.push({ title: "My Company", link: "/CompanyForm", icon: <Building size={20} /> });
@@ -114,11 +121,12 @@ function Navbar() {
     let settingsItems = [
         { title: "Profile", link: "/profile", icon: <User size={20} /> },
         { title: "UI Config", link: "/UIConfig", icon: <Settings size={20} /> },
-        { title: "WA Settings", link: "/whatsapp-settings", icon: <MessageCircle size={20} /> },
-        { title: "WA Connect", link: "/whatsapp-connect", icon: <LinkIcon size={20} /> },
-        { title: "WA Templates", link: "/whatsapp-templates", icon: <MessageSquare size={20} /> },
+        { title: "WA Settings", link: "/whatsapp-settings", icon: <MessageCircle size={20} />, feature: "whatsapp_integration" },
+        { title: "WA Connect", link: "/whatsapp-connect", icon: <LinkIcon size={20} />, feature: "whatsapp_integration" },
+        { title: "WA Templates", link: "/whatsapp-templates", icon: <MessageSquare size={20} />, feature: "whatsapp_integration" },
         { title: "Logout", link: "/logout", icon: <LogOut size={20} color="#ef4444" />, danger: true },
     ];
+    settingsItems = settingsItems.filter(item => !item.feature || hasFeature(item.feature));
 
     return (
         <>
