@@ -136,6 +136,7 @@ const WeasyprintPreview = () => {
     const [templateId, setTemplateId] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
+    const [uploadingImg, setUploadingImg] = useState(false);
 
     const canvasRef = useRef(null);
 
@@ -1129,6 +1130,35 @@ ${innerHtml}
                                                     placeholder="https://..."
                                                     className="w-full text-sm p-2 border rounded-md mb-2"
                                                 />
+                                                <div className="mb-3">
+                                                    <label className="block text-xs font-semibold text-gray-500 mb-1">Upload Image</label>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        disabled={uploadingImg}
+                                                        onChange={async (e) => {
+                                                            const file = e.target.files[0];
+                                                            if (!file) return;
+                                                            setUploadingImg(true);
+                                                            const formData = new FormData();
+                                                            formData.append('image', file);
+                                                            try {
+                                                                const res = await clientToken.post('upload_image/', formData, {
+                                                                    headers: { 'Content-Type': 'multipart/form-data' }
+                                                                });
+                                                                if (res.data && res.data.url) {
+                                                                    updateSelected('url', res.data.url);
+                                                                }
+                                                            } catch (err) {
+                                                                alert('Image upload failed!');
+                                                            } finally {
+                                                                setUploadingImg(false);
+                                                            }
+                                                        }}
+                                                        className="w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer disabled:opacity-50"
+                                                    />
+                                                    {uploadingImg && <span className="text-[10px] text-indigo-600 block mt-1">Uploading...</span>}
+                                                </div>
                                                 <div className="flex gap-2 mb-3">
                                                     <button
                                                         onClick={() => updateSelected('url', '{{ company.company_logo }}')}

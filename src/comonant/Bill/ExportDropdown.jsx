@@ -27,15 +27,15 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
   const handelWhatsapp = async (option) => {
     try {
       setLoading(true); // start loading
+      notify("Sending invoice via WhatsApp...", 'warning');
       const r = await clientToken.post("share_by_whatsapp/", { invoice: InvoiceData?.id,template_id:option });
-      if (r.status === 201) {
+      if (r.status === 201 || r.status === 200) {
         notify("Message has been sent to WhatsApp successfully!", 'success');
       }
     } catch (e) {
       console.log(e);
-      if (e.response?.status === 400) {
-        notify(e.response?.data?.error || 'Failed to send WhatsApp message');
-      }
+      const errMsg = e.response?.data?.error || e.response?.data?.details?.error?.message || e.message || 'Failed to send WhatsApp message';
+      notify(errMsg, 'error');
     } finally {
       setLoading(false);
     }

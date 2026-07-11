@@ -91,6 +91,7 @@ function NewBillBody({ id }) {
     const [customFields, setCustomFields] = useState([]);
     const [showCFPopup, setShowCFPopup] = useState(false);
     const [cfValues, setCFValues] = useState({});
+    const [uploadingImg, setUploadingImg] = useState(false);
     let navigate = useNavigate()
 
     const showToast = useCallback((message, type = 'error') => {
