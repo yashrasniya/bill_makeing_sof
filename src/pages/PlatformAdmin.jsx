@@ -349,7 +349,11 @@ export default function PlatformAdmin() {
     const [tab, setTab] = useState("plans");
 
     if (status === "succeeded" && !isProductOwner) {
-        return <div style={{ padding: 40 }}><p>You need product owner access to view this page.</p></div>;
+        return (
+            <div style={{ background: "#fff", minHeight: "100vh", padding: 40 }}>
+                <p>You need product owner access to view this page.</p>
+            </div>
+        );
     }
 
     const tabs = [
@@ -360,6 +364,7 @@ export default function PlatformAdmin() {
     ];
 
     return (
+        <div style={{ background: "#fff", minHeight: "100vh" }}>
         <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
             <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Platform Admin</h2>
             <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 20px" }}>
@@ -382,6 +387,7 @@ export default function PlatformAdmin() {
             {tab === "features" && <FeaturesTab />}
             {tab === "companies" && <CompaniesTab />}
             {tab === "audit" && <PlatformAuditTab />}
+        </div>
         </div>
     );
 }

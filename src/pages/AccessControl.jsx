@@ -405,7 +405,11 @@ export default function AccessControl() {
     }, []);
 
     if (status === "succeeded" && !isTenantAdmin) {
-        return <div style={{ padding: 40 }}><p>You need tenant admin access to view this page.</p></div>;
+        return (
+            <div style={{ background: "#fff", minHeight: "100vh", padding: 40 }}>
+                <p>You need tenant admin access to view this page.</p>
+            </div>
+        );
     }
 
     const tabs = [
@@ -416,6 +420,7 @@ export default function AccessControl() {
     ];
 
     return (
+        <div style={{ background: "#fff", minHeight: "100vh" }}>
         <div style={{ padding: "24px", maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Access Control{companyName ? ` — ${companyName}` : ""}</h2>
@@ -445,6 +450,7 @@ export default function AccessControl() {
             {tab === "groups" && <GroupsTab permissions={permissions} users={users} />}
             {tab === "users" && <UsersTab permissions={permissions} users={users} />}
             {tab === "audit" && <AuditTab />}
+        </div>
         </div>
     );
 }
