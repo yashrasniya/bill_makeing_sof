@@ -17,6 +17,9 @@ import SignUp from "@/pages/signup";
 import CompanyForm from "@/pages/CompanyForm";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser, logoutUser } from "./store/userSlice";
+import { fetchAccess, clearAccess } from "./store/accessSlice";
+import AccessControl from "@/pages/AccessControl";
+import PlatformAdmin from "@/pages/PlatformAdmin";
 import Profile from "./pages/profile";
 import InvoiceTemplateEditor from "@/pages/InvoiceTemplateEditor";
 import TablePage from "@/pages/templates_list";
@@ -48,6 +51,7 @@ function App() {
         clientToken.get('log_out/')
             .finally(() => {
                 dispatch(logoutUser());
+                dispatch(clearAccess());
                 navigate('/');
             });
     };
@@ -56,6 +60,13 @@ function App() {
     useEffect(() => {
         if (status === 'idle') {
             dispatch(fetchUser());
+        }
+    }, [status, dispatch]);
+
+    // Fetch tenant access context (permissions / features / admin flags)
+    useEffect(() => {
+        if (status === 'succeeded') {
+            dispatch(fetchAccess());
         }
     }, [status, dispatch]);
 
@@ -164,6 +175,24 @@ function App() {
                     <PrivateRoute isLogin={isLogin}>
                         <Navbar />
                         <Profile />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/access-control"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <AccessControl />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/platform-admin"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <PlatformAdmin />
                     </PrivateRoute>
                 }
             />

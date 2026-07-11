@@ -24,11 +24,14 @@ import {
     Menu,
     Home,
     Plus,
-    ShoppingCart
+    ShoppingCart,
+    Shield,
+    CreditCard
 } from "lucide-react";
 
 function Navbar() {
     const { userInfo } = useSelector((state) => state.user);
+    const { isTenantAdmin, isProductOwner } = useSelector((state) => state.access);
     const navigate = useNavigate();
     const location = useLocation();
     const [isExpanded, setIsExpanded] = useState(window.innerWidth > 768);
@@ -100,6 +103,12 @@ function Navbar() {
     }
     if (userInfo?.is_staff) {
         navItems.push({ title: "All Templates", link: "/templates", icon: <Files size={20} /> });
+    }
+    if (isTenantAdmin || userInfo?.is_company_admin) {
+        navItems.push({ title: "Access Control", link: "/access-control", icon: <Shield size={20} /> });
+    }
+    if (isProductOwner) {
+        navItems.push({ title: "Platform Admin", link: "/platform-admin", icon: <CreditCard size={20} /> });
     }
 
     let settingsItems = [
