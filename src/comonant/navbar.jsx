@@ -131,7 +131,7 @@ function Navbar() {
 
     let settingsItems = [
         { title: "Profile", link: "/profile", icon: <User size={20} /> },
-        { title: "UI Config", link: "/UIConfig", icon: <Settings size={20} />, feature: "template_designer" },
+        { title: "UI Config", link: "/UIConfig", icon: <Settings size={20} />, permission: "template.manage" },
         { title: "WA Settings", link: "/whatsapp-settings", icon: <MessageCircle size={20} />, feature: "whatsapp_integration" },
         { title: "WA Connect", link: "/whatsapp-connect", icon: <LinkIcon size={20} />, feature: "whatsapp_integration" },
         { title: "WA Templates", link: "/whatsapp-templates", icon: <MessageSquare size={20} />, feature: "whatsapp_integration" },

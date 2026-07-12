@@ -274,10 +274,10 @@ function App() {
                 path="/UIConfig"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <RequireFeature feature="template_designer">
+                        <RequirePermission permission="template.manage">
                             <Navbar />
                             <UIConfig />
-                        </RequireFeature>
+                        </RequirePermission>
                     </PrivateRoute>
                 }
             />
