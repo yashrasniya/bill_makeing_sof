@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { clientToken } from "@/axios";
 import SendPopup from "@/comonant/Bill/SendPopup";
 
 const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
   const [open, setOpen] = useState(false);
+  const { permissions, features, status: accessStatus } = useSelector((s) => s.access);
+  // WhatsApp share needs the plan feature + the whatsapp.send permission
+  const canWhatsapp = accessStatus !== 'succeeded' ||
+      (features.includes('whatsapp_integration') && permissions.includes('whatsapp.send'));
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false); // loading state
   const [showPopup, setShowPopup] = useState(false); // popup state
@@ -118,12 +123,12 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
         {/* Dropdown Menu */}
         {open && !loading && (
             <div className="absolute mt-2 -left-20 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-              <div
+              {canWhatsapp && <div
                   className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                   onClick={() => templates.length>1?handleOptionClick("whatsapp"):handelWhatsapp(templates[0]?.id)}
               >
                 Share by WhatsApp
-              </div>
+              </div>}
               <div
                   className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                   onClick={() => handleOptionClick("email")}
