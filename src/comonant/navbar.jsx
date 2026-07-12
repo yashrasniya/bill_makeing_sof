@@ -31,12 +31,17 @@ import {
 
 function Navbar() {
     const { userInfo } = useSelector((state) => state.user);
-    const { isTenantAdmin, isProductOwner, features, status: accessStatus } = useSelector((state) => state.access);
+    const { isTenantAdmin, isProductOwner, features, permissions, status: accessStatus } = useSelector((state) => state.access);
 
-    // Plan-based feature gating. While access info is still loading we show
-    // everything to avoid a menu flash; once loaded, items whose feature is
-    // not in the company's plan are hidden.
+    // Plan-based feature gating and permission gating. While access info is
+    // still loading we show everything to avoid a menu flash; once loaded,
+    // items whose feature is not in the plan, or whose permission the user
+    // lacks, are hidden.
     const hasFeature = (code) => accessStatus !== 'succeeded' || features.includes(code);
+    const hasPermission = (code) => accessStatus !== 'succeeded' || permissions.includes(code);
+    const itemVisible = (item) =>
+        (!item.feature || hasFeature(item.feature)) &&
+        (!item.permission || hasPermission(item.permission));
     const navigate = useNavigate();
     const location = useLocation();
     const [isExpanded, setIsExpanded] = useState(window.innerWidth > 768);
@@ -82,14 +87,15 @@ function Navbar() {
 
     let navItems = [
         { title: "Dashboard", link: "/home", icon: <LayoutDashboard size={20} /> },
-        { title: "Invoices", link: "/bill_list", icon: <FileText size={20} /> },
-        { title: "Customers", link: "/Customers", icon: <Users size={20} /> },
-        { title: "Inventory", link: "/inventory", icon: <Package size={20} />, feature: "inventory" },
+        { title: "Invoices", link: "/bill_list", icon: <FileText size={20} />, permission: "invoice.view" },
+        { title: "Customers", link: "/Customers", icon: <Users size={20} />, permission: "customer.manage" },
+        { title: "Inventory", link: "/inventory", icon: <Package size={20} />, feature: "inventory", permission: "inventory.manage" },
         { title: "Template Gallery", link: "/available-templates", icon: <LayoutTemplate size={20} />, feature: "template_designer" },
         {
             title: "Reports",
             icon: <FileText size={20} />,
             feature: "advanced_reports",
+            permission: "report.view",
             subItems: [
                 { title: "Cashflow", link: "/cashflow" }
             ]
@@ -98,12 +104,17 @@ function Navbar() {
             title: "Purchases",
             icon: <Package size={20} />,
             subItems: [
-                { title: "Purchase Dashboard", link: "/purchase_invoices" },
-                { title: "Vendors", link: "/vendors" }
+                { title: "Purchase Dashboard", link: "/purchase_invoices", permission: "invoice.view" },
+                { title: "Vendors", link: "/vendors", permission: "vendor.manage" }
             ]
         },
     ];
-    navItems = navItems.filter(item => !item.feature || hasFeature(item.feature));
+    navItems = navItems
+        .filter(itemVisible)
+        .map(item => item.subItems
+            ? { ...item, subItems: item.subItems.filter(itemVisible) }
+            : item)
+        .filter(item => !item.subItems || item.subItems.length > 0);
 
     if (userInfo?.is_company_admin) {
         navItems.push({ title: "My Company", link: "/CompanyForm", icon: <Building size={20} /> });
@@ -126,7 +137,7 @@ function Navbar() {
         { title: "WA Templates", link: "/whatsapp-templates", icon: <MessageSquare size={20} />, feature: "whatsapp_integration" },
         { title: "Logout", link: "/logout", icon: <LogOut size={20} color="#ef4444" />, danger: true },
     ];
-    settingsItems = settingsItems.filter(item => !item.feature || hasFeature(item.feature));
+    settingsItems = settingsItems.filter(itemVisible);
 
     return (
         <>
