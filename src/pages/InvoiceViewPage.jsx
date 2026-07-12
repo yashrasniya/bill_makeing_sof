@@ -23,6 +23,13 @@ export default function InvoiceViewPage() {
 
     const [invoice, setInvoice] = useState(null);   // null=loading, false=not found
     const [error, setError] = useState("");
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 640);
+
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 640);
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
 
     useEffect(() => {
         clientToken.get(`invoice/?id=${invoice_id}`)
@@ -73,11 +80,14 @@ export default function InvoiceViewPage() {
     }, [invoice]);
 
     return (
-        <div style={{ background: "#fff", minHeight: "100vh" }}>
-            <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ background: "#fff", minHeight: "100vh", paddingBottom: isMobile ? 90 : 0 }}>
+            <div style={{ padding: isMobile ? 12 : 24, maxWidth: 900, margin: "0 auto" }}>
+                <div style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    marginBottom: 16, flexWrap: "wrap", gap: 8,
+                }}>
                     <button style={btnGhost} onClick={() => navigate("/bill_list")}>
-                        <ArrowLeft size={14} /> Back to invoices
+                        <ArrowLeft size={14} /> {isMobile ? "Back" : "Back to invoices"}
                     </button>
                     <div style={{ display: "flex", gap: 8 }}>
                         {canDelete && invoice && (
@@ -87,7 +97,7 @@ export default function InvoiceViewPage() {
                         )}
                         {canEdit && invoice && (
                             <button style={btnPrimary} onClick={() => navigate(`/bill/${invoice_id}`)}>
-                                <Pencil size={14} /> Edit invoice
+                                <Pencil size={14} /> {isMobile ? "Edit" : "Edit invoice"}
                             </button>
                         )}
                     </div>
@@ -102,9 +112,12 @@ export default function InvoiceViewPage() {
                 )}
 
                 {invoice && (
-                    <div style={card}>
+                    <div style={{ ...card, padding: isMobile ? 16 : 24 }}>
                         {/* header */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                        <div style={{
+                            display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                            marginBottom: 20, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0,
+                        }}>
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <FileText size={20} color="#4f46e5" />
@@ -125,10 +138,19 @@ export default function InvoiceViewPage() {
                                     {" · "}Created by: <b>{invoice.user}</b>
                                 </p>
                             </div>
-                            <div style={{ textAlign: "right" }}>
+                            <div style={{
+                                textAlign: isMobile ? "left" : "right",
+                                ...(isMobile ? {
+                                    width: "100%", background: "#f8fafc", borderRadius: 10,
+                                    padding: "10px 14px", display: "flex",
+                                    justifyContent: "space-between", alignItems: "baseline",
+                                } : {}),
+                            }}>
                                 <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>Grand total</p>
-                                <p style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{money(invoice.total_final_amount)}</p>
-                                <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>incl. GST {money(invoice.gst_final_amount)}</p>
+                                <div>
+                                    <p style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{money(invoice.total_final_amount)}</p>
+                                    <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>incl. GST {money(invoice.gst_final_amount)}</p>
+                                </div>
                             </div>
                         </div>
 
@@ -143,7 +165,49 @@ export default function InvoiceViewPage() {
                             </div>
                         )}
 
-                        {/* products */}
+                        {/* products — cards on mobile, table on desktop */}
+                        {isMobile ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                {(invoice.products || []).map((p, i) => (
+                                    <div key={p.id} style={{
+                                        border: "1px solid #e2e8f0", borderRadius: 10, padding: 12,
+                                    }}>
+                                        <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, color: "#94a3b8" }}>
+                                            ITEM {i + 1}
+                                        </p>
+                                        {columns.map((c) => (
+                                            <div key={c} style={{
+                                                display: "flex", justifyContent: "space-between",
+                                                fontSize: 13, padding: "3px 0",
+                                            }}>
+                                                <span style={{ color: "#64748b" }}>{c}</span>
+                                                <span style={{ fontWeight: 500, textAlign: "right", maxWidth: "60%", wordBreak: "break-word" }}>
+                                                    {cellValue(p, c)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        <div style={{
+                                            display: "flex", justifyContent: "space-between", marginTop: 8,
+                                            paddingTop: 8, borderTop: "1px dashed #e2e8f0", fontSize: 13,
+                                        }}>
+                                            <span style={{ color: "#64748b" }}>GST {money(p.gst_amount)}</span>
+                                            <span style={{ fontWeight: 700 }}>{money(p.total_amount)}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!invoice.products || invoice.products.length === 0) && (
+                                    <p style={{ color: "#64748b", fontSize: 13 }}>No products on this invoice.</p>
+                                )}
+                                <div style={{
+                                    display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                                    background: "#f8fafc", borderRadius: 10, padding: "10px 14px",
+                                }}>
+                                    <span style={{ fontSize: 12, color: "#64748b" }}>GST {money(invoice.gst_final_amount)}</span>
+                                    <span style={{ fontWeight: 700, fontSize: 16 }}>{money(invoice.total_final_amount)}</span>
+                                </div>
+                            </div>
+                        ) : (
+                        <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
                             <thead>
                                 <tr>
@@ -178,6 +242,8 @@ export default function InvoiceViewPage() {
                                 </tr>
                             </tfoot>
                         </table>
+                        </div>
+                        )}
 
                         {!canEdit && (
                             <p style={{ marginTop: 16, fontSize: 12, color: "#94a3b8" }}>
