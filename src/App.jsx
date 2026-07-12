@@ -322,9 +322,9 @@ function App() {
                 path="/whatsapp-settings"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <RequireFeature feature="whatsapp_integration">
+                        <RequirePermission permission="whatsapp.manage">
                             <WhatsAppSettings />
-                        </RequireFeature>
+                        </RequirePermission>
                     </PrivateRoute>
                 }
             />

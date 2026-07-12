@@ -311,6 +311,77 @@ function CompaniesTab() {
     );
 }
 
+/* ------------------------------------------------- Platform WhatsApp account */
+
+function WhatsAppAccountTab() {
+    const [form, setForm] = useState(null);
+    const [tokenInput, setTokenInput] = useState("");
+    const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
+
+    const load = useCallback(() => {
+        clientToken.get("admin/whatsapp-account/").then((r) => setForm(r.data));
+    }, []);
+    useEffect(load, [load]);
+
+    const save = async () => {
+        setError(""); setNotice("");
+        try {
+            const payload = { ...form };
+            delete payload.access_token_masked;
+            delete payload.has_access_token;
+            if (tokenInput) payload.access_token = tokenInput;
+            const r = await clientToken.put("admin/whatsapp-account/", payload);
+            setForm(r.data); setTokenInput("");
+            setNotice("Shared WhatsApp account saved.");
+        } catch (e) { setError(errText(e)); }
+    };
+
+    if (!form) return <div style={card}><p style={{ color: "#64748b" }}>Loading…</p></div>;
+
+    return (
+        <div style={card}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15 }}>Shared WhatsApp account</h3>
+            <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 16px" }}>
+                Companies on plans with the <b>whatsapp_shared_number</b> feature send through
+                this account. The default daily limit applies per company unless the plan sets
+                its own <code>sends_per_day</code>.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <label style={{ fontSize: 12, color: "#64748b" }}>Name
+                    <input style={inputStyle} value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </label>
+                <label style={{ fontSize: 12, color: "#64748b" }}>Default daily limit (per company)
+                    <input style={inputStyle} type="number" min="0" value={form.default_daily_limit}
+                        onChange={(e) => setForm({ ...form, default_daily_limit: e.target.value })} />
+                </label>
+                <label style={{ fontSize: 12, color: "#64748b" }}>Phone Number ID
+                    <input style={inputStyle} value={form.phone_number_id || ""} onChange={(e) => setForm({ ...form, phone_number_id: e.target.value })} />
+                </label>
+                <label style={{ fontSize: 12, color: "#64748b" }}>Business Account ID
+                    <input style={inputStyle} value={form.business_account_id || ""} onChange={(e) => setForm({ ...form, business_account_id: e.target.value })} />
+                </label>
+                <label style={{ fontSize: 12, color: "#64748b" }}>Default template name
+                    <input style={inputStyle} value={form.default_template_name || ""} onChange={(e) => setForm({ ...form, default_template_name: e.target.value })} />
+                </label>
+                <label style={{ fontSize: 12, color: "#64748b" }}>
+                    Access token {form.has_access_token && <span style={{ color: "#16a34a" }}>(set: {form.access_token_masked})</span>}
+                    <input style={inputStyle} type="password" placeholder="Paste new token to replace"
+                        value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} />
+                </label>
+            </div>
+            <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                <input type="checkbox" checked={!!form.is_active}
+                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
+                Active (companies can send through this account)
+            </label>
+            {error && <p style={{ color: "#ef4444", fontSize: 12 }}>{error}</p>}
+            {notice && <p style={{ color: "#16a34a", fontSize: 12 }}>{notice}</p>}
+            <button style={btnPrimary} onClick={save}><Check size={14} /> Save account</button>
+        </div>
+    );
+}
+
 /* ------------------------------------------------------------ Audit log */
 
 function PlatformAuditTab() {
@@ -360,6 +431,7 @@ export default function PlatformAdmin() {
         { id: "plans", label: "Plans", icon: <CreditCard size={15} /> },
         { id: "features", label: "Features", icon: <Puzzle size={15} /> },
         { id: "companies", label: "Companies", icon: <Building2 size={15} /> },
+        { id: "whatsapp", label: "WhatsApp", icon: <CreditCard size={15} /> },
         { id: "audit", label: "Audit log", icon: <ScrollText size={15} /> },
     ];
 
@@ -386,6 +458,7 @@ export default function PlatformAdmin() {
             {tab === "plans" && <PlansTab />}
             {tab === "features" && <FeaturesTab />}
             {tab === "companies" && <CompaniesTab />}
+            {tab === "whatsapp" && <WhatsAppAccountTab />}
             {tab === "audit" && <PlatformAuditTab />}
         </div>
         </div>

@@ -6,9 +6,11 @@ import SendPopup from "@/comonant/Bill/SendPopup";
 const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
   const [open, setOpen] = useState(false);
   const { permissions, features, status: accessStatus } = useSelector((s) => s.access);
-  // WhatsApp share needs the plan feature + the whatsapp.send permission
+  // WhatsApp share needs whatsapp.send + either the own-number or the
+  // shared-number plan feature
   const canWhatsapp = accessStatus !== 'succeeded' ||
-      (features.includes('whatsapp_integration') && permissions.includes('whatsapp.send'));
+      ((features.includes('whatsapp_integration') || features.includes('whatsapp_shared_number'))
+          && permissions.includes('whatsapp.send'));
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false); // loading state
   const [showPopup, setShowPopup] = useState(false); // popup state

@@ -6,6 +6,8 @@ const WhatsAppSettings = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [config, setConfig] = useState(null);
+    const [modeInfo, setModeInfo] = useState(null);   // {mode, options}
+    const [savingMode, setSavingMode] = useState(false);
     const [formData, setFormData] = useState({
         access_token: '',
         phone_number_id: '',
@@ -15,7 +17,27 @@ const WhatsAppSettings = () => {
 
     useEffect(() => {
         fetchConfig();
+        fetchMode();
     }, []);
+
+    const fetchMode = () => {
+        clientToken.get('/whatsapp/mode/')
+            .then(res => setModeInfo(res.data))
+            .catch(() => setModeInfo(null));
+    };
+
+    const setMode = async (mode) => {
+        if (savingMode || modeInfo?.mode === mode) return;
+        setSavingMode(true);
+        try {
+            await clientToken.post('/whatsapp/mode/', { mode });
+            fetchMode();
+        } catch (e) {
+            // 403 toast comes from the axios interceptor
+        } finally {
+            setSavingMode(false);
+        }
+    };
 
     const fetchConfig = () => {
         setLoading(true);
@@ -67,10 +89,63 @@ const WhatsAppSettings = () => {
             <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-10">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-800">WhatsApp Integration</h1>
-                    <p className="text-gray-500 mt-2">Connect your Meta WhatsApp Business account dynamically.</p>
+                    <p className="text-gray-500 mt-2">Choose how your company sends invoices on WhatsApp.</p>
                 </div>
 
-                {config && config.status !== 'failed' ? (
+                {/* ── Sending mode ── */}
+                {modeInfo && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        {[
+                            {
+                                key: 'platform',
+                                title: "Use the product's WhatsApp number",
+                                desc: "Send through our shared account — zero setup.",
+                                opt: modeInfo.options.platform,
+                            },
+                            {
+                                key: 'own',
+                                title: 'Use your own WhatsApp number',
+                                desc: 'Connect your Meta WhatsApp Business account below.',
+                                opt: modeInfo.options.own,
+                            },
+                        ].map(({ key, title, desc, opt }) => {
+                            const selected = modeInfo.mode === key;
+                            const disabled = !opt.in_plan;
+                            return (
+                                <div key={key}
+                                    onClick={() => !disabled && setMode(key)}
+                                    className={`rounded-xl border p-5 transition-all ${
+                                        selected ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                                        : disabled ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                                        : 'border-gray-200 hover:border-indigo-300 cursor-pointer'}`}>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="font-semibold text-gray-800 text-sm">{title}</h3>
+                                        {selected && (
+                                            <span className="text-[11px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">ACTIVE</span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mb-2">{desc}</p>
+                                    <p className="text-xs text-gray-600">
+                                        {disabled
+                                            ? 'Not included in your plan — upgrade to enable.'
+                                            : <>Daily limit: <b>{opt.sends_per_day ?? 'unlimited'}</b> shares
+                                              {key === 'own' && !opt.configured && ' · not configured yet'}</>}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {modeInfo?.mode === 'platform' && (
+                    <div className="border border-blue-200 bg-blue-50 rounded-lg p-5 mb-6 text-sm text-blue-900">
+                        You're sending via the product's shared WhatsApp number.
+                        No configuration needed. Switch to "your own number" above if
+                        you want invoices to come from your business number.
+                    </div>
+                )}
+
+                {modeInfo?.mode !== 'platform' && (config && config.status !== 'failed' ? (
                     <div className="border border-green-200 bg-green-50 rounded-lg p-6 mb-6">
                         <div className="flex items-center mb-4">
                             <span className="w-4 h-4 rounded-full bg-green-500 mr-3"></span>
@@ -167,7 +242,7 @@ const WhatsAppSettings = () => {
                             </button>
                         </div>
                     </form>
-                )}
+                ))}
             </div>
         );
     };
