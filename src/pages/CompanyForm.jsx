@@ -231,8 +231,8 @@ export default function CompanyForm() {
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
             <div className="cf-split">
 
-                {/* ─────────────── LEFT PANEL ─────────────── */}
-                <div className="cf-left">
+                {/* ─────────────── LEFT PANEL (onboarding only) ─────────────── */}
+                {!showNavbar && <div className="cf-left">
                     <div style={{ position: 'absolute', top: '-90px', left: '-90px', width: '340px', height: '340px', borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', bottom: '-110px', right: '-70px', width: '380px', height: '380px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', top: '60%', right: '-50px', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
@@ -274,7 +274,7 @@ export default function CompanyForm() {
                             </div>
                         </div>
                     ))}
-                </div>
+                </div>}
 
                 {/* ─────────────── RIGHT PANEL ─────────────── */}
                 <div className="cf-right">
