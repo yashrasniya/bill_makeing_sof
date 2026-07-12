@@ -6,7 +6,7 @@ import { LandingPage } from './pages/landing.jsx';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { CompanyS } from "./pages/company's.jsx";
 import { NewBill } from "./pages/new_bill";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { clientToken } from "./axios.js";
 import Loader from './Loader';
 import ThanksPage from "./pages/thanks_page";
@@ -71,6 +71,22 @@ function App() {
             dispatch(fetchAccess());
         }
     }, [status, dispatch]);
+
+    // Keep access context fresh: permission grants made by an admin while
+    // the app is open take effect on the next route change or window focus
+    // (throttled to once per 30s) instead of requiring a full re-login.
+    const lastAccessFetch = useRef(Date.now());
+    useEffect(() => {
+        const refresh = () => {
+            if (status === 'succeeded' && Date.now() - lastAccessFetch.current > 30000) {
+                lastAccessFetch.current = Date.now();
+                dispatch(fetchAccess());
+            }
+        };
+        refresh(); // on route change
+        window.addEventListener('focus', refresh);
+        return () => window.removeEventListener('focus', refresh);
+    }, [location.pathname, status, dispatch]);
 
     // Handle navigation after user data is fetched
     useEffect(() => {
