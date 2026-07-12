@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { clientToken } from '../axios.js';
 import Navbar from '../comonant/navbar';
+import WhatsAppConnectButton from '../comonant/WhatsAppConnectButton';
 
 const WhatsAppSettings = () => {
     const [loading, setLoading] = useState(true);
@@ -153,6 +154,20 @@ const WhatsAppSettings = () => {
                         You're sending via the product's shared WhatsApp number.
                         No configuration needed. Switch to "your own number" above if
                         you want invoices to come from your business number.
+                    </div>
+                )}
+
+                {/* Quick connect via Facebook (own-number mode) */}
+                {modeInfo?.mode !== 'platform' && !(config && config.status === 'active') && (
+                    <div className="border border-gray-200 rounded-lg p-5 mb-6">
+                        <h3 className="font-semibold text-gray-800 mb-1">Quick connect</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Link your Meta Business WhatsApp in one step — no copying tokens.
+                        </p>
+                        <WhatsAppConnectButton onConnected={fetchConfig} />
+                        <p className="text-xs text-gray-400 mt-4">
+                            Or enter your credentials manually below.
+                        </p>
                     </div>
                 )}
 

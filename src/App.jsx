@@ -35,7 +35,6 @@ import PurchaseInvoices from "./pages/PurchaseInvoices";
 import Vendors from "./pages/Vendors";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import WhatsAppTemplates from "./pages/WhatsAppTemplates";
-import WhatsAppConnect from "./pages/WhatsAppConnect";
 import Reports from "./pages/reports";
 // Private route wrapper
 
@@ -328,16 +327,8 @@ function App() {
                     </PrivateRoute>
                 }
             />
-            <Route
-                path="/whatsapp-connect"
-                element={
-                    <PrivateRoute isLogin={isLogin}>
-                        <RequireFeature feature="whatsapp_integration">
-                            <WhatsAppConnect />
-                        </RequireFeature>
-                    </PrivateRoute>
-                }
-            />
+            {/* WhatsApp connect now lives inside WhatsApp Settings */}
+            <Route path="/whatsapp-connect" element={<Navigate to="/whatsapp-settings" replace />} />
             <Route
                 path="/whatsapp-templates"
                 element={
