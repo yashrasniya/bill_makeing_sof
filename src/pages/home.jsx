@@ -112,6 +112,13 @@ function Home() {
     });
     const navigate = useNavigate();
     const { userInfo } = useSelector(s => s.user);
+    const { permissions, features, isTenantAdmin, status: accessStatus } = useSelector(s => s.access);
+
+    // show everything while access info loads; filter once it's known
+    const can = (perm) => accessStatus !== 'succeeded' || permissions.includes(perm);
+    const hasFeat = (f) => accessStatus !== 'succeeded' || features.includes(f);
+    const isAdmin = accessStatus !== 'succeeded' || isTenantAdmin || userInfo?.is_company_admin;
+    const showKpis = can('invoice.view');
 
     useEffect(() => {
         clientToken.get('user_info/').then(r => {
@@ -154,7 +161,7 @@ function Home() {
                         </p>
                     </div>
 
-                    <button
+                    {can('invoice.create') && <button
                         onClick={() => navigate('/newBill')}
                         className="welcome-strip-btn"
                         style={{
@@ -174,11 +181,11 @@ function Home() {
                             <path d="M9 3v12M3 9h12" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" />
                         </svg>
                         Create Bill
-                    </button>
+                    </button>}
                 </div>
 
                 {/* ── KPI Cards row ── */}
-                <div style={{ display: 'flex', gap: '20px', marginBottom: '28px', flexWrap: 'wrap' }}>
+                {showKpis && <div style={{ display: 'flex', gap: '20px', marginBottom: '28px', flexWrap: 'wrap' }}>
                     <KpiCard
                         icon="💰"
                         label="This Month Sales"
@@ -211,7 +218,7 @@ function Home() {
                         color="linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
                         delay={0.2}
                     />
-                </div>
+                </div>}
 
                 {/* ── Quick Actions ── */}
                 <div style={{
@@ -224,11 +231,11 @@ function Home() {
                         Quick Actions
                     </p>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        <QuickAction icon="➕" label="New Bill" onClick={() => navigate('/newBill')} accent="#4f46e5" />
-                        <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />
-                        <QuickAction icon="👥" label="Customers" onClick={() => navigate('/Customers')} accent="#0ea5e9" />
-                        <QuickAction icon="📂" label="All Invoices" onClick={() => navigate('/invoices')} accent="#f43f5e" />
-                        <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#f59e0b" />
+                        {can('invoice.create') && <QuickAction icon="➕" label="New Bill" onClick={() => navigate('/newBill')} accent="#4f46e5" />}
+                        {hasFeat('template_designer') && <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />}
+                        {can('customer.manage') && <QuickAction icon="👥" label="Customers" onClick={() => navigate('/Customers')} accent="#0ea5e9" />}
+                        {can('invoice.view') && <QuickAction icon="📂" label="All Invoices" onClick={() => navigate('/bill_list')} accent="#f43f5e" />}
+                        {isAdmin && <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#f59e0b" />}
                         <QuickAction icon="👤" label="Profile" onClick={() => navigate('/profile')} accent="#ec4899" />
                     </div>
                 </div>
