@@ -45,7 +45,7 @@ function Navbar() {
     const navigate = useNavigate();
     const location = useLocation();
     const [isExpanded, setIsExpanded] = useState(window.innerWidth > 768);
-    const [openMenus, setOpenMenus] = useState({ "Reports": false, "Purchases": false });
+    const [openMenus, setOpenMenus] = useState({ "Reports": false, "Purchases": false, "Templates": false });
 
     const toggleMenu = (title) => {
         if (!isExpanded) setIsExpanded(true); // Auto expand sidebar if opening a submenu while collapsed
@@ -90,7 +90,15 @@ function Navbar() {
         { title: "Invoices", link: "/bill_list", icon: <FileText size={20} />, permission: "invoice.view" },
         { title: "Customers", link: "/Customers", icon: <Users size={20} />, permission: "customer.manage" },
         { title: "Inventory", link: "/inventory", icon: <Package size={20} />, feature: "inventory", permission: "inventory.manage" },
-        { title: "Template Gallery", link: "/available-templates", icon: <LayoutTemplate size={20} />, feature: "template_designer", permission: "template.manage" },
+        {
+            title: "Templates",
+            icon: <LayoutTemplate size={20} />,
+            permission: "template.manage",
+            subItems: [
+                { title: "My Invoice Templates", link: "/available-templates", feature: "template_designer" },
+                { title: "UI Config", link: "/UIConfig" }
+            ]
+        },
         {
             title: "Reports",
             icon: <FileText size={20} />,
@@ -131,7 +139,6 @@ function Navbar() {
 
     let settingsItems = [
         { title: "Profile", link: "/profile", icon: <User size={20} /> },
-        { title: "UI Config", link: "/UIConfig", icon: <Settings size={20} />, permission: "template.manage" },
         { title: "WA Settings", link: "/whatsapp-settings", icon: <MessageCircle size={20} />, feature: "whatsapp_integration" },
         { title: "WA Connect", link: "/whatsapp-connect", icon: <LinkIcon size={20} />, feature: "whatsapp_integration" },
         { title: "WA Templates", link: "/whatsapp-templates", icon: <MessageSquare size={20} />, feature: "whatsapp_integration" },
