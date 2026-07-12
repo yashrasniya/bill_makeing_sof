@@ -888,6 +888,61 @@ function NewBillBody({ id }) {
                     </select>
                 </div>
 
+                {/* Payment Status */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 140px', minWidth: '140px' }}>
+                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Payment Status
+                    </label>
+                    <select
+                        id="payment_status"
+                        value={InvoiceData?.payment_status || 'unpaid'}
+                        onChange={(e) => {
+                            setInvoiceData({ ...InvoiceData, payment_status: e.target.value });
+                            setRefresh(r => !r);
+                        }}
+                        style={{
+                            padding: '10px 14px', borderRadius: '12px',
+                            border: '1.5px solid #e2e8f0', outline: 'none',
+                            fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s', width: '100%', background: 'white',
+                            boxSizing: 'border-box'
+                        }}
+                    >
+                        <option value="unpaid">Unpaid</option>
+                        <option value="partially_paid">Partially Paid</option>
+                        <option value="paid">Paid</option>
+                        <option value="overdue">Overdue</option>
+                    </select>
+                </div>
+
+                {/* Payment Method */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 140px', minWidth: '140px' }}>
+                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Payment Method
+                    </label>
+                    <select
+                        id="payment_method"
+                        value={InvoiceData?.payment_method || ''}
+                        onChange={(e) => {
+                            setInvoiceData({ ...InvoiceData, payment_method: e.target.value });
+                            setRefresh(r => !r);
+                        }}
+                        style={{
+                            padding: '10px 14px', borderRadius: '12px',
+                            border: '1.5px solid #e2e8f0', outline: 'none',
+                            fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s', width: '100%', background: 'white',
+                            boxSizing: 'border-box'
+                        }}
+                    >
+                        <option value="">Not set</option>
+                        <option value="cash">Cash</option>
+                        <option value="upi">UPI</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="card">Card</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
                 <div style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto', minWidth: '160px' }}>
                     <button
                         onClick={() => setShowCFPopup(true)}

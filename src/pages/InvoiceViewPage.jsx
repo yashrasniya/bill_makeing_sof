@@ -59,6 +59,29 @@ export default function InvoiceViewPage() {
         (product.product_properties || []).find(
             (pp) => pp.new_product_in_frontend?.input_title === title)?.value ?? "—";
 
+    const PAYMENT_STATUSES = [
+        { value: "unpaid", label: "Unpaid", bg: "#fee2e2", fg: "#991b1b" },
+        { value: "partially_paid", label: "Partially Paid", bg: "#fef3c7", fg: "#b45309" },
+        { value: "paid", label: "Paid", bg: "#dcfce7", fg: "#166534" },
+        { value: "overdue", label: "Overdue", bg: "#fecdd3", fg: "#9f1239" },
+    ];
+    const PAYMENT_METHODS = [
+        { value: "", label: "Not set" }, { value: "cash", label: "Cash" },
+        { value: "upi", label: "UPI" }, { value: "bank_transfer", label: "Bank Transfer" },
+        { value: "cheque", label: "Cheque" }, { value: "card", label: "Card" },
+        { value: "other", label: "Other" },
+    ];
+    const statusStyle = (s) => PAYMENT_STATUSES.find((x) => x.value === s) || PAYMENT_STATUSES[0];
+
+    const updatePayment = async (patch) => {
+        try {
+            const r = await clientToken.post(`invoice/${invoice_id}/update/`, patch);
+            setInvoice((prev) => ({ ...prev, ...patch, ...r.data }));
+        } catch (e) {
+            setError(e.response?.data?.detail || "Failed to update payment info.");
+        }
+    };
+
     const removeInvoice = async () => {
         if (!window.confirm("Delete this invoice? This cannot be undone.")) return;
         try {
@@ -137,6 +160,59 @@ export default function InvoiceViewPage() {
                                     {" · "}Date: <b>{invoice.date || "—"}</b>
                                     {" · "}Created by: <b>{invoice.user}</b>
                                 </p>
+
+                                {/* Payment status & method */}
+                                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                    {canEdit ? (
+                                        <>
+                                            <select
+                                                value={invoice.payment_status || "unpaid"}
+                                                onChange={(e) => updatePayment({ payment_status: e.target.value })}
+                                                style={{
+                                                    border: "none", borderRadius: 999, padding: "5px 12px",
+                                                    fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                                    background: statusStyle(invoice.payment_status).bg,
+                                                    color: statusStyle(invoice.payment_status).fg,
+                                                }}>
+                                                {PAYMENT_STATUSES.map((s) => (
+                                                    <option key={s.value} value={s.value}>{s.label}</option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                value={invoice.payment_method || ""}
+                                                onChange={(e) => updatePayment({ payment_method: e.target.value || null })}
+                                                style={{
+                                                    border: "1px solid #e2e8f0", borderRadius: 999,
+                                                    padding: "5px 12px", fontSize: 12, color: "#334155",
+                                                    background: "#f8fafc", cursor: "pointer",
+                                                }}>
+                                                {PAYMENT_METHODS.map((m) => (
+                                                    <option key={m.value} value={m.value}>
+                                                        {m.value ? `Paid via ${m.label}` : "Payment method: not set"}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span style={{
+                                                borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700,
+                                                background: statusStyle(invoice.payment_status).bg,
+                                                color: statusStyle(invoice.payment_status).fg,
+                                            }}>
+                                                {statusStyle(invoice.payment_status).label}
+                                            </span>
+                                            {invoice.payment_method && (
+                                                <span style={{
+                                                    borderRadius: 999, padding: "5px 12px", fontSize: 12,
+                                                    background: "#f8fafc", border: "1px solid #e2e8f0", color: "#334155",
+                                                }}>
+                                                    Paid via {PAYMENT_METHODS.find((m) => m.value === invoice.payment_method)?.label || invoice.payment_method}
+                                                </span>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
                             </div>
                             <div style={{
                                 textAlign: isMobile ? "left" : "right",
