@@ -21,6 +21,7 @@ import { fetchAccess, clearAccess } from "./store/accessSlice";
 import AccessControl from "@/pages/AccessControl";
 import PlatformAdmin from "@/pages/PlatformAdmin";
 import InviteAccept from "@/pages/InviteAccept";
+import InvoiceViewPage from "@/pages/InvoiceViewPage";
 import Profile from "./pages/profile";
 import InvoiceTemplateEditor from "@/pages/InvoiceTemplateEditor";
 import TablePage from "@/pages/templates_list";
@@ -144,6 +145,15 @@ function App() {
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <NewBill />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/invoice/:invoice_id/view"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <InvoiceViewPage />
                     </PrivateRoute>
                 }
             />

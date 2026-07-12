@@ -314,7 +314,7 @@ const PurchaseInvoices = () => {
                                         </thead>
                                         <tbody>
                                             {summary.recent_purchases.map(inv => (
-                                                <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }} onClick={() => navigate(`/bill/${inv.id}`)} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }} onClick={() => navigate(`/invoice/${inv.id}/view`)} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                                     <td style={{ padding: '14px 8px', fontWeight: 700, color: '#0f172a' }}>{inv.invoice_number || '-'}</td>
                                                     <td style={{ padding: '14px 8px', color: '#475569', fontSize: '14px' }}>{inv.date}</td>
                                                     <td style={{ padding: '14px 8px', color: '#475569', fontSize: '14px' }}>{inv.vendor_name}</td>

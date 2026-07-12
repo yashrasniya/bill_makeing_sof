@@ -23,18 +23,18 @@ const TableRow = ({ obj, index, refresh, setRefresh }) => {
         <tr key={index} className="hidden md:table-row" style={{ borderBottom: '1px solid #f1f5f9' }}>
             <td
                 className="td-with-icon cursor-pointer font-bold"
-                onClick={() => navigate(`/bill/${obj.id}`)}
+                onClick={() => navigate(`/invoice/${obj.id}/view`)}
             >
                 {obj?.invoice_number ?? "No-number"}
             </td>
-            <td onClick={() => navigate(`/bill/${obj.id}`)} >{obj.date}</td>
+            <td onClick={() => navigate(`/invoice/${obj.id}/view`)} >{obj.date}</td>
             <td
                 className="px-2 py-4 cursor-pointer hover:bg-gray-50"
-                onClick={() => navigate(`/bill/${obj.id}`)}
+                onClick={() => navigate(`/invoice/${obj.id}/view`)}
             >
                 {obj.invoice_type === 'purchase' ? obj.vendor_name || "-" : obj.receiver_name || "-"}
             </td>
-            <td onClick={() => navigate(`/bill/${obj.id}`)} className={'font-bold '}>₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}</td>
+            <td onClick={() => navigate(`/invoice/${obj.id}/view`)} className={'font-bold '}>₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}</td>
 
             <td className="relative">
                 <button
@@ -89,7 +89,7 @@ const CardRow = ({ obj, index, refresh, setRefresh }) => {
             key={index}
             className="md:hidden  shadow-md rounded-lg p-4 mb-3  relative"
         >
-            <div className="cursor-pointer" onClick={() => navigate(`/bill/${obj.id}`)}>
+            <div className="cursor-pointer" onClick={() => navigate(`/invoice/${obj.id}/view`)}>
                 <p className="font-semibold">
                     Invoice: {obj?.invoice_number ?? "No-number"}
                 </p>
