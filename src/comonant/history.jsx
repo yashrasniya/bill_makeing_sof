@@ -14,6 +14,26 @@ const Loader = () => (
     </div>
 );
 
+// Payment status badge (shared by table + card)
+const STATUS_STYLES = {
+    unpaid: { label: "Unpaid", bg: "#fee2e2", fg: "#991b1b" },
+    partially_paid: { label: "Partial", bg: "#fef3c7", fg: "#b45309" },
+    paid: { label: "Paid", bg: "#dcfce7", fg: "#166534" },
+    overdue: { label: "Overdue", bg: "#fecdd3", fg: "#9f1239" },
+};
+const PaymentBadge = ({ status }) => {
+    const s = STATUS_STYLES[status] || STATUS_STYLES.unpaid;
+    return (
+        <span style={{
+            background: s.bg, color: s.fg, borderRadius: '999px',
+            padding: '3px 10px', fontSize: '11px', fontWeight: 700,
+            whiteSpace: 'nowrap', display: 'inline-block',
+        }}>
+            {s.label}
+        </span>
+    );
+};
+
 // Row for desktop table
 const TableRow = ({ obj, index, refresh, setRefresh }) => {
     const [open, setOpen] = useState(false);
@@ -35,6 +55,9 @@ const TableRow = ({ obj, index, refresh, setRefresh }) => {
                 {obj.invoice_type === 'purchase' ? obj.vendor_name || "-" : obj.receiver_name || "-"}
             </td>
             <td onClick={() => navigate(`/invoice/${obj.id}/view`)} className={'font-bold '}>₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}</td>
+            <td onClick={() => navigate(`/invoice/${obj.id}/view`)} className="cursor-pointer">
+                <PaymentBadge status={obj.payment_status} />
+            </td>
 
             <td className="relative">
                 <button
@@ -90,8 +113,9 @@ const CardRow = ({ obj, index, refresh, setRefresh }) => {
             className="md:hidden  shadow-md rounded-lg p-4 mb-3  relative"
         >
             <div className="cursor-pointer" onClick={() => navigate(`/invoice/${obj.id}/view`)}>
-                <p className="font-semibold">
+                <p className="font-semibold flex items-center gap-2">
                     Invoice: {obj?.invoice_number ?? "No-number"}
+                    <PaymentBadge status={obj.payment_status} />
                 </p>
                 <p className="text-sm text-gray-600">Date: {obj.date}</p>
                 <p className="text-sm text-gray-600">
@@ -252,6 +276,7 @@ function History({ show_header = true, filters = {} }) {
                                 <td className="px-2 py-2">DATE</td>
                                 <td className="px-2 py-2">CUSTOMER / VENDOR</td>
                                 <td className="px-2 py-2">AMOUNT</td>
+                                <td className="px-2 py-2">STATUS</td>
                             </tr>
                         </thead>
                         <tbody>
