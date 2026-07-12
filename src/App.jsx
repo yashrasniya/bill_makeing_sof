@@ -20,6 +20,7 @@ import { fetchUser, logoutUser } from "./store/userSlice";
 import { fetchAccess, clearAccess } from "./store/accessSlice";
 import AccessControl from "@/pages/AccessControl";
 import PlatformAdmin from "@/pages/PlatformAdmin";
+import InviteAccept from "@/pages/InviteAccept";
 import Profile from "./pages/profile";
 import InvoiceTemplateEditor from "@/pages/InvoiceTemplateEditor";
 import TablePage from "@/pages/templates_list";
@@ -83,7 +84,7 @@ function App() {
                 }
             }
         } else if (status === 'failed') {
-            if (location.pathname !== '/' && location.pathname !== '/SignUp' && location.pathname !== '/login' && location.pathname !== '/privacy') {
+            if (location.pathname !== '/' && location.pathname !== '/SignUp' && location.pathname !== '/login' && location.pathname !== '/privacy' && !location.pathname.startsWith('/invite/')) {
                 navigate('/', { replace: true });
             }
         }
@@ -102,6 +103,7 @@ function App() {
             <Route path="/login" element={isLogin ? <Navigate to="/home" replace /> : <Login />} />
             <Route path="/SignUp" element={<SignUp />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/invite/:token" element={<InviteAccept />} />
 
             {/* Private routes */}
             <Route

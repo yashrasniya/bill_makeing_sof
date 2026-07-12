@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { clientToken } from "@/axios";
 import {
     Shield, Users as UsersIcon, Layers, ScrollText, Plus, Trash2,
-    Pencil, X, Check, Ban, RefreshCw
+    Pencil, X, Check, Ban, RefreshCw, Mail, Copy, Send
 } from "lucide-react";
 
 /* ---------------------------------------------------------------- helpers */
@@ -360,6 +360,113 @@ function UsersTab({ permissions, users }) {
     );
 }
 
+/* ----------------------------------------------------------- Invites tab */
+
+function InvitesTab() {
+    const [invites, setInvites] = useState([]);
+    const [roles, setRoles] = useState([]);
+    const [email, setEmail] = useState("");
+    const [roleId, setRoleId] = useState("");
+    const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
+
+    const load = useCallback(() => {
+        clientToken.get("authz/invites/").then((r) => setInvites(r.data));
+        clientToken.get("authz/roles/").then((r) => setRoles(r.data.results || r.data));
+    }, []);
+    useEffect(load, [load]);
+
+    const sendInvite = async () => {
+        setError(""); setNotice("");
+        try {
+            const payload = { email };
+            if (roleId) payload.role = roleId;
+            const r = await clientToken.post("authz/invites/", payload);
+            setNotice(r.data.mail_sent
+                ? `Invitation emailed to ${email}.`
+                : `Invite created, but the email could not be sent — copy the link below and share it manually.`);
+            setEmail(""); setRoleId("");
+            load();
+        } catch (e) { setError(errText(e)); }
+    };
+
+    const revoke = async (inv) => {
+        if (!window.confirm(`Revoke the invite for ${inv.email}?`)) return;
+        await clientToken.delete(`authz/invites/${inv.id}/`); load();
+    };
+
+    const resend = async (inv) => {
+        setError(""); setNotice("");
+        try {
+            const r = await clientToken.post(`authz/invites/${inv.id}/resend/`);
+            setNotice(r.data.mail_sent
+                ? `Invitation re-sent to ${inv.email}.`
+                : "Email could not be sent — copy the link instead.");
+        } catch (e) { setError(errText(e)); }
+    };
+
+    const copyLink = (inv) => {
+        navigator.clipboard.writeText(inv.invite_link);
+        setNotice(`Invite link for ${inv.email} copied to clipboard.`);
+    };
+
+    const statusBadge = (s) => ({
+        pending: { background: "#fef9c3", color: "#854d0e" },
+        accepted: { background: "#dcfce7", color: "#166534" },
+        revoked: { background: "#fee2e2", color: "#991b1b" },
+        expired: { background: "#f1f5f9", color: "#64748b" },
+    }[s] || {});
+
+    return (
+        <div style={card}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>Invite a user</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, marginBottom: 8 }}>
+                <input style={inputStyle} type="email" placeholder="person@company.com"
+                    value={email} onChange={(e) => setEmail(e.target.value)} />
+                <select style={inputStyle} value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+                    <option value="">Role: Member (default)</option>
+                    {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+                <button style={btnPrimary} onClick={sendInvite} disabled={!email}>
+                    <Send size={14} /> Send invite
+                </button>
+            </div>
+            {error && <p style={{ color: "#ef4444", fontSize: 12 }}>{error}</p>}
+            {notice && <p style={{ color: "#16a34a", fontSize: 12 }}>{notice}</p>}
+
+            <h3 style={{ margin: "20px 0 12px", fontSize: 15 }}>Invitations</h3>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr><th style={th}>Email</th><th style={th}>Role</th><th style={th}>Invited by</th><th style={th}>Status</th><th style={th}>Expires</th><th style={th}></th></tr></thead>
+                <tbody>
+                    {invites.map((inv) => (
+                        <tr key={inv.id}>
+                            <td style={td}>{inv.email}</td>
+                            <td style={td}>{inv.role_name || "Member"}</td>
+                            <td style={td}>{inv.invited_by_name || "—"}</td>
+                            <td style={td}>
+                                <span style={{ ...statusBadge(inv.status), fontSize: 11, padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>
+                                    {inv.status}
+                                </span>
+                            </td>
+                            <td style={td}>{new Date(inv.expires_at).toLocaleDateString()}</td>
+                            <td style={{ ...td, whiteSpace: "nowrap" }}>
+                                {inv.status === "pending" && (
+                                    <>
+                                        <button style={btnGhost} title="Copy invite link" onClick={() => copyLink(inv)}><Copy size={13} /></button>{" "}
+                                        <button style={btnGhost} title="Resend email" onClick={() => resend(inv)}><Mail size={13} /></button>{" "}
+                                        <button style={{ ...btnGhost, color: "#ef4444" }} title="Revoke" onClick={() => revoke(inv)}><Trash2 size={13} /></button>
+                                    </>
+                                )}
+                            </td>
+                        </tr>
+                    ))}
+                    {invites.length === 0 && <tr><td style={td} colSpan={6}>No invitations yet.</td></tr>}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 /* --------------------------------------------------------- Audit log tab */
 
 function AuditTab() {
@@ -416,6 +523,7 @@ export default function AccessControl() {
         { id: "roles", label: "Roles", icon: <Shield size={15} /> },
         { id: "groups", label: "Groups", icon: <Layers size={15} /> },
         { id: "users", label: "User permissions", icon: <UsersIcon size={15} /> },
+        { id: "invites", label: "Invites", icon: <Mail size={15} /> },
         { id: "audit", label: "Audit log", icon: <ScrollText size={15} /> },
     ];
 
@@ -449,6 +557,7 @@ export default function AccessControl() {
             {tab === "roles" && <RolesTab permissions={permissions} users={users} />}
             {tab === "groups" && <GroupsTab permissions={permissions} users={users} />}
             {tab === "users" && <UsersTab permissions={permissions} users={users} />}
+            {tab === "invites" && <InvitesTab />}
             {tab === "audit" && <AuditTab />}
         </div>
         </div>
