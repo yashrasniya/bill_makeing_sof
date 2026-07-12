@@ -79,6 +79,9 @@ const Bill_list = ({ setLoading }) => {
             } else {
                 console.error('Failed to open a new tab. Please allow popups for this site.');
             }})
+            .catch((error) => {
+                console.error("Error exporting PDF:", error); // toast shown by axios interceptor
+            })
     }
     const handelExportExcel = () => {
 
