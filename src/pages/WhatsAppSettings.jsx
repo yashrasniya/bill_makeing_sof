@@ -16,8 +16,18 @@ const WhatsAppSettings = () => {
     });
 
     useEffect(() => {
-        fetchConfig();
-        fetchMode();
+        // fetch the mode first; only load the own-number config when the
+        // plan actually includes it (otherwise /whatsapp/config/ is 403)
+        clientToken.get('/whatsapp/mode/')
+            .then(res => {
+                setModeInfo(res.data);
+                if (res.data?.options?.own?.in_plan) fetchConfig();
+                else setLoading(false);
+            })
+            .catch(() => {
+                setModeInfo(null);
+                fetchConfig();
+            });
     }, []);
 
     const fetchMode = () => {
@@ -47,8 +57,9 @@ const WhatsAppSettings = () => {
                 // Optionally pre-fill if data is returned and we are editing
             })
             .catch(err => {
-                if (err.response && err.response.status === 404) {
-                    setConfig(null); // Not configured
+                const code = err.response?.status;
+                if (code === 404 || code === 403) {
+                    setConfig(null); // not configured / not in plan
                 } else {
                     alert("Failed to load WhatsApp configuration");
                 }
