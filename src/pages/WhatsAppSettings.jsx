@@ -7,8 +7,10 @@ const WhatsAppSettings = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [config, setConfig] = useState(null);
-    const [modeInfo, setModeInfo] = useState(null);   // {mode, options}
+    const [modeInfo, setModeInfo] = useState(null);   // {mode, options, default_invoice_template}
     const [savingMode, setSavingMode] = useState(false);
+    const [templates, setTemplates] = useState([]);
+    const [savingTemplate, setSavingTemplate] = useState(false);
     const [formData, setFormData] = useState({
         access_token: '',
         phone_number_id: '',
@@ -35,6 +37,26 @@ const WhatsAppSettings = () => {
         clientToken.get('/whatsapp/mode/')
             .then(res => setModeInfo(res.data))
             .catch(() => setModeInfo(null));
+    };
+
+    useEffect(() => {
+        clientToken.get('yaml/list/?only_my=true')
+            .then(res => setTemplates(Array.isArray(res.data) ? res.data : []))
+            .catch(() => setTemplates([]));
+    }, []);
+
+    const setDefaultTemplate = async (templateId) => {
+        setSavingTemplate(true);
+        try {
+            await clientToken.post('/whatsapp/mode/', {
+                default_invoice_template: templateId || null,
+            });
+            fetchMode();
+        } catch (e) {
+            // interceptor shows the toast
+        } finally {
+            setSavingTemplate(false);
+        }
     };
 
     const setMode = async (mode) => {
@@ -154,6 +176,36 @@ const WhatsAppSettings = () => {
                         You're sending via the product's shared WhatsApp number.
                         No configuration needed. Switch to "your own number" above if
                         you want invoices to come from your business number.
+                    </div>
+                )}
+
+                {/* ── Default invoice template for WhatsApp sends ── */}
+                {modeInfo && (
+                    <div className="border border-gray-200 rounded-lg p-5 mb-6">
+                        <h3 className="font-semibold text-gray-800 mb-1">Default invoice template</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Used automatically when sharing an invoice on WhatsApp —
+                            no need to pick a template on every send.
+                        </p>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <select
+                                value={modeInfo.default_invoice_template?.id || ''}
+                                disabled={savingTemplate}
+                                onChange={(e) => setDefaultTemplate(e.target.value ? Number(e.target.value) : null)}
+                                className="px-4 py-2 border rounded-lg bg-gray-50 border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none min-w-[240px]"
+                            >
+                                <option value="">Always ask (no default)</option>
+                                {templates.map(t => (
+                                    <option key={t.id} value={t.id}>{t.template_name}</option>
+                                ))}
+                            </select>
+                            {savingTemplate && <span className="text-xs text-gray-400">Saving…</span>}
+                            {modeInfo.default_invoice_template && !savingTemplate && (
+                                <span className="text-xs text-green-600 font-medium">
+                                    ✓ "{modeInfo.default_invoice_template.template_name}" is used for all sends
+                                </span>
+                            )}
+                        </div>
                     </div>
                 )}
 

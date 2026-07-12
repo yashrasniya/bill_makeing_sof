@@ -15,6 +15,8 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
   const [loading, setLoading] = useState(false); // loading state
   const [showPopup, setShowPopup] = useState(false); // popup state
 
+  const [hasDefaultTemplate, setHasDefaultTemplate] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     clientToken.get("yaml/list/?only_my=true")
@@ -25,6 +27,10 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
         })
         .catch((e) => console.log(e))
         .finally(() => setLoading(false));
+    // company default template (WA Settings) → skip the picker entirely
+    clientToken.get("/whatsapp/mode/")
+        .then((r) => setHasDefaultTemplate(!!r.data?.default_invoice_template))
+        .catch(() => {});
   }, []);
 
   const notify = (message, type = 'error') => {
@@ -127,7 +133,12 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
             <div className="absolute mt-2 -left-20 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
               {canWhatsapp && <div
                   className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => templates.length>1?handleOptionClick("whatsapp"):handelWhatsapp(templates[0]?.id)}
+                  onClick={() => {
+                    // default template set → send immediately (backend uses it)
+                    if (hasDefaultTemplate) handelWhatsapp(null);
+                    else if (templates.length > 1) handleOptionClick("whatsapp");
+                    else handelWhatsapp(templates[0]?.id);
+                  }}
               >
                 Share by WhatsApp
               </div>}
