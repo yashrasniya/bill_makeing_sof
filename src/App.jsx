@@ -105,6 +105,14 @@ function App() {
         }
         return children;
     }
+    // Blocks routes the user has no permission for (backend enforces too).
+    function RequirePermission({ permission, children }) {
+        const { permissions, status: accessStatus } = useSelector((s) => s.access);
+        if (accessStatus === 'succeeded' && !permissions.includes(permission)) {
+            return <Navigate to="/home" replace />;
+        }
+        return children;
+    }
     return (
         <Routes>
             {/* Public routes */}
@@ -127,8 +135,10 @@ function App() {
                 path="/bill_list"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <Navbar />
-                        <Bill_list />
+                        <RequirePermission permission="invoice.view">
+                            <Navbar />
+                            <Bill_list />
+                        </RequirePermission>
                     </PrivateRoute>
                 }
             />
@@ -136,7 +146,9 @@ function App() {
                 path="/Customers"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <CompanyS />
+                        <RequirePermission permission="customer.manage">
+                            <CompanyS />
+                        </RequirePermission>
                     </PrivateRoute>
                 }
             />
@@ -242,7 +254,11 @@ function App() {
                 path="/inventory"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <InventoryPage />
+                        <RequireFeature feature="inventory">
+                            <RequirePermission permission="inventory.manage">
+                                <InventoryPage />
+                            </RequirePermission>
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
@@ -271,7 +287,9 @@ function App() {
                 path="/whatsapp-settings"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <WhatsAppSettings />
+                        <RequireFeature feature="whatsapp_integration">
+                            <WhatsAppSettings />
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
@@ -279,7 +297,9 @@ function App() {
                 path="/whatsapp-connect"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <WhatsAppConnect />
+                        <RequireFeature feature="whatsapp_integration">
+                            <WhatsAppConnect />
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
@@ -287,7 +307,9 @@ function App() {
                 path="/whatsapp-templates"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <WhatsAppTemplates />
+                        <RequireFeature feature="whatsapp_integration">
+                            <WhatsAppTemplates />
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
@@ -295,7 +317,11 @@ function App() {
                 path="/cashflow"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <Reports />
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <Reports />
+                            </RequirePermission>
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
@@ -303,7 +329,9 @@ function App() {
                 path="/purchase_invoices"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <PurchaseInvoices />
+                        <RequirePermission permission="invoice.view">
+                            <PurchaseInvoices />
+                        </RequirePermission>
                     </PrivateRoute>
                 }
             />
@@ -311,7 +339,9 @@ function App() {
                 path="/vendors"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <Vendors />
+                        <RequirePermission permission="vendor.manage">
+                            <Vendors />
+                        </RequirePermission>
                     </PrivateRoute>
                 }
             />
