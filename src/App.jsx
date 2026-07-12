@@ -97,6 +97,14 @@ function App() {
     function PrivateRoute({ children, isLogin }) {
         return isLogin ? children : <Login />;
     }
+    // Blocks routes whose plan feature is missing (backend enforces too).
+    function RequireFeature({ feature, children }) {
+        const { features, status: accessStatus } = useSelector((s) => s.access);
+        if (accessStatus === 'succeeded' && !features.includes(feature)) {
+            return <Navigate to="/home" replace />;
+        }
+        return children;
+    }
     return (
         <Routes>
             {/* Public routes */}
@@ -161,8 +169,10 @@ function App() {
                 path="/invoice_editor"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <Navbar />
-                        <InvoiceTemplateEditor />
+                        <RequireFeature feature="template_designer">
+                            <Navbar />
+                            <InvoiceTemplateEditor />
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
@@ -221,8 +231,10 @@ function App() {
                 path="/UIConfig"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <Navbar />
-                        <UIConfig />
+                        <RequireFeature feature="template_designer">
+                            <Navbar />
+                            <UIConfig />
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
@@ -238,7 +250,9 @@ function App() {
                 path="/available-templates"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <AvailableTemplates />
+                        <RequireFeature feature="template_designer">
+                            <AvailableTemplates />
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
@@ -246,8 +260,10 @@ function App() {
                 path="/weasyprint-preview"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <Navbar />
-                        <WeasyprintPreview />
+                        <RequireFeature feature="template_designer">
+                            <Navbar />
+                            <WeasyprintPreview />
+                        </RequireFeature>
                     </PrivateRoute>
                 }
             />
