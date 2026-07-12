@@ -7,10 +7,10 @@ export default function AvailableTemplates() {
     const [templates, setTemplates] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
+    const [settingDefault, setSettingDefault] = useState(null);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        // Fetch all available templates
+    const loadTemplates = () => {
         clientToken.get('yaml/list/')
             .then((response) => {
                 if (response.status === 200) {
@@ -23,7 +23,21 @@ export default function AvailableTemplates() {
             .finally(() => {
                 setIsLoading(false);
             });
-    }, []);
+    };
+    useEffect(loadTemplates, []);
+
+    const setAsDefault = async (e, template) => {
+        e.stopPropagation(); // don't open the editor
+        setSettingDefault(template.id);
+        try {
+            await clientToken.post(`yaml/${template.id}/set-default/`);
+            loadTemplates();
+        } catch (err) {
+            // 403 toast comes from the axios interceptor
+        } finally {
+            setSettingDefault(null);
+        }
+    };
 
     const hasHtmlTemplate = templates.some(t => t.is_html);
 
@@ -173,6 +187,11 @@ export default function AvailableTemplates() {
                                         <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
                                             {template.template_name || `Template #${template.id}`}
                                         </h3>
+                                        {template.is_default && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 whitespace-nowrap">
+                                                ★ Default
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="mt-1 flex flex-col gap-1.5 text-sm">
@@ -196,9 +215,19 @@ export default function AvailableTemplates() {
                                     </div>
 
                                     <div className="mt-auto pt-4 flex items-center justify-between border-t border-gray-100">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            ID: {template.id}
-                                        </span>
+                                        {template.is_default ? (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                                Used for PDF export
+                                            </span>
+                                        ) : (
+                                            <button
+                                                onClick={(e) => setAsDefault(e, template)}
+                                                disabled={settingDefault === template.id}
+                                                className="text-xs font-semibold text-gray-500 hover:text-amber-600 border border-gray-200 hover:border-amber-300 rounded-full px-2.5 py-1 transition-colors disabled:opacity-50"
+                                            >
+                                                {settingDefault === template.id ? 'Setting…' : 'Set as default'}
+                                            </button>
+                                        )}
                                         <span className="text-indigo-600 text-sm font-medium group-hover:text-indigo-700">Select &rarr;</span>
                                     </div>
                                 </div>

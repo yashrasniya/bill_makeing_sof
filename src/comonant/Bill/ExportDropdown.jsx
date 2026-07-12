@@ -148,15 +148,17 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
               >
                 Share by Email
               </div>
-              {templates.map((e, idx) => (
-                  <div
-                      key={idx}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => handleOptionClick("pdf", e?.id)}
-                  >
-                    Download By {e?.template_name}
-                  </div>
-              ))}
+              <div
+                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => {
+                    // company default template (set in My Invoice Templates),
+                    // falling back to the first available template
+                    const def = templates.find(t => t.is_default) || templates[0];
+                    handleOptionClick("pdf", def?.id);
+                  }}
+              >
+                Export to PDF
+              </div>
             </div>
         )}
 
