@@ -90,7 +90,7 @@ function Navbar() {
         { title: "Invoices", link: "/bill_list", icon: <FileText size={20} />, permission: "invoice.view" },
         { title: "Customers", link: "/Customers", icon: <Users size={20} />, permission: "customer.manage" },
         { title: "Inventory", link: "/inventory", icon: <Package size={20} />, feature: "inventory", permission: "inventory.manage" },
-        { title: "Template Gallery", link: "/available-templates", icon: <LayoutTemplate size={20} />, feature: "template_designer" },
+        { title: "Template Gallery", link: "/available-templates", icon: <LayoutTemplate size={20} />, feature: "template_designer", permission: "template.manage" },
         {
             title: "Reports",
             icon: <FileText size={20} />,

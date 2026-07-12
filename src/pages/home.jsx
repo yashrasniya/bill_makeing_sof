@@ -232,7 +232,7 @@ function Home() {
                     </p>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         {can('invoice.create') && <QuickAction icon="➕" label="New Bill" onClick={() => navigate('/newBill')} accent="#4f46e5" />}
-                        {hasFeat('template_designer') && <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />}
+                        {hasFeat('template_designer') && can('template.manage') && <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />}
                         {can('customer.manage') && <QuickAction icon="👥" label="Customers" onClick={() => navigate('/Customers')} accent="#0ea5e9" />}
                         {can('invoice.view') && <QuickAction icon="📂" label="All Invoices" onClick={() => navigate('/bill_list')} accent="#f43f5e" />}
                         {isAdmin && <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#f59e0b" />}

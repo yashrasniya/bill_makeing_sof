@@ -193,8 +193,10 @@ function App() {
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <RequireFeature feature="template_designer">
-                            <Navbar />
-                            <InvoiceTemplateEditor />
+                            <RequirePermission permission="template.manage">
+                                <Navbar />
+                                <InvoiceTemplateEditor />
+                            </RequirePermission>
                         </RequireFeature>
                     </PrivateRoute>
                 }
@@ -280,7 +282,9 @@ function App() {
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <RequireFeature feature="template_designer">
-                            <AvailableTemplates />
+                            <RequirePermission permission="template.manage">
+                                <AvailableTemplates />
+                            </RequirePermission>
                         </RequireFeature>
                     </PrivateRoute>
                 }
@@ -290,8 +294,10 @@ function App() {
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <RequireFeature feature="template_designer">
-                            <Navbar />
-                            <WeasyprintPreview />
+                            <RequirePermission permission="template.manage">
+                                <Navbar />
+                                <WeasyprintPreview />
+                            </RequirePermission>
                         </RequireFeature>
                     </PrivateRoute>
                 }
