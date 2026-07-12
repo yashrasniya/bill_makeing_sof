@@ -113,6 +113,17 @@ function App() {
         }
         return children;
     }
+    // Company profile: open during onboarding (no verified company yet),
+    // admin-only once the company exists.
+    function RequireCompanyAdminOrOnboarding({ children }) {
+        const { isTenantAdmin, status: accessStatus } = useSelector((s) => s.access);
+        const onboarding = !userInfo?.is_company_varified;
+        if (!onboarding && accessStatus === 'succeeded' &&
+            !isTenantAdmin && !userInfo?.is_company_admin) {
+            return <Navigate to="/home" replace />;
+        }
+        return children;
+    }
     return (
         <Routes>
             {/* Public routes */}
@@ -199,7 +210,9 @@ function App() {
                 path="/CompanyForm"
                 element={
                     <PrivateRoute isLogin={isLogin}>
-                        <CompanyForm />
+                        <RequireCompanyAdminOrOnboarding>
+                            <CompanyForm />
+                        </RequireCompanyAdminOrOnboarding>
                     </PrivateRoute>
                 }
             />
