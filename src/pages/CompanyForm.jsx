@@ -209,22 +209,32 @@ export default function CompanyForm() {
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%', fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
             {showNavbar && <Navbar />}
             <style>{`
-                .cf-split   { display: flex; flex: 1; overflow: hidden; }
+                .cf-split   { display: flex; flex: 1; align-items: stretch; }
                 .cf-left    { flex: 0 0 36%; position: relative; overflow: hidden;
                               background: linear-gradient(145deg,#312e81 0%,#4f46e5 45%,#7c3aed 100%);
                               display: flex; flex-direction: column; align-items: center; justify-content: center;
-                              padding: 48px 36px; min-height: 100vh; }
+                              padding: 48px 36px; min-height: 100vh;
+                              position: sticky; top: 0; max-height: 100vh; }
                 .cf-right   { flex: 1; display: flex; flex-direction: column; align-items: center;
                               justify-content: flex-start; background: #f8fafc;
-                              padding: 32px 24px; overflow-y: auto; position: relative; }
+                              padding: 32px 24px 60px; position: relative; min-width: 0; }
+                .cf-card    { background: white; border-radius: 24px; padding: 36px 38px;
+                              width: 100%; max-width: 620px; position: relative; z-index: 1;
+                              margin-top: 8px; box-sizing: border-box;
+                              box-shadow: 0 16px 56px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04); }
                 .cf-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
                 .cf-grid-bank { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
                 .field-span-2 { grid-column: span 2; }
                 .field-span-1 { grid-column: span 1; }
+                @media (max-width: 1024px) {
+                    .cf-left  { flex: 0 0 32%; padding: 32px 20px; }
+                }
                 @media (max-width: 768px) {
                     .cf-left  { display: none; }
-                    .cf-right { padding: 20px 16px 80px; }
-                    .cf-grid, .cf-grid-bank { grid-template-columns: 1fr; }
+                    .cf-right { padding: 12px 10px 100px; }
+                    .cf-card  { padding: 22px 16px; border-radius: 16px; margin-top: 0; }
+                    .cf-title { font-size: 20px !important; }
+                    .cf-grid, .cf-grid-bank { grid-template-columns: 1fr; gap: 12px; }
                     .field-span-2, .field-span-1 { grid-column: 1 / -1 !important; }
                 }
             `}</style>
@@ -299,32 +309,31 @@ export default function CompanyForm() {
                     )}
 
                     {/* Card */}
-                    <div style={{
-                        background: 'white', borderRadius: '24px',
-                        padding: '36px 38px', width: '100%', maxWidth: '620px',
-                        boxShadow: '0 16px 56px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
-                        position: 'relative', zIndex: 1, marginTop: '8px',
-                    }}>
+                    <div className="cf-card">
                         {/* Header */}
                         <div style={{ marginBottom: '28px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                                <div style={{
-                                    width: '32px', height: '32px', borderRadius: '9px',
-                                    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    boxShadow: '0 4px 10px rgba(79,70,229,0.3)',
-                                }}>
-                                    <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
+                            {!showNavbar && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                    <div style={{
+                                        width: '32px', height: '32px', borderRadius: '9px',
+                                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: '0 4px 10px rgba(79,70,229,0.3)',
+                                    }}>
+                                        <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
+                                    </div>
+                                    <span style={{ fontSize: '15px', fontWeight: 800, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                        <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span>
+                                    </span>
                                 </div>
-                                <span style={{ fontSize: '15px', fontWeight: 800, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                    <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span>
-                                </span>
-                            </div>
-                            <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.6px', marginBottom: '4px' }}>
-                                Your Company Details
+                            )}
+                            <h2 className="cf-title" style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.6px', marginBottom: '4px' }}>
+                                {showNavbar ? 'My Company' : 'Your Company Details'}
                             </h2>
                             <p style={{ fontSize: '14px', color: '#94a3b8' }}>
-                                This info will appear on all your invoices — make it accurate!
+                                {showNavbar
+                                    ? 'Update your company profile — changes appear on new invoices.'
+                                    : 'This info will appear on all your invoices — make it accurate!'}
                             </p>
                         </div>
 
@@ -388,7 +397,7 @@ export default function CompanyForm() {
                                     </>
                                 ) : (
                                     <>
-                                        Save & Continue
+                                        {showNavbar ? 'Save Changes' : 'Save & Continue'}
                                         <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
                                             <path d="M3 9h12M9 3l6 6-6 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
