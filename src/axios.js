@@ -57,6 +57,9 @@ clientToken.interceptors.response.use(
     (response) => response,
     async (error) => {
         const response = error.response;
+        // opt-out for optional background requests:
+        // clientToken.get(url, { suppressErrorToast: true })
+        if (error.config?.suppressErrorToast) return Promise.reject(error);
         if (response && response.status === 403) {
             const data = await parseErrorBody(response);
             const isUpgrade = data.code === "upgrade_required";

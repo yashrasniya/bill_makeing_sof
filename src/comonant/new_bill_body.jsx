@@ -2,6 +2,7 @@ import '../style/bill.css';
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { clientToken } from "@/axios";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import PdfOpener from "@/utility/pdf_opener";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
@@ -83,6 +84,9 @@ function NewBillBody({ id }) {
     const [InvoiceData, setInvoiceData] = useState({})
     const [url, setUrl] = useState(id ? `invoice/${id}/update/` : 'invoice/')
     const [refresh, setRefresh] = useState(false)
+    const { features: planFeatures, permissions: userPermissions, status: accessStatus } = useSelector((s) => s.access);
+    const canInventory = accessStatus !== 'succeeded' ||
+        (planFeatures.includes('inventory') && userPermissions.includes('inventory.manage'));
     const [newDataFormat, setNewDataFormat] = useState({})
     const [invoiceNumber, setInvoiceNumber] = useState(InvoiceData?.invoice_number ?? "");
     const [inventoryProducts, setInventoryProducts] = useState([]);
@@ -146,12 +150,16 @@ function NewBillBody({ id }) {
             showToast(`Error ${error?.request?.status ?? ''}: Failed to load companies/vendors`)
         })
 
-        clientToken.get('/inventory/products/?limit=500').then((res) => {
-            if (res.status === 200) {
-                setInventoryProducts(res.data.results || res.data)
-            }
-        }).catch(err => console.error("Could not load inventory: ", err));
-    }, [refresh]);
+        // inventory suggestions are optional — skip when the plan/permission
+        // doesn't include inventory (avoids a 403 toast on every save)
+        if (canInventory) {
+            clientToken.get('/inventory/products/?limit=500', { suppressErrorToast: true }).then((res) => {
+                if (res.status === 200) {
+                    setInventoryProducts(res.data.results || res.data)
+                }
+            }).catch(err => console.error("Could not load inventory: ", err));
+        }
+    }, [refresh, canInventory]);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -304,7 +312,7 @@ function NewBillBody({ id }) {
                                     stockForm.append('notes', `Auto-deducted for Invoice #${InvoiceData.id || 'Unknown'}`);
 
                                     // Fire and forget stock deduction
-                                    clientToken.post('/inventory/stock-movements/', stockForm)
+                                    clientToken.post('/inventory/stock-movements/', stockForm, { suppressErrorToast: true })
                                         .catch(err => console.error("Failed to deduct stock:", err));
                                 }
 
