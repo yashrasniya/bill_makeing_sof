@@ -36,6 +36,11 @@ import Vendors from "./pages/Vendors";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import WhatsAppTemplates from "./pages/WhatsAppTemplates";
 import Reports from "./pages/reports";
+import SalesRegister from "./pages/SalesRegister";
+import PurchaseRegister from "./pages/PurchaseRegister";
+import CustomerLedger from "./pages/CustomerLedger";
+import SupplierLedger from "./pages/SupplierLedger";
+import GSTSummaryReport from "./pages/GSTSummaryReport";
 // Private route wrapper
 
 
@@ -346,6 +351,66 @@ function App() {
                         <RequireFeature feature="advanced_reports">
                             <RequirePermission permission="report.view">
                                 <Reports />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/sales-register"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <SalesRegister />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/purchase-register"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <PurchaseRegister />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/customer-ledger"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <CustomerLedger />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/supplier-ledger"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <SupplierLedger />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/gst-summary"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <GSTSummaryReport />
                             </RequirePermission>
                         </RequireFeature>
                     </PrivateRoute>
