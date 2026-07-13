@@ -4,19 +4,20 @@ import { clientToken } from '../../axios.js';
 function ProductsTable() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [suppliers, setSuppliers] = useState([]);
+    const [vendors, setVendors] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const [formData, setFormData] = useState({
         sku: '', name: '', description: '', price: '', gst_percentage: 18.00,
-        current_stock: 0, reorder_level: 10, category: '', supplier: ''
+        current_stock: 0, reorder_level: 10, category: '', vendor: ''
     });
     const [editingId, setEditingId] = useState(null);
 
     const fetchDropdowns = () => {
         clientToken.get(`/inventory/categories/`).then(res => setCategories(res.data.results || res.data));
-        clientToken.get(`/inventory/suppliers/`).then(res => setSuppliers(res.data.results || res.data));
+        // same vendors as the Purchases page
+        clientToken.get(`/vendors/?page_size=1000`).then(res => setVendors(res.data.results || res.data));
     }
 
     const fetchProducts = () => {
@@ -37,7 +38,7 @@ function ProductsTable() {
 
         const payload = { ...formData };
         if (!payload.category) payload.category = null;
-        if (!payload.supplier) payload.supplier = null;
+        if (!payload.vendor) payload.vendor = null;
 
         const request = editingId
             ? clientToken.put(`/inventory/products/${editingId}/`, payload)
@@ -45,7 +46,7 @@ function ProductsTable() {
 
         request.then(() => {
             setIsModalOpen(false);
-            setFormData({ sku: '', name: '', description: '', price: '', gst_percentage: 18.00, current_stock: 0, reorder_level: 10, category: '', supplier: '' });
+            setFormData({ sku: '', name: '', description: '', price: '', gst_percentage: 18.00, current_stock: 0, reorder_level: 10, category: '', vendor: '' });
             setEditingId(null);
             fetchProducts();
         }).catch(err => alert("Error saving product. Please check SKU uniqueness and fields."));
@@ -56,7 +57,7 @@ function ProductsTable() {
             sku: prod.sku, name: prod.name, description: prod.description || '',
             price: prod.price, gst_percentage: prod.gst_percentage || 18.00, current_stock: prod.current_stock,
             reorder_level: prod.reorder_level,
-            category: prod.category || '', supplier: prod.supplier || ''
+            category: prod.category || '', vendor: prod.vendor || ''
         });
         setEditingId(prod.id);
         setIsModalOpen(true);
@@ -69,7 +70,7 @@ function ProductsTable() {
     };
 
     const openCreate = () => {
-        setFormData({ sku: '', name: '', description: '', price: '', gst_percentage: 18.00, current_stock: 0, reorder_level: 10, category: '', supplier: '' });
+        setFormData({ sku: '', name: '', description: '', price: '', gst_percentage: 18.00, current_stock: 0, reorder_level: 10, category: '', vendor: '' });
         setEditingId(null);
         setIsModalOpen(true);
     };
@@ -111,7 +112,7 @@ function ProductsTable() {
                                 <td className="px-6 py-4 font-mono text-sm text-gray-600">{prod.sku}</td>
                                 <td className="px-6 py-4 font-medium text-gray-800">
                                     <div>{prod.name}</div>
-                                    <div className="text-xs text-gray-400 font-normal mt-0.5">{prod.supplier_name || 'No Supplier'}</div>
+                                    <div className="text-xs text-gray-400 font-normal mt-0.5">{prod.vendor_name || prod.supplier_name || 'No Vendor'}</div>
                                 </td>
                                 <td className="px-6 py-4 text-gray-600">
                                     <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-medium">
@@ -164,11 +165,12 @@ function ProductsTable() {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                                        <select value={formData.supplier} onChange={e => setFormData({ ...formData, supplier: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white outline-none">
-                                            <option value="">Select Supplier</option>
-                                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                                        <select value={formData.vendor} onChange={e => setFormData({ ...formData, vendor: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white outline-none">
+                                            <option value="">Select Vendor</option>
+                                            {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                                         </select>
+                                        <p className="text-xs text-gray-400 mt-1">Same vendors as the Purchases page.</p>
                                     </div>
                                 </div>
 
