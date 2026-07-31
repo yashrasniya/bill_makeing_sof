@@ -1,6 +1,6 @@
 import '../style/Companys.css';
 import { clientToken } from "/src/axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Shared input focus handlers
@@ -8,6 +8,32 @@ const onFocusIn = e => { e.target.style.borderColor = '#4f46e5'; e.target.style.
 const onFocusOut = e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#f8fafc'; };
 
 const EMPTY = { name: '', address: '', gst_number: '', state: '', state_code: '', phone_number: '' };
+
+// Strip absolute DRF pagination URLs to relative paths so axios always
+// uses the configured baseURL (avoids http vs https mismatch in prod).
+const toRelativeUrl = (absoluteUrl) => {
+    if (!absoluteUrl) return null;
+    try {
+        const u = new URL(absoluteUrl);
+        let path = u.pathname;
+        // Get the baseURL path prefix (works for both "/api" and "https://domain/api/")
+        const baseUrl = import.meta.env.VITE_APP_URL || '';
+        let basePath = '';
+        try { basePath = new URL(baseUrl).pathname; } catch {
+            basePath = baseUrl; // already a relative path like "/api"
+        }
+        // Normalise: ensure basePath ends without trailing slash for comparison
+        basePath = basePath.replace(/\/+$/, '');
+        if (basePath && path.startsWith(basePath)) {
+            path = path.slice(basePath.length);
+        }
+        // Remove leading slash so axios appends to baseURL correctly
+        path = path.replace(/^\/+/, '');
+        return path + u.search;
+    } catch {
+        return absoluteUrl; // already relative, return as-is
+    }
+};
 
 function CompanysTable() {
     const navigate = useNavigate();
@@ -22,12 +48,15 @@ function CompanysTable() {
     const [popupOpen, setPopupOpen] = useState(false);
     const [pageError, setPageError] = useState('');
     const [errorInfo, setErrorInfo] = useState('');
+    const [exportOpen, setExportOpen] = useState(false);
+    const [exporting, setExporting] = useState(false);
+    const exportRef = useRef(null);
 
     useEffect(() => {
         clientToken.get(url).then(response => {
             if (response.status === 200) {
                 set_table_content(response.data.results);
-                set_urls({ next: response.data.next, previous: response.data.previous });
+                set_urls({ next: toRelativeUrl(response.data.next), previous: toRelativeUrl(response.data.previous) });
                 let a = {};
                 response.data.results.forEach(r => { a[r.id] = false; });
                 setCheckBox(a);
@@ -37,6 +66,17 @@ function CompanysTable() {
             setPageError(`Failed to load customers. ${error.message || ''}`);
         });
     }, [url, refresh]);
+
+    // Close export dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (exportRef.current && !exportRef.current.contains(e.target)) {
+                setExportOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const closePopup = () => {
         setPopupOpen(false);
@@ -79,10 +119,13 @@ function CompanysTable() {
     };
 
     const handelMultiDelete = () => {
-        if (window.confirm('Are you sure you want to delete selected customers?')) {
-            Object.keys(checkbox).forEach(id => {
-                if (checkbox[id]) handelDelete(id);
-            });
+        const selectedIds = Object.keys(checkbox).filter(id => checkbox[id]);
+        if (selectedIds.length === 0) {
+            setPageError('Please select at least one customer to delete.');
+            return;
+        }
+        if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected customer(s)?`)) {
+            selectedIds.forEach(id => handelDelete(id));
         }
     };
 
@@ -93,7 +136,9 @@ function CompanysTable() {
     };
 
     const handelUrl = (e) => {
-        set_url(urls[e.currentTarget.id]);
+        const target = urls[e.currentTarget.id];
+        if (!target) return;
+        set_url(target);
         setCheckBox({});
     };
 
@@ -101,6 +146,207 @@ function CompanysTable() {
         set_SearchValue(e.target.value);
         set_url(`companies/?s=${e.target.value}`);
     };
+
+    // ── Export Functions ──
+    const handleExportCSV = useCallback(() => {
+        setExporting(true);
+        setExportOpen(false);
+        clientToken.get('companies/?page_size=9999', { responseType: 'json' })
+            .then(response => {
+                const data = response.data.results || response.data;
+                if (!data || data.length === 0) {
+                    setPageError('No customer data to export.');
+                    return;
+                }
+                const headers = ['Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone Number'];
+                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number'];
+                const csvRows = [headers.join(',')];
+                data.forEach(row => {
+                    const values = keys.map(k => {
+                        const val = (row[k] || '').toString().replace(/"/g, '""');
+                        return `"${val}"`;
+                    });
+                    csvRows.push(values.join(','));
+                });
+                const csvString = csvRows.join('\n');
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `customers_export_${new Date().toISOString().slice(0,10)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                link.parentNode.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(err => {
+                console.error('CSV export error:', err);
+                setPageError('Failed to export CSV. Please try again.');
+            })
+            .finally(() => setExporting(false));
+    }, []);
+
+    const handleExportJSON = useCallback(() => {
+        setExporting(true);
+        setExportOpen(false);
+        clientToken.get('companies/?page_size=9999', { responseType: 'json' })
+            .then(response => {
+                const data = response.data.results || response.data;
+                if (!data || data.length === 0) {
+                    setPageError('No customer data to export.');
+                    return;
+                }
+                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number'];
+                const cleanData = data.map(row => {
+                    const obj = {};
+                    keys.forEach(k => { obj[k] = row[k] || ''; });
+                    return obj;
+                });
+                const jsonString = JSON.stringify(cleanData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `customers_export_${new Date().toISOString().slice(0,10)}.json`);
+                document.body.appendChild(link);
+                link.click();
+                link.parentNode.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(err => {
+                console.error('JSON export error:', err);
+                setPageError('Failed to export JSON. Please try again.');
+            })
+            .finally(() => setExporting(false));
+    }, []);
+
+    const handleExportPDF = useCallback(() => {
+        setExporting(true);
+        setExportOpen(false);
+        clientToken.get('companies/?page_size=9999', { responseType: 'json' })
+            .then(response => {
+                const data = response.data.results || response.data;
+                if (!data || data.length === 0) {
+                    setPageError('No customer data to export.');
+                    return;
+                }
+                const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number'];
+                const headers = ['#', 'Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone'];
+                const rows = data.map((row, i) =>
+                    `<tr>
+                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#94a3b8;text-align:center;">${i + 1}</td>
+                        ${keys.map(k => `<td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;">${row[k] || '—'}</td>`).join('')}
+                    </tr>`
+                ).join('');
+                const html = `
+                    <html>
+                    <head>
+                        <title>Customers Data Export</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+                        <style>
+                            * { box-sizing: border-box; margin: 0; padding: 0; }
+                            body { font-family: 'Inter', sans-serif; margin: 0; color: #0f172a; background: #fff; }
+                            .header { background: linear-gradient(135deg, #312e81, #4f46e5); padding: 28px 36px; color: white; }
+                            .header h1 { font-size: 22px; font-weight: 900; letter-spacing: -0.3px; }
+                            .header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+                            .stats { display: flex; gap: 24px; padding: 16px 36px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+                            .stat { font-size: 12px; color: #64748b; font-weight: 600; }
+                            .stat strong { color: #0f172a; font-size: 16px; display: block; margin-top: 2px; }
+                            .table-wrap { padding: 0 36px 40px; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            thead { background: #f1f5f9; }
+                            thead th { padding: 10px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; text-align: left; border-bottom: 2px solid #e2e8f0; }
+                            thead th:first-child { text-align: center; width: 40px; }
+                            tbody tr:nth-child(even) { background: #fafbfc; }
+                            tbody td:nth-child(2) { color: #4f46e5; font-weight: 700; }
+                            .footer { text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+                            @media print {
+                                body { margin: 0; }
+                                .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                thead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>Customers Data Report</h1>
+                            <p>Generated on ${dateStr}</p>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Total Customers<strong>${data.length}</strong></div>
+                            <div class="stat">With GST<strong>${data.filter(r => r.gst_number).length}</strong></div>
+                            <div class="stat">With Phone<strong>${data.filter(r => r.phone_number).length}</strong></div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                        <div class="footer">End of report — ${data.length} customer(s)</div>
+                    </body>
+                    </html>
+                `;
+                const win = window.open('', '_blank');
+                win.document.write(html);
+                win.document.close();
+                win.focus();
+                setTimeout(() => { win.print(); }, 500);
+            })
+            .catch(err => {
+                console.error('PDF export error:', err);
+                setPageError('Failed to export PDF. Please try again.');
+            })
+            .finally(() => setExporting(false));
+    }, []);
+
+    const handlePrint = useCallback(() => {
+        setExportOpen(false);
+        const printContent = table_content;
+        if (!printContent || printContent.length === 0) {
+            setPageError('No customer data to print.');
+            return;
+        }
+        const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number'];
+        const headers = ['Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone'];
+        const rows = printContent.map(row =>
+            `<tr>${keys.map(k => `<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#374151;">${row[k] || '—'}</td>`).join('')}</tr>`
+        ).join('');
+        const html = `
+            <html>
+            <head>
+                <title>Customers List</title>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 32px; color: #0f172a; }
+                    h1 { font-size: 24px; font-weight: 900; margin-bottom: 4px; }
+                    p.sub { font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 24px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    thead { background: #312e81; }
+                    thead th { padding: 12px 14px; color: white; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; }
+                    tbody tr:nth-child(even) { background: #f8fafc; }
+                    @media print { body { margin: 16px; } }
+                </style>
+            </head>
+            <body>
+                <h1>Customers List</h1>
+                <p class="sub">Exported on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                <table>
+                    <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </body>
+            </html>
+        `;
+        const win = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 400);
+    }, [table_content]);
+
+    const selectedCount = Object.values(checkbox).filter(Boolean).length;
 
     const filed = (label, id, basis, numeric = false) => (
         <div className="form_box" style={{ flexBasis: basis }}>
@@ -133,6 +379,71 @@ function CompanysTable() {
                     />
                 </div>
                 <div className="button-div">
+                    {/* Export Dropdown */}
+                    <div className="export-wrapper" ref={exportRef}>
+                        <div
+                            className="button export-btn"
+                            onClick={() => setExportOpen(prev => !prev)}
+                            style={{ background: exporting ? 'linear-gradient(135deg,#a5b4fc,#c4b5fd)' : undefined }}
+                        >
+                            {exporting ? (
+                                <>
+                                    <div className="export-spinner" />
+                                    Exporting…
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="7 10 12 15 17 10" />
+                                        <line x1="12" y1="15" x2="12" y2="3" />
+                                    </svg>
+                                    Export
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="6 9 12 15 18 9" />
+                                    </svg>
+                                </>
+                            )}
+                        </div>
+                        {exportOpen && (
+                            <div className="export-dropdown">
+                                <button className="export-dropdown-item" onClick={handleExportCSV}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                    </svg>
+                                    Export as CSV
+                                </button>
+                                <button className="export-dropdown-item" onClick={handleExportJSON}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                    </svg>
+                                    Export as JSON
+                                </button>
+                                <button className="export-dropdown-item" onClick={handleExportPDF}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <line x1="9" y1="15" x2="15" y2="15" />
+                                        <line x1="9" y1="11" x2="15" y2="11" />
+                                        <line x1="9" y1="19" x2="13" y2="19" />
+                                    </svg>
+                                    Export All as PDF
+                                </button>
+                                <div className="export-dropdown-divider" />
+                                <button className="export-dropdown-item" onClick={handlePrint}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="6 9 6 2 18 2 18 9" />
+                                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                                        <rect x="6" y="14" width="12" height="8" />
+                                    </svg>
+                                    Print / Save as PDF
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="button" onClick={() => { set_update(false); set_company_data(EMPTY); setPopupOpen(true); }}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 36 35" fill="none">
                             <path d="M22.4655 16.0523L22.4759 7.19432C22.4759 6.80597 22.3196 6.43352 22.0413 6.15891C21.763 5.8843 21.3856 5.73002 20.9921 5.73002C20.5985 5.73002 20.2211 5.8843 19.9429 6.15891C19.6646 6.43352 19.5083 6.80596 19.5083 7.19432L19.5187 16.0523L10.5426 16.042C10.1491 16.042 9.77166 16.1963 9.49339 16.4709C9.21512 16.7455 9.05879 17.1179 9.05879 17.5063C9.05879 17.8947 9.21512 18.2671 9.49339 18.5417C9.77166 18.8163 10.1491 18.9706 10.5426 18.9706L19.5187 18.9603L19.5083 27.8183C19.5075 28.0108 19.5453 28.2016 19.6196 28.3796C19.6939 28.5576 19.8031 28.7193 19.9411 28.8554C20.079 28.9916 20.2429 29.0994 20.4233 29.1727C20.6037 29.246 20.797 29.2834 20.9921 29.2826C21.1872 29.2834 21.3805 29.246 21.5609 29.1727C21.7412 29.0994 21.9051 28.9916 22.0431 28.8554C22.181 28.7193 22.2903 28.5576 22.3646 28.3796C22.4389 28.2016 22.4767 28.0108 22.4759 27.8183L22.4655 18.9603L31.4415 18.9706C31.6366 18.9714 31.8299 18.934 32.0103 18.8607C32.1907 18.7874 32.3546 18.6796 32.4926 18.5435C32.6305 18.4073 32.7398 18.2456 32.814 18.0676C32.8883 17.8896 32.9262 17.6988 32.9254 17.5063C32.9262 17.3138 32.8883 17.123 32.814 16.945C32.7398 16.767 32.6305 16.6053 32.4926 16.4691C32.3546 16.333 32.1907 16.2252 32.0103 16.1519C31.8299 16.0785 31.6366 16.0412 31.4415 16.042L22.4655 16.0523Z" fill="white" />
@@ -143,18 +454,18 @@ function CompanysTable() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 27 27" fill="none">
                             <path d="M11.25 20.25C11.5484 20.25 11.8345 20.1315 12.0455 19.9205C12.2565 19.7095 12.375 19.4234 12.375 19.125V12.375C12.375 12.0766 12.2565 11.7905 12.0455 11.5795C11.8345 11.3685 11.5484 11.25 11.25 11.25C10.9516 11.25 10.6655 11.3685 10.4545 11.5795C10.2435 11.7905 10.125 12.0766 10.125 12.375V19.125C10.125 19.4234 10.2435 19.7095 10.4545 19.9205C10.6655 20.1315 10.9516 20.25 11.25 20.25ZM22.5 6.75H18V5.625C18 4.72989 17.6444 3.87145 17.0115 3.23851C16.3786 2.60558 15.5201 2.25 14.625 2.25H12.375C11.4799 2.25 10.6214 2.60558 9.98851 3.23851C9.35558 3.87145 9 4.72989 9 5.625V6.75H4.5C4.20163 6.75 3.91548 6.86853 3.7045 7.0795C3.49353 7.29048 3.375 7.57663 3.375 7.875C3.375 8.17337 3.49353 8.45952 3.7045 8.6705C3.91548 8.88147 4.20163 9 4.5 9H5.625V21.375C5.625 22.2701 5.98058 23.1286 6.61351 23.7615C7.24645 24.3944 8.10489 24.75 9 24.75H18C18.8951 24.75 19.7536 24.3944 20.3865 23.7615C21.0194 23.1286 21.375 22.2701 21.375 21.375V9H22.5C22.7984 9 23.0845 8.88147 23.2955 8.6705C23.5065 8.45952 23.625 8.17337 23.625 7.875C23.625 7.57663 23.5065 7.29048 23.2955 7.0795C23.0845 6.86853 22.7984 6.75 22.5 6.75ZM11.25 5.625C11.25 5.32663 11.3685 5.04048 11.5795 4.8295C11.7905 4.61853 12.0766 4.5 12.375 4.5H14.625C14.9234 4.5 15.2095 4.61853 15.4205 4.8295C15.6315 5.04048 15.75 5.32663 15.75 5.625V6.75H11.25V5.625ZM19.125 21.375C19.125 21.6734 19.0065 21.9595 18.7955 22.1705C18.5845 22.3815 18.2984 22.5 18 22.5H9C8.70163 22.5 8.41548 22.3815 8.2045 22.1705C7.99353 21.9595 7.875 21.6734 7.875 21.375V9H19.125V21.375ZM15.75 20.25C16.0484 20.25 16.3345 20.1315 16.5455 19.9205C16.7565 19.7095 16.875 19.4234 16.875 19.125V12.375C16.875 12.0766 16.7565 11.7905 16.5455 11.5795C16.3345 11.3685 16.0484 11.25 15.75 11.25C15.4516 11.25 15.1655 11.3685 14.9545 11.5795C14.7435 11.7905 14.625 12.0766 14.625 12.375V19.125C14.625 19.4234 14.7435 19.7095 14.9545 19.9205C15.1655 20.1315 15.4516 20.25 15.75 20.25Z" fill="white" />
                         </svg>
-                        Delete
+                        Delete{selectedCount > 0 && ` (${selectedCount})`}
                     </div>
                 </div>
             </div>
 
             {pageError && (
-                <div style={{ margin: '16px 24px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', color: '#dc2626', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ margin: '16px 24px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', color: '#dc2626', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '1280px', marginLeft: 'auto', marginRight: 'auto' }}>
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-9V7a1 1 0 10-2 0v2a1 1 0 102 0zm0 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
                     </svg>
                     {pageError}
-                    <button onClick={() => setPageError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}>✕</button>
+                    <button onClick={() => setPageError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '16px', padding: '2px 6px' }}>✕</button>
                 </div>
             )}
 
@@ -192,8 +503,8 @@ function CompanysTable() {
                                     <td>
                                         <input type="checkbox" className="check-box"
                                             checked={!!checkbox[obj.id]}
-                                            onChange={e => setCheckBox({ ...checkbox, [e.target.id]: e.target.checked })}
-                                            id={obj.id}
+                                            onChange={e => setCheckBox({ ...checkbox, [obj.id]: e.target.checked })}
+                                            id={String(obj.id)}
                                         />
                                     </td>
                                     <td onClick={() => handelItemsOpen(key)} style={{ cursor: 'pointer' }}>

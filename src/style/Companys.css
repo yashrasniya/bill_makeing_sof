@@ -115,6 +115,82 @@
     flex-shrink: 0;
 }
 
+/* ── Export dropdown ── */
+.export-wrapper {
+    position: relative;
+}
+
+.button-div .button.export-btn {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.3);
+}
+
+.button-div .button.export-btn:hover {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.4);
+}
+
+.export-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 210px;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    z-index: 100;
+    padding: 6px;
+    animation: dropIn 0.18s ease;
+}
+
+@keyframes dropIn {
+    from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.export-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    background: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.15s, color 0.15s;
+    text-align: left;
+}
+
+.export-dropdown-item:hover {
+    background: #f5f3ff;
+    color: #4f46e5;
+}
+
+.export-dropdown-divider {
+    height: 1px;
+    background: #f1f5f9;
+    margin: 4px 8px;
+}
+
+.export-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
 /* ── Table container ── */
 .companys_table_raper {
     max-width: 1280px;
