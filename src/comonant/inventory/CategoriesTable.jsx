@@ -77,6 +77,22 @@ function CategoriesTable() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {categories.length === 0 && (
+                            <tr>
+                                <td colSpan="3" className="px-6 py-12 text-center">
+                                    <div className="flex flex-col items-center justify-center">
+                                        <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
+                                            <span className="text-2xl">🏷️</span>
+                                        </div>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-1">No categories found</h3>
+                                        <p className="text-gray-500 mb-4">Get started by creating your first category.</p>
+                                        <button onClick={openCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                                            + Add Category
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        )}
                         {categories.map(cat => (
                             <tr key={cat.id} className="hover:bg-gray-50/50 transition-colors">
                                 <td className="px-6 py-4 font-medium text-gray-800">{cat.name}</td>

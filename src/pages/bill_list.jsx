@@ -1,7 +1,8 @@
 import History from "../comonant/history";
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {clientToken} from "../axios";
+import { useSelector } from "react-redux";
 import MultiSelectDropdown from "../comonant/MultiSelectDropdown";
 import ExportDropdown from "../comonant/ExportDropdown";
 
@@ -12,13 +13,38 @@ import ExportDropdown from "../comonant/ExportDropdown";
 
 const Bill_list = ({ setLoading }) => {
     const navigate = useNavigate();
+    const { features, status: accessStatus } = useSelector((state) => state.access);
+    const [searchParams] = useSearchParams();
+    // dashboard cards deep-link here:
+    //   ?payment_status=overdue   → one exact status
+    //   ?status_group=open        → everything still owing
+    //   ?type=purchase            → opens purchase invoices list
+    const initialStatus = searchParams.get("payment_status") || "";
+    const initialGroup = searchParams.get("status_group") || "";
+    const initialType = searchParams.get("type") || "sales";
     const [filters, setFilters] = useState({
         s: "",
         customer: [],
         date_from: "",
         date_to: "",
-        invoice_type: "sales",
+        invoice_type: initialType,
+        page_size: 15,
+        ordering: "-date",
+        ...(initialStatus ? { payment_status: initialStatus } : { payment_status: "" }),
+        ...(initialGroup ? { status_group: initialGroup } : {}),
     });
+    const [showFilters, setShowFilters] = useState(false);
+    const activeStatusLabel =
+        { open: "Awaiting payment", overdue: "Overdue" }[filters.status_group]
+        || { overdue: "Overdue", unpaid: "Unpaid", paid: "Paid", partially_paid: "Partially paid" }[filters.payment_status]
+        || "";
+    const clearStatusFilter = () =>
+        setFilters(prev => {
+            const next = { ...prev };
+            delete next.payment_status;
+            delete next.status_group;
+            return next;
+        });
     const [searchTerm, setSearchTerm] = useState(filters.s || ""); // local input state
 
     const [Customer, setCustomer] = useState([])
@@ -210,7 +236,10 @@ const Bill_list = ({ setLoading }) => {
                 {/* ── Tabs for Sales / Purchases ── */}
                 <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', animation: 'fadeUp 0.45s ease both' }}>
                     <button 
-                        onClick={() => setFilters(prev => ({ ...prev, invoice_type: 'sales' }))}
+                        onClick={() => {
+                            setFilters(prev => ({ ...prev, invoice_type: 'sales' }));
+                            setSearchParams(prev => { prev.set('type', 'sales'); return prev; });
+                        }}
                         style={{
                             padding: '10px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
                             fontWeight: 700, fontSize: '14px', transition: 'all 0.2s',
@@ -222,7 +251,10 @@ const Bill_list = ({ setLoading }) => {
                         Sales Invoices
                     </button>
                     <button 
-                        onClick={() => setFilters(prev => ({ ...prev, invoice_type: 'purchase' }))}
+                        onClick={() => {
+                            setFilters(prev => ({ ...prev, invoice_type: 'purchase' }));
+                            setSearchParams(prev => { prev.set('type', 'purchase'); return prev; });
+                        }}
                         style={{
                             padding: '10px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
                             fontWeight: 700, fontSize: '14px', transition: 'all 0.2s',
@@ -239,97 +271,199 @@ const Bill_list = ({ setLoading }) => {
                 <div style={{
                     position: 'relative', zIndex: 10,
                     background: 'white', borderRadius: '20px',
-                    padding: '20px 24px', marginBottom: '28px',
-                    boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
+                    padding: '24px', marginBottom: '28px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
                     animation: 'fadeUp 0.5s ease 0.1s both',
-                    display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end'
+                    display: 'flex', flexDirection: 'column', gap: '20px'
                 }}>
-                    {/* Search Input */}
-                    <div style={{ flex: '1 1 200px' }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Search Invoices</label>
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Search by invoice # or customer..."
+                    {/* Top Row: Search & Toggle */}
+                    <div style={{ width: '100%', display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                        <div style={{ flex: '1 1 auto' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>Search Invoices</label>
+                            <div style={{ position: 'relative' }}>
+                                <svg style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                <input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Search by invoice # or customer name..."
+                                    style={{
+                                        width: '100%', padding: '12px 14px 12px 40px', borderRadius: '12px',
+                                        border: '1.5px solid #e2e8f0', outline: 'none',
+                                        fontSize: '15px', color: '#0f172a', transition: 'all 0.2s',
+                                        backgroundColor: '#f8fafc'
+                                    }}
+                                    onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.backgroundColor = 'white'; }}
+                                    onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.backgroundColor = '#f8fafc'; }}
+                                />
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
                             style={{
-                                width: '100%', padding: '10px 14px', borderRadius: '12px',
-                                border: '1.5px solid #e2e8f0', outline: 'none',
-                                fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s'
+                                padding: '12px 20px', borderRadius: '12px', background: showFilters ? '#eef2ff' : '#f1f5f9',
+                                color: showFilters ? '#4f46e5' : '#475569', border: showFilters ? '1px solid #c7d2fe' : '1px solid transparent', 
+                                fontWeight: 600, cursor: 'pointer', fontSize: '14px', height: '46px', 
+                                transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px'
                             }}
-                            onFocus={e => e.target.style.borderColor = '#4f46e5'}
-                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                        />
+                            onMouseEnter={e => e.currentTarget.style.background = showFilters ? '#eef2ff' : '#e2e8f0'}
+                            onMouseLeave={e => e.currentTarget.style.background = showFilters ? '#eef2ff' : '#f1f5f9'}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                            Filters & Sort
+                        </button>
                     </div>
 
-                    {/* Dynamic Filters (Customer Multi-select) */}
-                    {filterConfig.map((f) => (
-                        <div key={f.key} style={{ flex: '1 1 200px' }}>
-                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>{f.label}</label>
-                            {f.type === "multi-checkbox-dropdown" ? (
-                                <MultiSelectDropdown
-                                    label={f.label}
-                                    fetchOptions={fetchCustomerOptions}
-                                    options={f.options}
-                                    selected={filters[f.key]}
-                                    onChange={(newValues) => handleChange(f.key, newValues)}
-                                />
-                            ) : (
-                                <input
-                                    type={f.type}
-                                    value={filters[f.key]}
-                                    onChange={(e) => handleChange(f.key, e.target.value)}
-                                    placeholder={f.placeholder}
-                                    style={{
-                                        width: '100%', padding: '10px 14px', borderRadius: '12px',
-                                        border: '1.5px solid #e2e8f0', outline: 'none',
-                                        fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s'
-                                    }}
-                                    onFocus={e => e.target.style.borderColor = '#4f46e5'}
-                                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                                />
-                            )}
-                        </div>
-                    ))}
-
-                    {/* Date Range */}
-                    <DateRangeFilter
-                        value={{ from: filters.date_from, to: filters.date_to }}
-                        onChange={(v) =>
-                            setFilters((prev) => ({
-                                ...prev,
-                                date_from: v.from,
-                                date_to: v.to,
-                            }))
-                        }
-                    />
-
-                    {/* Action Buttons */}
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                            onClick={() => { setSearchTerm(''); setFilters({ s: "", customer: [], date_from: "", date_to: "", invoice_type: filters.invoice_type }); }}
-                            style={{
-                                padding: '10px 20px', borderRadius: '12px', background: '#f1f5f9',
-                                color: '#64748b', border: 'none', fontWeight: 700, cursor: 'pointer',
-                                fontSize: '14px', height: '41px', transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={e => e.target.style.background = '#e2e8f0'}
-                            onMouseLeave={e => e.target.style.background = '#f1f5f9'}
-                        >
-                            Clear
-                        </button>
-                        <div>
-                            <ExportDropdown
-                                onExport={(format) => {
-                                    if (format === "csv") handelExportCSV();
-                                    if (format === "pdf") handelExportPDF();
-                                    if (format === "pdf_data") handelExportPDFData();
-                                    if (format === "xlsx") handelExportExcel();
-                                }}
+                    {/* Bottom Row: Filters Grid (Collapsible) */}
+                    {showFilters && (
+                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                        
+                        {/* Customer Filter */}
+                        <div style={{ flex: '1 1 200px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Customer</label>
+                            <MultiSelectDropdown
+                                label="Customer"
+                                fetchOptions={fetchCustomerOptions}
+                                options={Customer}
+                                selected={filters.customer}
+                                onChange={(newValues) => handleChange("customer", newValues)}
                             />
                         </div>
+
+                        {/* Payment Status Filter */}
+                        <div style={{ flex: '1 1 140px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Status</label>
+                            <select
+                                value={filters.payment_status || ""}
+                                onChange={(e) => handleChange("payment_status", e.target.value)}
+                                style={{
+                                    width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                    border: '1.5px solid #e2e8f0', outline: 'none',
+                                    fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s',
+                                    backgroundColor: 'white'
+                                }}
+                                onFocus={e => e.target.style.borderColor = '#4f46e5'}
+                                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="paid">Paid</option>
+                                <option value="unpaid">Unpaid</option>
+                                <option value="partially_paid">Partially Paid</option>
+                                <option value="overdue">Overdue</option>
+                            </select>
+                        </div>
+
+                        {/* Sort By Filter */}
+                        <div style={{ flex: '1 1 180px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Sort By</label>
+                            <select
+                                value={filters.ordering || "-date"}
+                                onChange={(e) => handleChange("ordering", e.target.value)}
+                                style={{
+                                    width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                    border: '1.5px solid #e2e8f0', outline: 'none',
+                                    fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s',
+                                    backgroundColor: 'white'
+                                }}
+                                onFocus={e => e.target.style.borderColor = '#4f46e5'}
+                                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                            >
+                                <option value="-date">Date (Newest First)</option>
+                                <option value="date">Date (Oldest First)</option>
+                                <option value="-total_final_amount">Amount (High to Low)</option>
+                                <option value="total_final_amount">Amount (Low to High)</option>
+                            </select>
+                        </div>
+
+                        {/* Date Range */}
+                        <DateRangeFilter
+                            value={{ from: filters.date_from, to: filters.date_to }}
+                            onChange={(v) =>
+                                setFilters((prev) => ({
+                                    ...prev,
+                                    date_from: v.from,
+                                    date_to: v.to,
+                                }))
+                            }
+                        />
+
+                        {/* Page Size */}
+                        <div style={{ flex: '1 1 100px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Page Size</label>
+                            <select
+                                value={filters.page_size}
+                                onChange={(e) => handleChange("page_size", e.target.value)}
+                                style={{
+                                    width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                    border: '1.5px solid #e2e8f0', outline: 'none',
+                                    fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s',
+                                    backgroundColor: 'white'
+                                }}
+                                onFocus={e => e.target.style.borderColor = '#4f46e5'}
+                                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                            >
+                                <option value={15}>15</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: '8px', flex: '1 1 auto', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => { setSearchTerm(''); setFilters({ s: "", customer: [], date_from: "", date_to: "", invoice_type: filters.invoice_type, page_size: 15, payment_status: "", ordering: "-date" }); }}
+                                style={{
+                                    padding: '10px 20px', borderRadius: '12px', background: '#f1f5f9',
+                                    color: '#64748b', border: 'none', fontWeight: 700, cursor: 'pointer',
+                                    fontSize: '14px', height: '41px', transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={e => e.target.style.background = '#e2e8f0'}
+                                onMouseLeave={e => e.target.style.background = '#f1f5f9'}
+                            >
+                                Clear
+                            </button>
+                            <div>
+                                <ExportDropdown
+                                    onClick={() => {
+                                        if (!(accessStatus === 'succeeded' && features.includes("bulk_export"))) {
+                                            alert("Your current subscription does not contain this feature");
+                                            return false;
+                                        }
+                                        return true;
+                                    }}
+                                    onExport={(format) => {
+                                        if (format === "csv") handelExportCSV();
+                                        if (format === "pdf") handelExportPDF();
+                                        if (format === "pdf_data") handelExportPDFData();
+                                        if (format === "xlsx") handelExportExcel();
+                                    }}
+                                />
+                            </div>
+                        </div>
                     </div>
+                    )}
                 </div>
+
+                {/* ── Active status filter (arrived via a dashboard card) ── */}
+                {activeStatusLabel && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 16px' }}>
+                        <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Showing:</span>
+                        <button
+                            onClick={clearStatusFilter}
+                            title="Remove this filter"
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe',
+                                borderRadius: '99px', padding: '6px 14px', cursor: 'pointer',
+                                fontSize: '13px', fontWeight: 700,
+                            }}
+                        >
+                            {activeStatusLabel}
+                            <span style={{ fontSize: '15px', lineHeight: 1 }}>×</span>
+                        </button>
+                    </div>
+                )}
 
                 {/* ── History List ── */}
                 <div style={{

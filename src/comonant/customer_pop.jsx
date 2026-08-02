@@ -39,6 +39,9 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
             .then(res => {
                 if (res.status === 200 || res.status === 201) {
                     setNewCustomer({ name: '', phone_number: '', address: '' });
+                    if (res.data && res.data.id) {
+                        setInvoiceData(prev => ({ ...prev, [idKey]: res.data.id }));
+                    }
                     setRefresh(e => !e);
                     setShowPopup(false);
                 }

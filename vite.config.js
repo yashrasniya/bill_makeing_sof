@@ -1,13 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import path from "path"
+import path from "path";
 
 export default defineConfig({
+    base: '/app/',
+    define: {
+        '__APP_VERSION__': JSON.stringify(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })),
+    },
     plugins: [
         react(),
         VitePWA({
-            registerType: 'autoUpdate',
+            registerType: 'prompt',
             injectRegister: 'auto',
             devOptions: {
                 enabled: true
@@ -18,7 +22,7 @@ export default defineConfig({
                 description: 'Easy Invoicing App',
                 theme_color: '#4f46e5',
                 background_color: '#4f46e5',
-                start_url: '/login',
+                start_url: '/app/login',
                 icons: [
                     {
                         src: '/pwa-icon.svg',

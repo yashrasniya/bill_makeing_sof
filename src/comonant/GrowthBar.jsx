@@ -20,8 +20,8 @@ export default function GrowthBar({ percentageChange,invoices_this_month_count }
                         isPositive ? "text-button_blue" : isNegative ? "text-rose-600" : "to-[#071952]"
                     }`}
                 >
-                    {percentageChange > 0 ? "+" : ""}
-                    {percentageChange.toFixed(1)}%
+                    {/* the API sends null when there is no prior period to compare against */}
+                    {percentageChange == null ? "—" : `${percentageChange > 0 ? "+" : ""}${percentageChange.toFixed(1)}%`}
                 </div>
             </div>
 
@@ -40,8 +40,8 @@ export default function GrowthBar({ percentageChange,invoices_this_month_count }
 
                 {/* Percentage badge */}
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-800 bg-white/60 px-2 py-0.5 rounded">
-                    {percentageChange > 0 ? "+" : ""}
-                    {percentageChange.toFixed(1)}%
+                    {/* the API sends null when there is no prior period to compare against */}
+                    {percentageChange == null ? "—" : `${percentageChange > 0 ? "+" : ""}${percentageChange.toFixed(1)}%`}
                 </div>
             </div>
         </div>

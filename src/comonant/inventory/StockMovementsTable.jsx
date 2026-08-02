@@ -74,6 +74,22 @@ function StockMovementsTable() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {movements.length === 0 && (
+                            <tr>
+                                <td colSpan="6" className="px-6 py-12 text-center">
+                                    <div className="flex flex-col items-center justify-center">
+                                        <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
+                                            <span className="text-2xl">📋</span>
+                                        </div>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-1">No stock movements found</h3>
+                                        <p className="text-gray-500 mb-4">Record your first stock movement to track inventory.</p>
+                                        <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-sm">
+                                            Record Movement
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        )}
                         {movements.map(mov => {
                             const date = new Date(mov.date).toLocaleDateString() + ' ' + new Date(mov.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                             return (

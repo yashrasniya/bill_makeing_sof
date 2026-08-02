@@ -354,7 +354,7 @@ function Login() {
 
                 {/* Back to home */}
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => window.location.href = '/'}
                     style={{
                         marginTop: '20px', background: 'none', border: 'none',
                         cursor: 'pointer', fontSize: '13px', color: '#94a3b8',

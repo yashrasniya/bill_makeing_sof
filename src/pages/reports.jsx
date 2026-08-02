@@ -89,34 +89,16 @@ export default function Reports() {
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap justify-end gap-3">
               <button 
-                onClick={() => navigate('/sales-register')}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-100 transition-colors border border-indigo-200"
-              >
-                <FileText size={16} /> Sales Register
-              </button>
-              <button 
                 onClick={() => navigate('/purchase-register')}
                 className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl font-semibold hover:bg-rose-100 transition-colors border border-rose-200"
               >
                 <FileText size={16} /> Purchase Register
               </button>
               <button 
-                onClick={() => navigate('/customer-ledger')}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-semibold hover:bg-blue-100 transition-colors border border-blue-200"
-              >
-                <FileText size={16} /> Customer Ledger
-              </button>
-              <button 
                 onClick={() => navigate('/supplier-ledger')}
                 className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-600 rounded-xl font-semibold hover:bg-orange-100 transition-colors border border-orange-200"
               >
                 <FileText size={16} /> Supplier Ledger
-              </button>
-              <button 
-                onClick={() => navigate('/gst-summary')}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl font-semibold hover:bg-emerald-100 transition-colors border border-emerald-200"
-              >
-                <FileText size={16} /> GST Summary
               </button>
             </div>
             <div className="flex flex-wrap gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">

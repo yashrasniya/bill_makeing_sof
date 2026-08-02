@@ -20,8 +20,11 @@ import { fetchUser, logoutUser } from "./store/userSlice";
 import { fetchAccess, clearAccess } from "./store/accessSlice";
 import AccessControl from "@/pages/AccessControl";
 import PlatformAdmin from "@/pages/PlatformAdmin";
+import Billing from "@/pages/Billing";
 import InviteAccept from "@/pages/InviteAccept";
 import InvoiceViewPage from "@/pages/InvoiceViewPage";
+import AdminGlobalTemplatesList from './pages/AdminGlobalTemplatesList';
+import AdminGlobalTemplateEdit from './pages/AdminGlobalTemplateEdit';
 import Profile from "./pages/profile";
 import InvoiceTemplateEditor from "@/pages/InvoiceTemplateEditor";
 import TablePage from "@/pages/templates_list";
@@ -147,7 +150,7 @@ function App() {
     return (
         <Routes>
             {/* Public routes */}
-            <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <LandingPage />} />
+            <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <Navigate to="/SignUp" replace />} />
             <Route path="/login" element={isLogin ? <Navigate to="/home" replace /> : <Login />} />
             <Route path="/SignUp" element={<SignUp />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -222,6 +225,22 @@ function App() {
                 }
             />
             <Route
+                path="/admin/global-templates"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <AdminGlobalTemplatesList />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/admin/global-templates/:id"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <AdminGlobalTemplateEdit />
+                    </PrivateRoute>
+                }
+            />
+            <Route
                 path="/thanks-page"
                 element={
                     <PrivateRoute isLogin={isLogin}>
@@ -253,6 +272,15 @@ function App() {
                     <PrivateRoute isLogin={isLogin}>
                         <Navbar />
                         <AccessControl />
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/billing"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <Navbar />
+                        <Billing />
                     </PrivateRoute>
                 }
             />
@@ -334,7 +362,7 @@ function App() {
             />
             {/* WhatsApp connect now lives inside WhatsApp Settings */}
             <Route path="/whatsapp-connect" element={<Navigate to="/whatsapp-settings" replace />} />
-            <Route
+            {/* <Route
                 path="/whatsapp-templates"
                 element={
                     <PrivateRoute isLogin={isLogin}>
@@ -343,7 +371,7 @@ function App() {
                         </RequireFeature>
                     </PrivateRoute>
                 }
-            />
+            /> */}
             <Route
                 path="/cashflow"
                 element={

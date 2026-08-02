@@ -2,12 +2,53 @@ import '../style/Companys.css';
 import { clientToken } from "/src/axios";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 // Shared input focus handlers
 const onFocusIn = e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.12)'; e.target.style.background = 'white'; };
 const onFocusOut = e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#f8fafc'; };
 
 const EMPTY = { name: '', address: '', gst_number: '', state: '', state_code: '', phone_number: '' };
+
+const INDIAN_STATES = [
+    { name: "Andaman and Nicobar Islands", code: "35" },
+    { name: "Andhra Pradesh", code: "37" },
+    { name: "Andhra Pradesh (New)", code: "37" },
+    { name: "Arunachal Pradesh", code: "12" },
+    { name: "Assam", code: "18" },
+    { name: "Bihar", code: "10" },
+    { name: "Chandigarh", code: "04" },
+    { name: "Chattisgarh", code: "22" },
+    { name: "Dadra and Nagar Haveli", code: "26" },
+    { name: "Daman and Diu", code: "25" },
+    { name: "Delhi", code: "07" },
+    { name: "Goa", code: "30" },
+    { name: "Gujarat", code: "24" },
+    { name: "Haryana", code: "06" },
+    { name: "Himachal Pradesh", code: "02" },
+    { name: "Jammu and Kashmir", code: "01" },
+    { name: "Jharkhand", code: "20" },
+    { name: "Karnataka", code: "29" },
+    { name: "Kerala", code: "32" },
+    { name: "Lakshadweep Islands", code: "31" },
+    { name: "Madhya Pradesh", code: "23" },
+    { name: "Maharashtra", code: "27" },
+    { name: "Manipur", code: "14" },
+    { name: "Meghalaya", code: "17" },
+    { name: "Mizoram", code: "15" },
+    { name: "Nagaland", code: "13" },
+    { name: "Odisha", code: "21" },
+    { name: "Pondicherry", code: "34" },
+    { name: "Punjab", code: "03" },
+    { name: "Rajasthan", code: "08" },
+    { name: "Sikkim", code: "11" },
+    { name: "Tamil Nadu", code: "33" },
+    { name: "Telangana", code: "36" },
+    { name: "Tripura", code: "16" },
+    { name: "Uttar Pradesh", code: "09" },
+    { name: "Uttarakhand", code: "05" },
+    { name: "West Bengal", code: "19" }
+];
 
 // Strip absolute DRF pagination URLs to relative paths so axios always
 // uses the configured baseURL (avoids http vs https mismatch in prod).
@@ -37,14 +78,17 @@ const toRelativeUrl = (absoluteUrl) => {
 
 function CompanysTable() {
     const navigate = useNavigate();
+    const { userInfo } = useSelector(state => state.user);
+    const { features, status: accessStatus } = useSelector(state => state.access);
     const [table_content, set_table_content] = useState([]);
-    const [url, set_url] = useState('companies/');
+    const [filters, setFilters] = useState({ s: "", ordering: "-id", page_size: 10 });
+    const [page, setPage] = useState(1);
+    const [showFilters, setShowFilters] = useState(false);
     const [urls, set_urls] = useState({});
     const [checkbox, setCheckBox] = useState({});
     const [company_data, set_company_data] = useState(EMPTY);
     const [refresh, set_refresh] = useState(false);
     const [update, set_update] = useState(false);
-    const [SearchValue, set_SearchValue] = useState('');
     const [popupOpen, setPopupOpen] = useState(false);
     const [pageError, setPageError] = useState('');
     const [errorInfo, setErrorInfo] = useState('');
@@ -52,11 +96,19 @@ function CompanysTable() {
     const [exporting, setExporting] = useState(false);
     const exportRef = useRef(null);
 
+    useEffect(() => { setPage(1); }, [filters]);
+
     useEffect(() => {
-        clientToken.get(url).then(response => {
+        const params = new URLSearchParams();
+        if (filters.s) params.set('search', filters.s);
+        if (filters.ordering) params.set('ordering', filters.ordering);
+        if (filters.page_size) params.set('page_size', filters.page_size);
+        if (page > 1) params.set('page', page);
+
+        clientToken.get(`companies/?${params.toString()}`).then(response => {
             if (response.status === 200) {
                 set_table_content(response.data.results);
-                set_urls({ next: toRelativeUrl(response.data.next), previous: toRelativeUrl(response.data.previous) });
+                set_urls({ next: !!response.data.next, previous: !!response.data.previous });
                 let a = {};
                 response.data.results.forEach(r => { a[r.id] = false; });
                 setCheckBox(a);
@@ -65,7 +117,7 @@ function CompanysTable() {
             console.log(error);
             setPageError(`Failed to load customers. ${error.message || ''}`);
         });
-    }, [url, refresh]);
+    }, [filters, page, refresh]);
 
     // Close export dropdown when clicking outside
     useEffect(() => {
@@ -136,15 +188,17 @@ function CompanysTable() {
     };
 
     const handelUrl = (e) => {
-        const target = urls[e.currentTarget.id];
-        if (!target) return;
-        set_url(target);
+        if (e.currentTarget.id === 'next' && urls.next) setPage(p => p + 1);
+        if (e.currentTarget.id === 'previous' && urls.previous) setPage(p => p - 1);
         setCheckBox({});
     };
 
     const handelSearch = (e) => {
-        set_SearchValue(e.target.value);
-        set_url(`companies/?s=${e.target.value}`);
+        setFilters(prev => ({ ...prev, s: e.target.value }));
+    };
+    
+    const handleChange = (key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
     };
 
     // ── Export Functions ──
@@ -367,97 +421,166 @@ function CompanysTable() {
         <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 
-            {/* ── Header ── */}
-            <div className="companys_header_raper">
-                <div className="title-div">
-                    <p>Customers</p>
-                    <input
-                        placeholder="🔍  Search customers…"
-                        onChange={handelSearch}
-                        value={SearchValue}
-                        className="search input"
-                    />
-                </div>
-                <div className="button-div">
-                    {/* Export Dropdown */}
-                    <div className="export-wrapper" ref={exportRef}>
-                        <div
-                            className="button export-btn"
-                            onClick={() => setExportOpen(prev => !prev)}
-                            style={{ background: exporting ? 'linear-gradient(135deg,#a5b4fc,#c4b5fd)' : undefined }}
-                        >
-                            {exporting ? (
-                                <>
-                                    <div className="export-spinner" />
-                                    Exporting…
-                                </>
-                            ) : (
-                                <>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                        <polyline points="7 10 12 15 17 10" />
-                                        <line x1="12" y1="15" x2="12" y2="3" />
-                                    </svg>
-                                    Export
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="6 9 12 15 18 9" />
-                                    </svg>
-                                </>
-                            )}
+            {/* ── Top Page Title & Actions ── */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '0 24px', paddingTop: '24px' }}>
+                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>Customers</h1>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    {selectedCount > 0 && (
+                        <div className="button delete" onClick={handelMultiDelete}>
+                            Delete ({selectedCount})
                         </div>
-                        {exportOpen && (
-                            <div className="export-dropdown">
-                                <button className="export-dropdown-item" onClick={handleExportCSV}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                        <polyline points="14 2 14 8 20 8" />
-                                    </svg>
-                                    Export as CSV
-                                </button>
-                                <button className="export-dropdown-item" onClick={handleExportJSON}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                        <polyline points="14 2 14 8 20 8" />
-                                    </svg>
-                                    Export as JSON
-                                </button>
-                                <button className="export-dropdown-item" onClick={handleExportPDF}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                        <polyline points="14 2 14 8 20 8" />
-                                        <line x1="9" y1="15" x2="15" y2="15" />
-                                        <line x1="9" y1="11" x2="15" y2="11" />
-                                        <line x1="9" y1="19" x2="13" y2="19" />
-                                    </svg>
-                                    Export All as PDF
-                                </button>
-                                <div className="export-dropdown-divider" />
-                                <button className="export-dropdown-item" onClick={handlePrint}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="6 9 6 2 18 2 18 9" />
-                                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                                        <rect x="6" y="14" width="12" height="8" />
-                                    </svg>
-                                    Print / Save as PDF
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
+                    )}
                     <div className="button" onClick={() => { set_update(false); set_company_data(EMPTY); setPopupOpen(true); }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 36 35" fill="none">
-                            <path d="M22.4655 16.0523L22.4759 7.19432C22.4759 6.80597 22.3196 6.43352 22.0413 6.15891C21.763 5.8843 21.3856 5.73002 20.9921 5.73002C20.5985 5.73002 20.2211 5.8843 19.9429 6.15891C19.6646 6.43352 19.5083 6.80596 19.5083 7.19432L19.5187 16.0523L10.5426 16.042C10.1491 16.042 9.77166 16.1963 9.49339 16.4709C9.21512 16.7455 9.05879 17.1179 9.05879 17.5063C9.05879 17.8947 9.21512 18.2671 9.49339 18.5417C9.77166 18.8163 10.1491 18.9706 10.5426 18.9706L19.5187 18.9603L19.5083 27.8183C19.5075 28.0108 19.5453 28.2016 19.6196 28.3796C19.6939 28.5576 19.8031 28.7193 19.9411 28.8554C20.079 28.9916 20.2429 29.0994 20.4233 29.1727C20.6037 29.246 20.797 29.2834 20.9921 29.2826C21.1872 29.2834 21.3805 29.246 21.5609 29.1727C21.7412 29.0994 21.9051 28.9916 22.0431 28.8554C22.181 28.7193 22.2903 28.5576 22.3646 28.3796C22.4389 28.2016 22.4767 28.0108 22.4759 27.8183L22.4655 18.9603L31.4415 18.9706C31.6366 18.9714 31.8299 18.934 32.0103 18.8607C32.1907 18.7874 32.3546 18.6796 32.4926 18.5435C32.6305 18.4073 32.7398 18.2456 32.814 18.0676C32.8883 17.8896 32.9262 17.6988 32.9254 17.5063C32.9262 17.3138 32.8883 17.123 32.814 16.945C32.7398 16.767 32.6305 16.6053 32.4926 16.4691C32.3546 16.333 32.1907 16.2252 32.0103 16.1519C31.8299 16.0785 31.6366 16.0412 31.4415 16.042L22.4655 16.0523Z" fill="white" />
-                        </svg>
-                        Add Customer
-                    </div>
-                    <div className="button delete" onClick={handelMultiDelete}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 27 27" fill="none">
-                            <path d="M11.25 20.25C11.5484 20.25 11.8345 20.1315 12.0455 19.9205C12.2565 19.7095 12.375 19.4234 12.375 19.125V12.375C12.375 12.0766 12.2565 11.7905 12.0455 11.5795C11.8345 11.3685 11.5484 11.25 11.25 11.25C10.9516 11.25 10.6655 11.3685 10.4545 11.5795C10.2435 11.7905 10.125 12.0766 10.125 12.375V19.125C10.125 19.4234 10.2435 19.7095 10.4545 19.9205C10.6655 20.1315 10.9516 20.25 11.25 20.25ZM22.5 6.75H18V5.625C18 4.72989 17.6444 3.87145 17.0115 3.23851C16.3786 2.60558 15.5201 2.25 14.625 2.25H12.375C11.4799 2.25 10.6214 2.60558 9.98851 3.23851C9.35558 3.87145 9 4.72989 9 5.625V6.75H4.5C4.20163 6.75 3.91548 6.86853 3.7045 7.0795C3.49353 7.29048 3.375 7.57663 3.375 7.875C3.375 8.17337 3.49353 8.45952 3.7045 8.6705C3.91548 8.88147 4.20163 9 4.5 9H5.625V21.375C5.625 22.2701 5.98058 23.1286 6.61351 23.7615C7.24645 24.3944 8.10489 24.75 9 24.75H18C18.8951 24.75 19.7536 24.3944 20.3865 23.7615C21.0194 23.1286 21.375 22.2701 21.375 21.375V9H22.5C22.7984 9 23.0845 8.88147 23.2955 8.6705C23.5065 8.45952 23.625 8.17337 23.625 7.875C23.625 7.57663 23.5065 7.29048 23.2955 7.0795C23.0845 6.86853 22.7984 6.75 22.5 6.75ZM11.25 5.625C11.25 5.32663 11.3685 5.04048 11.5795 4.8295C11.7905 4.61853 12.0766 4.5 12.375 4.5H14.625C14.9234 4.5 15.2095 4.61853 15.4205 4.8295C15.6315 5.04048 15.75 5.32663 15.75 5.625V6.75H11.25V5.625ZM19.125 21.375C19.125 21.6734 19.0065 21.9595 18.7955 22.1705C18.5845 22.3815 18.2984 22.5 18 22.5H9C8.70163 22.5 8.41548 22.3815 8.2045 22.1705C7.99353 21.9595 7.875 21.6734 7.875 21.375V9H19.125V21.375ZM15.75 20.25C16.0484 20.25 16.3345 20.1315 16.5455 19.9205C16.7565 19.7095 16.875 19.4234 16.875 19.125V12.375C16.875 12.0766 16.7565 11.7905 16.5455 11.5795C16.3345 11.3685 16.0484 11.25 15.75 11.25C15.4516 11.25 15.1655 11.3685 14.9545 11.5795C14.7435 11.7905 14.625 12.0766 14.625 12.375V19.125C14.625 19.4234 14.7435 19.7095 14.9545 19.9205C15.1655 20.1315 15.4516 20.25 15.75 20.25Z" fill="white" />
-                        </svg>
-                        Delete{selectedCount > 0 && ` (${selectedCount})`}
+                        + Add New
                     </div>
                 </div>
             </div>
+
+            {/* ── Filters Section ── */}
+            <div style={{
+                position: 'relative', zIndex: 10,
+                background: 'white', borderRadius: '20px',
+                padding: '24px', margin: '0 24px 28px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+                animation: 'fadeUp 0.5s ease 0.1s both',
+                display: 'flex', flexDirection: 'column', gap: '20px'
+            }}>
+                {/* Top Row: Search & Toggle */}
+                <div style={{ width: '100%', display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                    <div style={{ flex: '1 1 auto' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>Search Customers</label>
+                        <div style={{ position: 'relative' }}>
+                            <svg style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input
+                                type="text"
+                                value={filters.s}
+                                onChange={handelSearch}
+                                placeholder="Search by name..."
+                                style={{
+                                    width: '100%', padding: '12px 14px 12px 40px', borderRadius: '12px',
+                                    border: '1.5px solid #e2e8f0', outline: 'none',
+                                    fontSize: '15px', color: '#0f172a', transition: 'all 0.2s',
+                                    backgroundColor: '#f8fafc'
+                                }}
+                                onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.backgroundColor = 'white'; }}
+                                onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.backgroundColor = '#f8fafc'; }}
+                            />
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        style={{
+                            padding: '12px 20px', borderRadius: '12px', background: showFilters ? '#eef2ff' : '#f1f5f9',
+                            color: showFilters ? '#4f46e5' : '#475569', border: showFilters ? '1px solid #c7d2fe' : '1px solid transparent', 
+                            fontWeight: 600, cursor: 'pointer', fontSize: '14px', height: '46px', 
+                            transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px'
+                        }}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                        Filters & Sort
+                    </button>
+                </div>
+
+                {/* Bottom Row: Filters Grid (Collapsible) */}
+                {showFilters && (
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                        {/* Sort By Filter */}
+                        <div style={{ flex: '1 1 180px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Sort By</label>
+                            <select
+                                value={filters.ordering}
+                                onChange={(e) => handleChange("ordering", e.target.value)}
+                                style={{
+                                    width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                    border: '1.5px solid #e2e8f0', outline: 'none',
+                                    fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s',
+                                    backgroundColor: 'white'
+                                }}
+                            >
+                                <option value="-id">Date Added (Newest)</option>
+                                <option value="id">Date Added (Oldest)</option>
+                                <option value="name">Name (A-Z)</option>
+                                <option value="-name">Name (Z-A)</option>
+                            </select>
+                        </div>
+
+                        {/* Page Size */}
+                        <div style={{ flex: '1 1 100px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Page Size</label>
+                            <select
+                                value={filters.page_size}
+                                onChange={(e) => handleChange("page_size", e.target.value)}
+                                style={{
+                                    width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                    border: '1.5px solid #e2e8f0', outline: 'none',
+                                    fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s',
+                                    backgroundColor: 'white'
+                                }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: '8px', flex: '1 1 auto', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setFilters({ s: "", ordering: "-id", page_size: 10 })}
+                                style={{
+                                    padding: '10px 20px', borderRadius: '12px', background: '#f1f5f9',
+                                    color: '#64748b', border: 'none', fontWeight: 700, cursor: 'pointer',
+                                    fontSize: '14px', height: '41px', transition: 'background 0.2s'
+                                }}
+                            >
+                                Clear
+                            </button>
+                            <div className="export-wrapper" ref={exportRef}>
+                                <div
+                                    className="button export-btn"
+                                    onClick={() => {
+                                        if (!(accessStatus === 'succeeded' && features.includes("bulk_export"))) {
+                                            setPageError("Your current subscription does not contain this feature");
+                                            return;
+                                        }
+                                        setExportOpen(prev => !prev);
+                                    }}
+                                    style={{ height: '41px', background: exporting ? 'linear-gradient(135deg,#a5b4fc,#c4b5fd)' : undefined }}
+                                >
+                                    {exporting ? 'Exporting…' : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                <polyline points="7 10 12 15 17 10" />
+                                                <line x1="12" y1="15" x2="12" y2="3" />
+                                            </svg>
+                                            Export
+                                        </>
+                                    )}
+                                </div>
+                                {exportOpen && (
+                                    <div className="export-dropdown" style={{ top: '48px', zIndex: 100 }}>
+                                        <button className="export-dropdown-item" onClick={handleExportCSV}>
+                                            Export as CSV
+                                        </button>
+                                        <button className="export-dropdown-item" onClick={handleExportJSON}>
+                                            Export as JSON
+                                        </button>
+                                        <button className="export-dropdown-item" onClick={handleExportPDF}>
+                                            Export All as PDF
+                                        </button>
+                                        <div className="export-dropdown-divider" />
+                                        <button className="export-dropdown-item" onClick={handlePrint}>
+                                            Print / Save as PDF
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div> 
 
             {pageError && (
                 <div style={{ margin: '16px 24px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', color: '#dc2626', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '1280px', marginLeft: 'auto', marginRight: 'auto' }}>
@@ -471,60 +594,75 @@ function CompanysTable() {
 
             {/* ── Customer Table ── */}
             <div className="companys_table_raper">
-                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)', background: 'white' }}>
-                    <table className="table" style={{ boxShadow: 'none', borderRadius: 0, minWidth: '700px' }}>
-                        <thead>
-                            <tr>
-                                <td style={{ width: '40px' }}>
-                                    <input type="checkbox" className="check-box"
-                                        onChange={e => {
-                                            const list = {};
-                                            Object.keys(checkbox).forEach(id => { list[id] = e.target.checked; });
-                                            setCheckBox(list);
-                                        }}
-                                    />
-                                </td>
-                                <td>Name</td>
-                                <td>GST Number</td>
-                                <td>State</td>
-                                <td>State Code</td>
-                                <td>Phone</td>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {table_content.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontSize: '15px', fontWeight: 600 }}>
-                                        No customers found
-                                    </td>
-                                </tr>
-                            ) : table_content.map((obj, key) => (
-                                <tr key={obj.id}>
-                                    <td>
-                                        <input type="checkbox" className="check-box"
-                                            checked={!!checkbox[obj.id]}
-                                            onChange={e => setCheckBox({ ...checkbox, [obj.id]: e.target.checked })}
-                                            id={String(obj.id)}
-                                        />
-                                    </td>
-                                    <td onClick={() => handelItemsOpen(key)} style={{ cursor: 'pointer' }}>
-                                        {obj.name || '—'}
-                                    </td>
-                                    <td>{obj.gst_number || '—'}</td>
-                                    <td>{obj.state || '—'}</td>
-                                    <td>{obj.state_code || '—'}</td>
-                                    <td>{obj.phone_number || '—'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                <div className="paging">
-                    {urls.previous && <div id="previous" onClick={handelUrl}>← Previous</div>}
-                    {urls.next && <div id="next" onClick={handelUrl}>Next →</div>}
-                </div>
+                {table_content.length === 0 ? (
+                    <div style={{ padding: '60px 20px', textAlign: 'center', background: '#fff', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', background: '#eef2ff', color: '#4f46e5', marginBottom: '16px' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>No Customers Found</h3>
+                        <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px', maxWidth: '300px', margin: '0 auto 24px' }}>It looks like you don't have any customers yet. Get started by adding your first customer!</p>
+                        <button
+                            onClick={() => { set_update(false); set_company_data(EMPTY); setPopupOpen(true); }}
+                            style={{ background: '#4f46e5', color: 'white', fontWeight: 700, fontSize: '14px', padding: '10px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            Add Customer
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)', background: 'white' }}>
+                            <table className="table" style={{ boxShadow: 'none', borderRadius: 0, minWidth: '700px' }}>
+                                <thead>
+                                    <tr>
+                                        <td style={{ width: '40px' }}>
+                                            <input type="checkbox" className="check-box"
+                                                onChange={e => {
+                                                    const list = {};
+                                                    Object.keys(checkbox).forEach(id => { list[id] = e.target.checked; });
+                                                    setCheckBox(list);
+                                                }}
+                                            />
+                                        </td>
+                                        <td>Name</td>
+                                        <td>GST Number</td>
+                                        <td>State</td>
+                                        <td>State Code</td>
+                                        <td>Phone</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {table_content.map((obj, key) => (
+                                        <tr key={obj.id}>
+                                            <td>
+                                                <input type="checkbox" className="check-box"
+                                                    checked={!!checkbox[obj.id]}
+                                                    onChange={e => setCheckBox({ ...checkbox, [obj.id]: e.target.checked })}
+                                                    id={String(obj.id)}
+                                                />
+                                            </td>
+                                            <td onClick={() => handelItemsOpen(key)} style={{ cursor: 'pointer' }}>
+                                                {obj.name || '—'}
+                                            </td>
+                                            <td>{obj.gst_number || '—'}</td>
+                                            <td>{obj.state || '—'}</td>
+                                            <td>{obj.state_code || '—'}</td>
+                                            <td>{obj.phone_number || '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {/* Pagination */}
+                        <div className="paging">
+                            {urls.previous && <div id="previous" onClick={handelUrl}>← Previous</div>}
+                            {urls.next && <div id="next" onClick={handelUrl}>Next →</div>}
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* ── Add / Edit Customer Popup ── */}
@@ -583,7 +721,32 @@ function CompanysTable() {
                             {filed('Customer Name', 'name', '48%')}
                             {filed('Address', 'address', '48%')}
                             {filed('GST Number', 'gst_number', '48%')}
-                            {filed('State', 'state', '22%')}
+                            <div className="form_box" style={{ flexBasis: '22%' }}>
+                                State
+                                <select
+                                    id="state"
+                                    value={company_data.state || ''}
+                                    onFocus={onFocusIn} onBlur={onFocusOut}
+                                    onChange={e => {
+                                        const selectedName = e.target.value;
+                                        const stateObj = INDIAN_STATES.find(s => s.name === selectedName);
+                                        set_company_data({ 
+                                            ...company_data, 
+                                            state: selectedName, 
+                                            ...(stateObj ? { state_code: stateObj.code } : {})
+                                        });
+                                    }}
+                                    style={{
+                                        width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                        border: '1.5px solid #e2e8f0', outline: 'none',
+                                        fontSize: '14px', color: '#0f172a', transition: 'all 0.2s',
+                                        backgroundColor: '#f8fafc', appearance: 'auto', marginTop: '4px'
+                                    }}
+                                >
+                                    <option value="">Select State...</option>
+                                    {INDIAN_STATES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                                </select>
+                            </div>
                             {filed('State Code', 'state_code', '22%', true)}
                             {filed('Phone Number', 'phone_number', '30%')}
                         </div>

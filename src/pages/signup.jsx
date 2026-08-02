@@ -356,7 +356,7 @@ function SignUp() {
 
         {/* Back to home */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => window.location.href = '/'}
           style={{
             margin: '16px 0 32px', background: 'none', border: 'none',
             cursor: 'pointer', fontSize: '13px', color: '#94a3b8',

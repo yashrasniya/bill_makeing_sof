@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../comonant/navbar.jsx";
 import { clientToken } from "@/axios";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 function KpiCard({ icon, label, value, sub, color, delay = 0 }) {
     return (
@@ -35,6 +36,8 @@ function KpiCard({ icon, label, value, sub, color, delay = 0 }) {
 }
 
 const PurchaseInvoices = () => {
+    const { features, status: accessStatus } = useSelector((state) => state.access);
+    const hasOcrFeature = accessStatus === 'succeeded' && features.includes('ocr_purchase_invoice');
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [pendingJobs, setPendingJobs] = useState([]);
@@ -102,6 +105,12 @@ const PurchaseInvoices = () => {
                             style={{ display: 'none' }}
                             accept="application/pdf,image/*"
                             onChange={(e) => {
+                                if (!hasOcrFeature) {
+                                    alert("Your current subscription does not contain this feature");
+                                    e.target.value = '';
+                                    return;
+                                }
+
                                 const file = e.target.files[0];
                                 if (!file) return;
 
@@ -150,7 +159,7 @@ const PurchaseInvoices = () => {
                         </button>
 
                         <button
-                            onClick={() => navigate('/newBill')}
+                            onClick={() => navigate('/newBill?type=purchase')}
                             className="action-btn"
                             style={{
                                 background: '#4f46e5', color: 'white',
@@ -294,7 +303,7 @@ const PurchaseInvoices = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                 <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Recent Purchases</h2>
                                 <button
-                                    onClick={() => navigate('/bill_list')}
+                                    onClick={() => navigate('/bill_list?type=purchase')}
                                     style={{ background: 'transparent', border: 'none', color: '#4f46e5', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
                                 >
                                     View All Invoices →
@@ -325,7 +334,21 @@ const PurchaseInvoices = () => {
                                     </table>
                                 </div>
                             ) : (
-                                <p style={{ textAlign: 'center', color: '#94a3b8', padding: '20px 0', fontSize: '14px' }}>No purchase invoices found.</p>
+                                <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: '#f8fafc', color: '#94a3b8', marginBottom: '16px' }}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                                    </div>
+                                    <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>No Purchases Found</h4>
+                                    <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '20px' }}>You haven't recorded any purchase invoices yet.</p>
+                                    <button
+                                        onClick={() => navigate("/newBill?type=purchase")}
+                                        style={{ background: 'white', color: '#0f172a', fontWeight: 600, fontSize: '14px', padding: '8px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                                    >
+                                        Record Purchase
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </>

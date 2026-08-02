@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { clientToken } from '../axios';
 
 const initialElements = [
@@ -106,6 +107,11 @@ const generateTableHtml = (el) => {
 };
 
 const WeasyprintPreview = () => {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const queryParams = new URLSearchParams(location.search);
+    const urlId = queryParams.get('id');
+
     // ── Editor State ──
     const [elements, setElements] = useState(() => {
         const saved = localStorage.getItem('weasyprint_layout');
@@ -134,6 +140,7 @@ const WeasyprintPreview = () => {
 
     // ── Backend State ──
     const [templateId, setTemplateId] = useState(null);
+    const [templateName, setTemplateName] = useState("Untitled Template");
     const [isSaving, setIsSaving] = useState(false);
     const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
     const [uploadingImg, setUploadingImg] = useState(false);
@@ -287,9 +294,15 @@ const WeasyprintPreview = () => {
     React.useEffect(() => {
         const fetchCloudTemplate = async () => {
             try {
-                const response = await clientToken.get('/yaml/?is_html=true');
+                let endpoint = '/yaml/?is_html=true';
+                if (urlId) endpoint += `&id=${urlId}`;
+                
+                const response = await clientToken.get(endpoint);
                 if (response.data && response.data.id) {
                     setTemplateId(response.data.id);
+                    if (response.data.template_name) {
+                        setTemplateName(response.data.template_name);
+                    }
                     if (response.data.elements && response.data.elements.length > 0) {
                         setElements(response.data.elements);
                     }
@@ -310,10 +323,10 @@ const WeasyprintPreview = () => {
         try {
             const htmlContent = generateHTMLString();
             if (templateId) {
-                await clientToken.put('/yaml/', { id: templateId, is_html: true, elements, html_content: htmlContent });
+                await clientToken.put('/yaml/', { id: templateId, template_name: templateName, is_html: true, elements, html_content: htmlContent });
                 alert("Template successfully saved to cloud!");
             } else {
-                const response = await clientToken.post('/yaml/', { template_name: "Web Editor Layout", is_html: true, elements, html_content: htmlContent });
+                const response = await clientToken.post('/yaml/', { template_name: templateName, is_html: true, elements, html_content: htmlContent });
                 if (response.data && response.data.id) {
                     setTemplateId(response.data.id);
                     alert("Template successfully saved to cloud!");
@@ -628,10 +641,14 @@ ${innerHtml}
         <div className="flex flex-col h-screen bg-gray-50 overflow-hidden text-gray-800 font-sans">
             {/* ── Header ── */}
             <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm z-10 shrink-0">
-                <div>
-                    <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                        HTML Layout Builder
-                    </h1>
+                <div className="flex flex-col gap-1">
+                    <input 
+                        type="text" 
+                        value={templateName}
+                        onChange={(e) => setTemplateName(e.target.value)}
+                        className="text-xl font-bold bg-clip-text text-indigo-700 bg-transparent border-b-2 border-transparent hover:border-indigo-200 focus:border-indigo-500 focus:outline-none focus:text-indigo-900 transition-all px-1 py-0.5 -ml-1"
+                        placeholder="Template Name"
+                    />
                     <p className="text-sm text-gray-500">Design your invoice visually for WeasyPrint PDF</p>
                 </div>
                 <div className="flex gap-3 items-center">

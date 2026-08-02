@@ -37,8 +37,8 @@ function Navbar() {
     // still loading we show everything to avoid a menu flash; once loaded,
     // items whose feature is not in the plan, or whose permission the user
     // lacks, are hidden.
-    const hasFeature = (code) => accessStatus !== 'succeeded' || features.includes(code);
-    const hasPermission = (code) => accessStatus !== 'succeeded' || permissions.includes(code);
+    const hasFeature = (code) => accessStatus === 'succeeded' && features.includes(code);
+    const hasPermission = (code) => accessStatus === 'succeeded' && permissions.includes(code);
     const itemVisible = (item) =>
         (!item.feature || hasFeature(item.feature)) &&
         (!item.permission || hasPermission(item.permission));
@@ -96,7 +96,7 @@ function Navbar() {
             permission: "template.manage",
             subItems: [
                 { title: "My Invoice Templates", link: "/available-templates", feature: "template_designer" },
-                { title: "UI Config", link: "/UIConfig" }
+                { title: "UI Config", link: "/UIConfig", feature: "template_designer" }
             ]
         },
         {
@@ -105,12 +105,16 @@ function Navbar() {
             feature: "advanced_reports",
             permission: "report.view",
             subItems: [
-                { title: "Cashflow", link: "/cashflow" }
+                { title: "Cashflow", link: "/cashflow" },
+                { title: "Sales Register", link: "/sales-register" },
+                { title: "Customer Ledger", link: "/customer-ledger" },
+                { title: "GST Summary", link: "/gst-summary" }
             ]
         },
         {
             title: "Purchases",
             icon: <Package size={20} />,
+            feature: "purchases_invoice",
             subItems: [
                 { title: "Purchase Dashboard", link: "/purchase_invoices", permission: "invoice.view" },
                 { title: "Vendors", link: "/vendors", permission: "vendor.manage" }
@@ -136,11 +140,15 @@ function Navbar() {
     if (isProductOwner) {
         navItems.push({ title: "Platform Admin", link: "/platform-admin", icon: <CreditCard size={20} /> });
     }
+    if (userInfo?.is_superuser) {
+        navItems.push({ title: "Global Templates", link: "/admin/global-templates", icon: <Files size={20} /> });
+    }
 
     let settingsItems = [
         { title: "Profile", link: "/profile", icon: <User size={20} /> },
+        { title: "Plan & Billing", link: "/billing", icon: <CreditCard size={20} />, permission: "subscription.view" },
         { title: "WA Settings", link: "/whatsapp-settings", icon: <MessageCircle size={20} />, permission: "whatsapp.manage" },
-        { title: "WA Templates", link: "/whatsapp-templates", icon: <MessageSquare size={20} />, feature: "whatsapp_integration" },
+        // { title: "WA Templates", link: "/whatsapp-templates", icon: <MessageSquare size={20} />, feature: "whatsapp_integration" },
         { title: "Logout", link: "/logout", icon: <LogOut size={20} color="#ef4444" />, danger: true },
     ];
     settingsItems = settingsItems.filter(itemVisible);
@@ -250,6 +258,11 @@ function Navbar() {
                             {isExpanded && <span className="nav-text" style={{ color: item.danger ? '#ef4444' : 'inherit' }}>{item.title}</span>}
                         </div>
                     ))}
+                    {isExpanded && typeof __APP_VERSION__ !== 'undefined' && (
+                        <div style={{ marginTop: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '10px' }}>
+                            Build: {__APP_VERSION__}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

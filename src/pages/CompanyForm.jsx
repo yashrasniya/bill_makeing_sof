@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser } from "@/store/userSlice";
 import Navbar from "../comonant/navbar.jsx";
+import "./CompanyForm.css";
 
 /* ─── field definitions ─── */
 const COMPANY_FIELDS = [
@@ -26,16 +27,12 @@ const BANK_FIELDS = [
 
 const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS];
 
-/* ─── styles (module-level so they're stable) ─── */
-const baseInput = {
-    width: '100%', padding: '10px 13px', fontSize: '14px',
-    border: '1.5px solid #e2e8f0', borderRadius: '10px',
-    outline: 'none', color: '#0f172a', background: '#f8fafc',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-    boxSizing: 'border-box', fontFamily: 'inherit',
-};
-const onFocusIn = (e) => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.15)'; e.target.style.background = 'white'; };
-const onFocusOut = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#f8fafc'; };
+const ONBOARDING_STEPS = [
+    { icon: '🏢', title: 'Company Details', desc: 'Name, address, GST & email' },
+    { icon: '🖼️', title: 'Brand Logo', desc: 'Appears on every invoice you send' },
+    { icon: '🏦', title: 'Bank Details', desc: 'For payment info on invoices' },
+    { icon: '✅', title: 'Verified & Ready', desc: 'Start billing your customers!' },
+];
 
 /* ─────────────────────────────────────────────────
    IMPORTANT: Field & SectionHeader are defined at
@@ -43,14 +40,17 @@ const onFocusOut = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.sty
    inside would cause React to treat them as a new
    component type on every render, unmounting the
    focused input after every keystroke.
+
+   All presentation lives in CompanyForm.css — hover
+   and focus states are CSS pseudo-classes rather than
+   JS handlers, so a focus ring can be scoped to
+   keyboard users and can't get stuck mid-re-render.
 ───────────────────────────────────────────────── */
 function SectionHeader({ title }) {
     return (
-        <div className="field-span-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0 16px' }}>
-            <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {title}
-            </span>
+        <div className="cf-section-header">
+            <div className="cf-section-header__bar" />
+            <span className="cf-section-header__text">{title}</span>
         </div>
     );
 }
@@ -58,19 +58,13 @@ function SectionHeader({ title }) {
 function Field({ field, value, logoPreview, onChange }) {
     if (field.type === 'file') {
         return (
-            <div className="field-span-2" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.02em' }}>
-                    {field.label}
-                </label>
+            <div className="cf-field field-span-2">
+                {/* no htmlFor here on purpose: the hidden input lives inside the
+                    dropzone's own click handler, so a label activation would
+                    bubble back through it and open the picker twice */}
+                <label className="cf-label">{field.label}</label>
                 <div
-                    style={{
-                        border: '2px dashed #c7d2fe', borderRadius: '12px',
-                        padding: '16px', background: '#fafbff',
-                        display: 'flex', alignItems: 'center', gap: '16px',
-                        cursor: 'pointer', transition: 'border-color 0.2s',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = '#4f46e5'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = '#c7d2fe'}
+                    className="cf-drop"
                     onClick={() => document.getElementById('logo-input').click()}
                 >
                     <input
@@ -82,10 +76,9 @@ function Field({ field, value, logoPreview, onChange }) {
                         style={{ display: 'none' }}
                     />
                     {logoPreview ? (
-                        <img src={logoPreview} alt="logo preview"
-                            style={{ width: '56px', height: '56px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                        <img className="cf-drop__preview" src={logoPreview} alt="logo preview" />
                     ) : (
-                        <div style={{ width: '56px', height: '56px', borderRadius: '10px', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div className="cf-drop__placeholder">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                 <path d="M4 16l4-4 3 3 4-5 5 6H4z" stroke="#4f46e5" strokeWidth="1.5" strokeLinejoin="round" />
                                 <rect x="3" y="3" width="18" height="18" rx="3" stroke="#4f46e5" strokeWidth="1.5" />
@@ -93,10 +86,10 @@ function Field({ field, value, logoPreview, onChange }) {
                         </div>
                     )}
                     <div>
-                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#4f46e5', marginBottom: '2px' }}>
+                        <p className="cf-drop__title">
                             {logoPreview ? 'Change logo' : 'Upload company logo'}
                         </p>
-                        <p style={{ fontSize: '11px', color: '#94a3b8' }}>PNG, JPG up to 5MB</p>
+                        <p className="cf-drop__hint">PNG, JPG up to 5MB</p>
                     </div>
                 </div>
             </div>
@@ -104,21 +97,18 @@ function Field({ field, value, logoPreview, onChange }) {
     }
 
     return (
-        <div className={field.col === 2 ? "field-span-2" : "field-span-1"} style={{
-            display: 'flex', flexDirection: 'column', gap: '5px',
-        }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.02em' }}>
-                {field.label} <span style={{ color: '#ef4444' }}>*</span>
+        <div className={`cf-field ${field.col === 2 ? 'field-span-2' : 'field-span-1'}`}>
+            <label className="cf-label" htmlFor={`cf-${field.name}`}>
+                {field.label} <span className="cf-req">*</span>
             </label>
             <input
+                id={`cf-${field.name}`}
+                className="cf-input"
                 type={field.type}
                 name={field.name}
                 value={value || ''}
                 onChange={onChange}
                 placeholder={field.placeholder}
-                onFocus={onFocusIn}
-                onBlur={onFocusOut}
-                style={baseInput}
             />
         </div>
     );
@@ -206,131 +196,80 @@ export default function CompanyForm() {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%', fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
+        <div className="cf-root">
             {showNavbar && <Navbar />}
-            <style>{`
-                .cf-split   { display: flex; flex: 1; align-items: stretch; }
-                .cf-left    { flex: 0 0 36%; position: relative; overflow: hidden;
-                              background: linear-gradient(145deg,#312e81 0%,#4f46e5 45%,#7c3aed 100%);
-                              display: flex; flex-direction: column; align-items: center; justify-content: center;
-                              padding: 48px 36px; min-height: 100vh;
-                              position: sticky; top: 0; max-height: 100vh; }
-                .cf-right   { flex: 1; display: flex; flex-direction: column; align-items: center;
-                              justify-content: flex-start; background: #f8fafc;
-                              padding: 32px 24px 60px; position: relative; min-width: 0; }
-                .cf-card    { background: white; border-radius: 24px; padding: 36px 38px;
-                              width: 100%; max-width: 620px; position: relative; z-index: 1;
-                              margin-top: 8px; box-sizing: border-box;
-                              box-shadow: 0 16px 56px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04); }
-                .cf-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-                .cf-grid-bank { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
-                .field-span-2 { grid-column: span 2; }
-                .field-span-1 { grid-column: span 1; }
-                @media (max-width: 1024px) {
-                    .cf-left  { flex: 0 0 32%; padding: 32px 20px; }
-                }
-                @media (max-width: 768px) {
-                    .cf-left  { display: none; }
-                    .cf-right { padding: 12px 10px 100px; }
-                    .cf-card  { padding: 22px 16px; border-radius: 16px; margin-top: 0; }
-                    .cf-title { font-size: 20px !important; }
-                    .cf-grid, .cf-grid-bank { grid-template-columns: 1fr; gap: 12px; }
-                    .field-span-2, .field-span-1 { grid-column: 1 / -1 !important; }
-                }
-            `}</style>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
             <div className="cf-split">
 
                 {/* ─────────────── LEFT PANEL (onboarding only) ─────────────── */}
-                {!showNavbar && <div className="cf-left">
-                    <div style={{ position: 'absolute', top: '-90px', left: '-90px', width: '340px', height: '340px', borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', bottom: '-110px', right: '-70px', width: '380px', height: '380px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', top: '60%', right: '-50px', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+                {!showNavbar && (
+                    <div className="cf-left">
+                        <div className="cf-orb cf-orb--a" />
+                        <div className="cf-orb cf-orb--b" />
+                        <div className="cf-orb cf-orb--c" />
 
-                    <div style={{
-                        width: '60px', height: '60px', borderRadius: '16px',
-                        background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255,255,255,0.25)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        marginBottom: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                    }}>
-                        <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
-                    </div>
-
-                    <h2 style={{ fontSize: '26px', fontWeight: 900, color: 'white', letterSpacing: '-0.8px', textAlign: 'center', marginBottom: '10px' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span>
-                    </h2>
-                    <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 1.7, maxWidth: '260px', marginBottom: '36px' }}>
-                        Set up your company profile to start creating professional invoices.
-                    </p>
-
-                    {[
-                        { icon: '🏢', title: 'Company Details', desc: 'Name, address, GST & email' },
-                        { icon: '🖼️', title: 'Brand Logo', desc: 'Appears on every invoice you send' },
-                        { icon: '🏦', title: 'Bank Details', desc: 'For payment info on invoices' },
-                        { icon: '✅', title: 'Verified & Ready', desc: 'Start billing your customers!' },
-                    ].map((item, i) => (
-                        <div key={i} style={{
-                            display: 'flex', alignItems: 'flex-start', gap: '12px',
-                            background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(8px)',
-                            border: '1px solid rgba(255,255,255,0.15)',
-                            borderRadius: '14px', padding: '13px 16px',
-                            marginBottom: '9px', width: '100%', maxWidth: '290px',
-                        }}>
-                            <span style={{ fontSize: '20px', flexShrink: 0 }}>{item.icon}</span>
-                            <div>
-                                <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '2px' }}>{item.title}</div>
-                                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)' }}>{item.desc}</div>
-                            </div>
+                        <div className="cf-badge">
+                            <img src={orvineLogo} alt="" />
                         </div>
-                    ))}
-                </div>}
+
+                        <h2>
+                            <span className="cf-wordmark">Invoice Orvine</span>
+                        </h2>
+                        <p className="cf-lede">
+                            Set up your company profile to start creating professional invoices.
+                        </p>
+
+                        {ONBOARDING_STEPS.map((item) => (
+                            <div className="cf-step" key={item.title}>
+                                <span className="cf-step__icon">{item.icon}</span>
+                                <div>
+                                    <div className="cf-step__title">{item.title}</div>
+                                    <div className="cf-step__desc">{item.desc}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* ─────────────── RIGHT PANEL ─────────────── */}
                 <div className="cf-right">
-                    <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '240px', height: '240px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                    <div className="cf-glow cf-glow--a" />
+                    <div className="cf-glow cf-glow--b" />
 
                     {/* Error toast */}
                     {error && (
-                        <div style={{
-                            position: 'fixed', top: '20px', right: '20px', zIndex: 1000,
-                            background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px',
-                            padding: '12px 16px', fontSize: '13px', color: '#dc2626', fontWeight: 500,
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                            display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '380px',
-                        }}>
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="#dc2626">
+                        <div className="cf-toast" role="alert">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="#dc2626" aria-hidden="true">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-9V7a1 1 0 10-2 0v2a1 1 0 102 0zm0 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
                             </svg>
-                            <span style={{ flex: 1 }}>{error}</span>
-                            <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '16px' }}>✕</button>
+                            <span className="cf-toast__msg">{error}</span>
+                            <button
+                                className="cf-toast__close"
+                                onClick={() => setError(null)}
+                                aria-label="Dismiss"
+                            >✕</button>
                         </div>
                     )}
 
                     {/* Card */}
                     <div className="cf-card">
                         {/* Header */}
-                        <div style={{ marginBottom: '28px' }}>
+                        <div className="cf-head">
                             {!showNavbar && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                                    <div style={{
-                                        width: '32px', height: '32px', borderRadius: '9px',
-                                        background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        boxShadow: '0 4px 10px rgba(79,70,229,0.3)',
-                                    }}>
-                                        <img src={orvineLogo} style={{ width: '90%', height: '90%', objectFit: 'contain' }} alt="" />
+                                <div className="cf-brandline">
+                                    <div className="cf-mark">
+                                        <img src={orvineLogo} alt="" />
                                     </div>
-                                    <span style={{ fontSize: '15px', fontWeight: 800, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                        <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Invoice Orvine</span>
+                                    <span className="cf-brandname">
+                                        <span className="cf-wordmark">Invoice Orvine</span>
                                     </span>
                                 </div>
                             )}
-                            <h2 className="cf-title" style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.6px', marginBottom: '4px' }}>
+                            <h2 className="cf-title">
                                 {showNavbar ? 'My Company' : 'Your Company Details'}
                             </h2>
-                            <p style={{ fontSize: '14px', color: '#94a3b8' }}>
+                            <p className="cf-subtitle">
                                 {showNavbar
                                     ? 'Update your company profile — changes appear on new invoices.'
                                     : 'This info will appear on all your invoices — make it accurate!'}
@@ -352,10 +291,10 @@ export default function CompanyForm() {
                                 ))}
                             </div>
 
-                            <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0 24px' }} />
+                            <div className="cf-divider" />
 
                             {/* Bank Details section */}
-                            <div className="cf-grid-bank">
+                            <div className="cf-grid">
                                 <SectionHeader title="🏦  Bank Details" />
                                 {BANK_FIELDS.map(f => (
                                     <Field
@@ -369,27 +308,10 @@ export default function CompanyForm() {
                             </div>
 
                             {/* Submit */}
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                style={{
-                                    width: '100%', padding: '13px', fontSize: '15px', fontWeight: 700,
-                                    color: 'white',
-                                    background: loading
-                                        ? 'linear-gradient(135deg, #818cf8, #a78bfa)'
-                                        : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                                    border: 'none', borderRadius: '12px',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    boxShadow: '0 6px 20px rgba(79,70,229,0.35)',
-                                    transition: 'transform 0.2s, box-shadow 0.2s',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                }}
-                                onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 10px 28px rgba(79,70,229,0.45)'; } }}
-                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(79,70,229,0.35)'; }}
-                            >
+                            <button type="submit" className="cf-submit" disabled={loading}>
                                 {loading ? (
                                     <>
-                                        <svg style={{ animation: 'spin 1s linear infinite' }} width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <svg className="cf-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                             <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
                                             <path d="M12 2a10 10 0 0110 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
                                         </svg>
@@ -398,7 +320,7 @@ export default function CompanyForm() {
                                 ) : (
                                     <>
                                         {showNavbar ? 'Save Changes' : 'Save & Continue'}
-                                        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                                        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
                                             <path d="M3 9h12M9 3l6 6-6 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </>
@@ -407,11 +329,7 @@ export default function CompanyForm() {
                         </form>
                     </div>
 
-                    <div style={{ height: '40px' }} />
-
-                    <style>{`
-                    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                `}</style>
+                    <div className="cf-tailspace" />
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function ExportDropdown({ onExport }) {
+export default function ExportDropdown({ onExport, onClick }) {
     const [open, setOpen] = useState(false);
 
     const handleSelect = (format) => {
@@ -13,7 +13,12 @@ export default function ExportDropdown({ onExport }) {
             {/* Main button */}
             <button
                 className="border border-gray-400 px-4 py-2 rounded hover:bg-gray-100 transition flex items-center gap-2"
-                onClick={() => setOpen((prev) => !prev)}
+                onClick={() => {
+                    if (onClick) {
+                        if (!onClick()) return;
+                    }
+                    setOpen((prev) => !prev);
+                }}
             >
                 Export
                 <svg

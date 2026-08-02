@@ -257,93 +257,107 @@ function History({ show_header = true, filters = {} }) {
                 <Loader />
             ) : (
                 <div className="w-full overflow-x-auto">
-                    {/* Desktop Table */}
-                    <table
-                        className="
-      hidden md:table
-      w-full
-      text-[#0B666A]
-      font-inter
-      not-italic
-      leading-normal
-      border-collapse
-      text-center
-    "
-                    >
-                        <thead>
-                            <tr>
-                                <td className="w-1/4 px-2 py-2">INVOICE NO.</td>
-                                <td className="px-2 py-2">DATE</td>
-                                <td className="px-2 py-2">CUSTOMER / VENDOR</td>
-                                <td className="px-2 py-2">AMOUNT</td>
-                                <td className="px-2 py-2">STATUS</td>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {invoice_data.map((obj, index) => (
-                                <TableRow
-                                    key={index}
-                                    index={index}
-                                    obj={obj}
-                                    refresh={refresh}
-                                    setRefresh={setRefresh}
-                                />
-                            ))}
-                        </tbody>
-                    </table>
-
-
-
-                    {/* Mobile Card List */}
-                    <div className="md:hidden">
-                        {invoice_data.map((obj, index) => (
-                            <CardRow
-                                key={index}
-                                index={index}
-                                obj={obj}
-                                refresh={refresh}
-                                setRefresh={setRefresh}
-                            />
-                        ))}
-                    </div>
-
                     {invoice_data.length === 0 ? (
-                        <p className="text-center w-full">No Data</p>
-                    ) : (
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '20px', paddingBottom: '10px' }}>
+                        <div style={{ padding: '60px 20px', textAlign: 'center', background: '#fff', borderRadius: '16px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', background: '#eef2ff', color: '#4f46e5', marginBottom: '16px' }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            </div>
+                            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>No Bills Found</h3>
+                            <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px', maxWidth: '300px', margin: '0 auto 24px' }}>It looks like you don't have any bills yet. Get started by creating your first bill!</p>
                             <button
-                                onClick={() => page > 1 && setPage(page - 1)}
-                                disabled={page === 1}
-                                style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    width: '36px', height: '36px', borderRadius: '10px',
-                                    border: '1.5px solid #e2e8f0', background: page > 1 ? 'white' : '#f8fafc',
-                                    cursor: page > 1 ? 'pointer' : 'not-allowed', color: page > 1 ? '#4f46e5' : '#cbd5e1',
-                                    transition: 'all 0.2s', boxShadow: page > 1 ? '0 2px 4px rgba(0,0,0,0.02)' : 'none'
-                                }}
-                                onMouseEnter={e => { if (page > 1) { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#eef2ff'; } }}
-                                onMouseLeave={e => { if (page > 1) { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; } }}
+                                onClick={() => navigate("/newBill")}
+                                style={{ background: '#4f46e5', color: 'white', fontWeight: 700, fontSize: '14px', padding: '10px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                             >
-                                <ChevronLeft size={18} />
-                            </button>
-                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                                PAGE {current_page}
-                            </span>
-                            <button
-                                onClick={() => setPage(page + 1)}
-                                style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    width: '36px', height: '36px', borderRadius: '10px',
-                                    border: '1.5px solid #e2e8f0', background: 'white',
-                                    cursor: 'pointer', color: '#4f46e5',
-                                    transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#eef2ff'; }}
-                                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; }}
-                            >
-                                <ChevronRight size={18} />
+                                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                                    <path d="M9 3v12M3 9h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                                </svg>
+                                Create Your First Bill
                             </button>
                         </div>
+                    ) : (
+                        <>
+                            {/* Desktop Table */}
+                            <table
+                                className="
+                                    hidden md:table
+                                    w-full
+                                    text-[#0B666A]
+                                    font-inter
+                                    not-italic
+                                    leading-normal
+                                    border-collapse
+                                    text-center
+                                "
+                            >
+                                <thead>
+                                    <tr>
+                                        <td className="w-1/4 px-2 py-2">INVOICE NO.</td>
+                                        <td className="px-2 py-2">DATE</td>
+                                        <td className="px-2 py-2">CUSTOMER / VENDOR</td>
+                                        <td className="px-2 py-2">AMOUNT</td>
+                                        <td className="px-2 py-2">STATUS</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {invoice_data.map((obj, index) => (
+                                        <TableRow
+                                            key={index}
+                                            index={index}
+                                            obj={obj}
+                                            refresh={refresh}
+                                            setRefresh={setRefresh}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* Mobile Card List */}
+                            <div className="md:hidden">
+                                {invoice_data.map((obj, index) => (
+                                    <CardRow
+                                        key={index}
+                                        index={index}
+                                        obj={obj}
+                                        refresh={refresh}
+                                        setRefresh={setRefresh}
+                                    />
+                                ))}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '20px', paddingBottom: '10px' }}>
+                                <button
+                                    onClick={() => page > 1 && setPage(page - 1)}
+                                    disabled={page === 1}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        width: '36px', height: '36px', borderRadius: '10px',
+                                        border: '1.5px solid #e2e8f0', background: page > 1 ? 'white' : '#f8fafc',
+                                        cursor: page > 1 ? 'pointer' : 'not-allowed', color: page > 1 ? '#4f46e5' : '#cbd5e1',
+                                        transition: 'all 0.2s', boxShadow: page > 1 ? '0 2px 4px rgba(0,0,0,0.02)' : 'none'
+                                    }}
+                                    onMouseEnter={e => { if (page > 1) { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#eef2ff'; } }}
+                                    onMouseLeave={e => { if (page > 1) { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; } }}
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                    PAGE {current_page}
+                                </span>
+                                <button
+                                    onClick={() => setPage(page + 1)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        width: '36px', height: '36px', borderRadius: '10px',
+                                        border: '1.5px solid #e2e8f0', background: 'white',
+                                        cursor: 'pointer', color: '#4f46e5',
+                                        transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#eef2ff'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; }}
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
             )}

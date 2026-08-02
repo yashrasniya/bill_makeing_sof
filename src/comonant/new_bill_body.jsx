@@ -1,7 +1,7 @@
 import '../style/bill.css';
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { clientToken } from "@/axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import PdfOpener from "@/utility/pdf_opener";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
@@ -97,6 +97,16 @@ function NewBillBody({ id }) {
     const [cfValues, setCFValues] = useState({});
     const [uploadingImg, setUploadingImg] = useState(false);
     let navigate = useNavigate()
+    const location = useLocation()
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const typeParam = params.get('type');
+        // Only override if creating a new bill (no id) and no type is selected yet
+        if (typeParam && !id && !InvoiceData?.invoice_type) {
+            setInvoiceData(prev => ({ ...prev, invoice_type: typeParam }));
+        }
+    }, [location.search, id]);
 
     const showToast = useCallback((message, type = 'error') => {
         const id = Date.now() + Math.random();
@@ -243,11 +253,75 @@ function NewBillBody({ id }) {
     }, [refresh]);
 
 
+    const calculateProductTotals = (productProps) => {
+        let total = 1;
+        let extraCal = 0;
+        
+        function calculate(abc) {
+            const item = abc.new_product_in_frontend;
+            let currentCalculatedVal = abc.value;
+
+            if (item.is_calculable) {
+                if (item.formula) {
+                    const val = parseFloat(abc.value) || 0;
+                    if (item.formula === '+') {
+                        if (item.on_with_out_gst_amount) extraCal += val;
+                        else total += val;
+                    } else if (item.formula === '-') {
+                        if (item.on_with_out_gst_amount) extraCal -= val;
+                        else total -= val;
+                    } else if (item.formula === '/') {
+                        total /= val || 1;
+                    } else if (item.formula === '%+') {
+                        currentCalculatedVal = (val / 100) * total;
+                        if (item.on_with_out_gst_amount) extraCal += currentCalculatedVal;
+                        else total += currentCalculatedVal;
+                    } else if (item.formula === '%-') {
+                        currentCalculatedVal = (val / 100) * total;
+                        if (item.on_with_out_gst_amount) extraCal -= currentCalculatedVal;
+                        else total -= currentCalculatedVal;
+                    }
+                } else {
+                    if (abc.value && item.input_title !== 'GST') {
+                        total *= parseFloat(abc.value);
+                    }
+                }
+            }
+        }
+
+        [...productProps]
+            .sort((a, b) => {
+                const aFormula = a.new_product_in_frontend?.formula;
+                const bFormula = b.new_product_in_frontend?.formula;
+                if (!aFormula && bFormula) return -1;
+                if (aFormula && !bFormula) return 1;
+                return 0;
+            })
+            .forEach(calculate);
+
+        let gstAmount = 0;
+        if (
+            productProps.length > 0 &&
+            bill_body_items.some((o) => o.input_title === 'GST')
+        ) {
+            const gstItem = bill_body_items.find((o) => o.input_title === 'GST');
+            const gstProp = productProps.find(p => p.new_product_in_frontend?.id === gstItem.id);
+            const gst = gstProp ? gstProp.value : 0;
+            gstAmount = gst ? total * (parseFloat(gst) / 100) : 0;
+        }
+
+        return {
+            total_amount: (total + gstAmount + extraCal).toFixed(2),
+            gst_amount: gstAmount.toFixed(2)
+        };
+    };
+
     const handelSave = (obj, update_data = false) => {
         console.log(new_product)
         var temp_opj = { product_properties: [] }
         console.log(table_content)
         if (update_data) {
+            const totals = calculateProductTotals(new_product.product_properties);
             const promises = new_product.product_properties.map((obj) => {
                 if (obj.id !== undefined) {
                     const form = new FormData()
@@ -261,8 +335,8 @@ function NewBillBody({ id }) {
                         if (response.status === 200) {
                             const productUpdateForm = new FormData()
                             productUpdateForm.append('product_properties', response.data.id)
-                            productUpdateForm.append('gst_amount', 0)
-                            productUpdateForm.append('total_amount', 0)
+                            productUpdateForm.append('gst_amount', totals.gst_amount)
+                            productUpdateForm.append('total_amount', totals.total_amount)
                             return clientToken.post(`product/${new_product.id}/update/`, productUpdateForm)
                         }
                     })
@@ -270,6 +344,11 @@ function NewBillBody({ id }) {
             })
 
             Promise.all(promises).then(() => {
+                const productUpdateForm = new FormData()
+                productUpdateForm.append('gst_amount', totals.gst_amount)
+                productUpdateForm.append('total_amount', totals.total_amount)
+                return clientToken.post(`product/${new_product.id}/update/`, productUpdateForm)
+            }).then(() => {
                 setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
                 setPop_up_properties('none')
                 setRefresh(r => !r)
@@ -292,16 +371,46 @@ function NewBillBody({ id }) {
                 }
             }
 
+            const totals = calculateProductTotals(new_product.product_properties);
             const form = new FormData()
             form.append('product_properties', '')
-            form.append('gst_amount', 0)
-            form.append('total_amount', 0)
-            clientToken.post('product/', form).then((response) => {
+            form.append('gst_amount', totals.gst_amount)
+            form.append('total_amount', totals.total_amount)
+
+            // Helper: ensure we have an invoice ID before adding products.
+            // On a brand-new invoice the auto-save may not have fired yet,
+            // so InvoiceData.id can be undefined. Create the invoice first.
+            const ensureInvoiceId = async () => {
+                if (InvoiceData.id) return InvoiceData.id;
+                const invoiceForm = new FormData();
+                Object.keys(InvoiceData).forEach(k => {
+                    if (k !== 'products' && InvoiceData[k]) {
+                        if ((k === 'receiver' || k === 'vendor') && typeof InvoiceData[k] === 'object') {
+                            invoiceForm.append(k, InvoiceData[k].id);
+                        } else if (k === 'custom_header_field') {
+                            invoiceForm.append(k, typeof InvoiceData[k] === 'object' ? JSON.stringify(InvoiceData[k]) : InvoiceData[k]);
+                        } else {
+                            invoiceForm.append(k, InvoiceData[k]);
+                        }
+                    }
+                });
+                const res = await clientToken.post('invoice/', invoiceForm);
+                if (res.status === 200) {
+                    setInvoiceData(res.data);
+                    setInvoiceNumber(res.data.invoice_number);
+                    setUrl(`invoice/${res.data.id}/update/`);
+                    navigate(`/bill/${res.data.id}`);
+                    return res.data.id;
+                }
+                throw new Error('Failed to create invoice');
+            };
+
+            clientToken.post('product/', form).then(async (response) => {
                 if (response.status === 200) {
                     id = response.data.id
                     if (new_product.product_properties.length > 0) {
-
-                        clientToken.post(`invoice/${InvoiceData.id}/product/add/`, { product_id: response.data.id }).then((response) => {
+                        const invoiceId = await ensureInvoiceId();
+                        clientToken.post(`invoice/${invoiceId}/product/add/`, { product_id: response.data.id }).then((response) => {
                             if (response.status === 200) {
                                 // NEW STOCK DEDUCTION LOGIC (Runs exactly once per product added)
                                 if (selectedInventoryProductId && parsedQuantity > 0) {
@@ -309,7 +418,7 @@ function NewBillBody({ id }) {
                                     stockForm.append('product', selectedInventoryProductId);
                                     stockForm.append('quantity', parsedQuantity);
                                     stockForm.append('movement_type', 'OUT');
-                                    stockForm.append('notes', `Auto-deducted for Invoice #${InvoiceData.id || 'Unknown'}`);
+                                    stockForm.append('notes', `Auto-deducted for Invoice #${invoiceId || 'Unknown'}`);
 
                                     // Fire and forget stock deduction
                                     clientToken.post('/inventory/stock-movements/', stockForm, { suppressErrorToast: true })
@@ -325,8 +434,8 @@ function NewBillBody({ id }) {
                                         if (response.status === 200) {
                                             const productUpdateForm = new FormData()
                                             productUpdateForm.append('product_properties', response.data.id)
-                                            productUpdateForm.append('gst_amount', 0)
-                                            productUpdateForm.append('total_amount', 0)
+                                            productUpdateForm.append('gst_amount', totals.gst_amount)
+                                            productUpdateForm.append('total_amount', totals.total_amount)
                                             clientToken.post(`product/${id}/update/`, productUpdateForm).then((response) => {
                                                 if (response.status === 200) {
                                                     setRefresh(prev => !prev);
@@ -777,7 +886,7 @@ function NewBillBody({ id }) {
 
                         <p>New Product</p>
 
-                        {!update && (
+                        {!update && canInventory && (
                             <div className="mb-4 mt-2">
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">
                                     Quick Fill from Inventory
@@ -951,25 +1060,27 @@ function NewBillBody({ id }) {
                     </select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto', minWidth: '160px' }}>
-                    <button
-                        onClick={() => setShowCFPopup(true)}
-                        style={{
-                            padding: '10px 14px', borderRadius: '12px',
-                            background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: 'white',
-                            border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 700,
-                            boxShadow: '0 4px 14px rgba(79,70,229,0.25)', width: '100%',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                            transition: 'transform 0.15s, box-shadow 0.15s',
-                            boxSizing: 'border-box',
-                            height: '40px',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(79,70,229,0.35)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(79,70,229,0.25)'; }}
-                    >
-                        ⚙️ Header Options
-                    </button>
-                </div>
+                {customFields && customFields.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto', minWidth: '160px' }}>
+                        <button
+                            onClick={() => setShowCFPopup(true)}
+                            style={{
+                                padding: '10px 14px', borderRadius: '12px',
+                                background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: 'white',
+                                border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 700,
+                                boxShadow: '0 4px 14px rgba(79,70,229,0.25)', width: '100%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                transition: 'transform 0.15s, box-shadow 0.15s',
+                                boxSizing: 'border-box',
+                                height: '40px',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(79,70,229,0.35)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(79,70,229,0.25)'; }}
+                        >
+                            ⚙️ Header Options
+                        </button>
+                    </div>
+                )}
 
             </div>
             <div className={'header-button '}>
