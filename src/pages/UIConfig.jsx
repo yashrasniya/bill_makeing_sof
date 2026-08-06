@@ -33,6 +33,15 @@ const inp = {
 const focIn = e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.12)'; e.target.style.background = 'white'; };
 const focOut = e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#f8fafc'; };
 
+/* delete button shown on each row of the list */
+const rowDelBtn = {
+    flexShrink: 0, width: '28px', height: '28px', lineHeight: 1,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '14px', color: '#dc2626', background: 'transparent',
+    border: '1.5px solid transparent', borderRadius: '8px',
+    cursor: 'pointer', transition: 'all 0.15s',
+};
+
 const UIConfig = () => {
     const [activeTab, setActiveTab] = useState("productFields"); // "productFields" | "customFields"
 
@@ -46,7 +55,9 @@ const UIConfig = () => {
     const [selectedCF, setSelectedCF] = useState(null);
     const [cfFormData, setCFFormData] = useState({});
 
-    const { userInfo } = useSelector((state) => state.user);
+    const { permissions, status: accessStatus } = useSelector((state) => state.access);
+    // Mirrors the backend gate on these endpoints (template.manage), not is_staff.
+    const canManage = accessStatus === 'succeeded' && permissions.includes('template.manage');
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null); // { type: 'success' | 'error', msg }
 
@@ -170,17 +181,20 @@ const UIConfig = () => {
             .finally(() => setSaving(false));
     };
 
-    const handleDelete = () => {
-        if (!window.confirm("Are you sure you want to delete this config?")) return;
+    const handleDelete = (item = formData) => {
+        if (!item?.id || String(item.id).startsWith('new_')) return;
+        if (!window.confirm(`Delete "${item.input_title || 'this config'}"? This cannot be undone.`)) return;
         setSaving(true);
         clientToken
-            .delete(`new/product/in/frontend/${formData.id}/update/`, { data: formData })
+            .delete(`new/product/in/frontend/${item.id}/update/`)
             .then((response) => {
                 if (response.status === 204 || response.status === 200) {
                     showToast('success', "Deleted successfully.");
-                    setProducts(products.filter((p) => p.id !== formData.id));
-                    setSelected(null);
-                    setFormData({});
+                    setProducts(products.filter((p) => p.id !== item.id));
+                    if (selected === item.id) {
+                        setSelected(null);
+                        setFormData({});
+                    }
                 }
             })
             .catch(() => showToast('error', 'Failed to delete.'))
@@ -218,16 +232,19 @@ const UIConfig = () => {
             .finally(() => setSaving(false));
     };
 
-    const handleCFDelete = () => {
-        if (!window.confirm("Are you sure you want to delete this custom field?")) return;
+    const handleCFDelete = (item = cfFormData) => {
+        if (!item?.id || String(item.id).startsWith('new_')) return;
+        if (!window.confirm(`Delete "${item.name || 'this custom field'}"? This cannot be undone.`)) return;
         setSaving(true);
         clientToken
-            .delete(`custom-fields/${cfFormData.id}/`)
+            .delete(`custom-fields/${item.id}/`)
             .then(() => {
                 showToast('success', "Deleted custom field successfully.");
-                setCustomFields(customFields.filter((cf) => cf.id !== cfFormData.id));
-                setSelectedCF(null);
-                setCFFormData({});
+                setCustomFields(customFields.filter((cf) => cf.id !== item.id));
+                if (selectedCF === item.id) {
+                    setSelectedCF(null);
+                    setCFFormData({});
+                }
             })
             .catch(() => showToast('error', 'Failed to delete custom field.'))
             .finally(() => setSaving(false));
@@ -364,11 +381,27 @@ const UIConfig = () => {
                                                 fontWeight: selected === p.id ? 700 : 600,
                                                 fontSize: '14px', cursor: 'pointer',
                                                 transition: 'all 0.15s',
+                                                display: 'flex', alignItems: 'center', gap: '8px',
                                             }}
                                             onMouseEnter={e => { if (selected !== p.id) { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; } }}
                                             onMouseLeave={e => { if (selected !== p.id) { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; } }}
                                         >
-                                            📄 {p.input_title || 'Untitled'}
+                                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                📄 {p.input_title || 'Untitled'}
+                                            </span>
+                                            {canManage && (
+                                                <button
+                                                    title="Delete this config"
+                                                    aria-label={`Delete ${p.input_title || 'Untitled'}`}
+                                                    disabled={saving}
+                                                    onClick={(e) => { e.stopPropagation(); handleDelete(p); }}
+                                                    style={{ ...rowDelBtn, cursor: saving ? 'not-allowed' : 'pointer' }}
+                                                    onMouseEnter={e => { if (!saving) { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fca5a5'; } }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                                                >
+                                                    🗑
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -392,11 +425,27 @@ const UIConfig = () => {
                                                 fontWeight: selectedCF === cf.id ? 700 : 600,
                                                 fontSize: '14px', cursor: 'pointer',
                                                 transition: 'all 0.15s',
+                                                display: 'flex', alignItems: 'center', gap: '8px',
                                             }}
                                             onMouseEnter={e => { if (selectedCF !== cf.id) { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; } }}
                                             onMouseLeave={e => { if (selectedCF !== cf.id) { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; } }}
                                         >
-                                            🛠️ {cf.name || 'Untitled Field'}
+                                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                🛠️ {cf.name || 'Untitled Field'}
+                                            </span>
+                                            {canManage && (
+                                                <button
+                                                    title="Delete this custom field"
+                                                    aria-label={`Delete ${cf.name || 'Untitled Field'}`}
+                                                    disabled={saving}
+                                                    onClick={(e) => { e.stopPropagation(); handleCFDelete(cf); }}
+                                                    style={{ ...rowDelBtn, cursor: saving ? 'not-allowed' : 'pointer' }}
+                                                    onMouseEnter={e => { if (!saving) { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fca5a5'; } }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                                                >
+                                                    🗑
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -509,9 +558,9 @@ const UIConfig = () => {
 
                                     {/* Actions */}
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
-                                        {userInfo?.is_staff && formData.id && !String(formData.id).startsWith('new_') && (
+                                        {canManage && formData.id && !String(formData.id).startsWith('new_') && (
                                             <button
-                                                onClick={handleDelete}
+                                                onClick={() => handleDelete()}
                                                 disabled={saving}
                                                 style={{
                                                     padding: '10px 24px', fontSize: '14px', fontWeight: 700, color: '#dc2626',
@@ -607,9 +656,9 @@ const UIConfig = () => {
 
                                     {/* Actions */}
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
-                                        {cfFormData.id && !String(cfFormData.id).startsWith('new_') && (
+                                        {canManage && cfFormData.id && !String(cfFormData.id).startsWith('new_') && (
                                             <button
-                                                onClick={handleCFDelete}
+                                                onClick={() => handleCFDelete()}
                                                 disabled={saving}
                                                 style={{
                                                     padding: '10px 24px', fontSize: '14px', fontWeight: 700, color: '#dc2626',

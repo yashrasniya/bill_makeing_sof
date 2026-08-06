@@ -117,6 +117,7 @@ function Navbar() {
             feature: "purchases_invoice",
             subItems: [
                 { title: "Purchase Dashboard", link: "/purchase_invoices", permission: "invoice.view" },
+                { title: "OCR Invoices", link: "/ocr-invoices", feature: "ocr_purchase_invoice", permission: "invoice.view" },
                 { title: "Vendors", link: "/vendors", permission: "vendor.manage" }
             ]
         },

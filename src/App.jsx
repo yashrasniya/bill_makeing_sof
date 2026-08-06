@@ -35,6 +35,7 @@ import AvailableTemplates from "./pages/AvailableTemplates";
 import PrivacyPolicy from "./pages/privacy";
 import WeasyprintPreview from "./pages/WeasyprintPreview";
 import PurchaseInvoices from "./pages/PurchaseInvoices";
+import OcrInvoices from "./pages/OcrInvoices";
 import Vendors from "./pages/Vendors";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import WhatsAppTemplates from "./pages/WhatsAppTemplates";
@@ -450,6 +451,16 @@ function App() {
                     <PrivateRoute isLogin={isLogin}>
                         <RequirePermission permission="invoice.view">
                             <PurchaseInvoices />
+                        </RequirePermission>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/ocr-invoices"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequirePermission permission="invoice.view">
+                            <OcrInvoices />
                         </RequirePermission>
                     </PrivateRoute>
                 }
