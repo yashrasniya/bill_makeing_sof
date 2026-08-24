@@ -3,7 +3,16 @@ import { useSelector } from "react-redux";
 import { clientToken } from "@/axios";
 import SendPopup from "@/comonant/Bill/SendPopup";
 
-const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
+const ExportDropdown = ({
+  InvoiceData,
+  handelExport,
+  showToast,
+  // let callers outside the bill editor drop the global `.button` look and
+  // right-align the menu; defaults keep the bill page exactly as it was
+  buttonClassName = "button cursor-pointer select-none flex items-center",
+  buttonStyle,
+  menuAlign = "left",
+}) => {
   const [open, setOpen] = useState(false);
   const { permissions, features, status: accessStatus } = useSelector((s) => s.access);
   // WhatsApp share needs whatsapp.send + either the own-number or the
@@ -55,7 +64,8 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
   };
 
   const handleOptionClick = async (option, id = null) => {
-    if (!InvoiceData?.receiver) {
+    // purchase invoices carry a vendor instead of a receiver
+    if (!InvoiceData?.receiver && !InvoiceData?.vendor) {
       notify("Receiver is not set. Please select a customer first.", 'warning');
       return;
     }
@@ -96,7 +106,8 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
       <div className="relative inline-block">
         {/* Main Button */}
         <div
-            className="button cursor-pointer select-none flex items-center"
+            className={buttonClassName}
+            style={buttonStyle}
             onClick={() => setOpen(!open)}
         >
           {loading ? (
@@ -130,7 +141,7 @@ const ExportDropdown = ({ InvoiceData, handelExport, showToast }) => {
 
         {/* Dropdown Menu */}
         {open && !loading && (
-            <div className="absolute mt-2 -left-20 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+            <div className={`absolute mt-2 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-10 ${menuAlign === "right" ? "right-0" : "-left-20"}`}>
               {canWhatsapp && <div
                   className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                   onClick={() => {

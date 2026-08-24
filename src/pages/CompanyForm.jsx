@@ -25,12 +25,29 @@ const BANK_FIELDS = [
     { label: "Branch", name: "branch", type: "text", placeholder: "MG Road, Bangalore" },
 ];
 
-const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS];
+/* UPI is opt-in: unlike the fields above, a company can bill perfectly well
+   without it, so these are flagged `optional` and skipped by the
+   all-fields-required check in handleSubmit. */
+const UPI_FIELDS = [
+    {
+        label: "UPI ID", name: "upi_id", type: "text", optional: true, col: 2,
+        placeholder: "acme@okaxis",
+        hint: "Your UPI id / VPA \u2014 customers pay into this account.",
+    },
+    {
+        label: "Show UPI QR on invoices", name: "show_upi_qr", type: "checkbox",
+        optional: true, col: 2,
+        hint: "Prints a QR on every exported invoice, pre-filled with that invoice's total.",
+    },
+];
+
+const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS];
 
 const ONBOARDING_STEPS = [
     { icon: '🏢', title: 'Company Details', desc: 'Name, address, GST & email' },
     { icon: '🖼️', title: 'Brand Logo', desc: 'Appears on every invoice you send' },
     { icon: '🏦', title: 'Bank Details', desc: 'For payment info on invoices' },
+    { icon: '📱', title: 'UPI QR', desc: 'Let customers scan & pay the exact total' },
     { icon: '✅', title: 'Verified & Ready', desc: 'Start billing your customers!' },
 ];
 
@@ -96,10 +113,28 @@ function Field({ field, value, logoPreview, onChange }) {
         );
     }
 
+    if (field.type === 'checkbox') {
+        return (
+            <div className="cf-field field-span-2">
+                <label className="cf-check" htmlFor={`cf-${field.name}`}>
+                    <input
+                        id={`cf-${field.name}`}
+                        type="checkbox"
+                        name={field.name}
+                        checked={!!value}
+                        onChange={onChange}
+                    />
+                    <span className="cf-check__label">{field.label}</span>
+                </label>
+                {field.hint && <p className="cf-hint">{field.hint}</p>}
+            </div>
+        );
+    }
+
     return (
         <div className={`cf-field ${field.col === 2 ? 'field-span-2' : 'field-span-1'}`}>
             <label className="cf-label" htmlFor={`cf-${field.name}`}>
-                {field.label} <span className="cf-req">*</span>
+                {field.label} {!field.optional && <span className="cf-req">*</span>}
             </label>
             <input
                 id={`cf-${field.name}`}
@@ -110,6 +145,7 @@ function Field({ field, value, logoPreview, onChange }) {
                 onChange={onChange}
                 placeholder={field.placeholder}
             />
+            {field.hint && <p className="cf-hint">{field.hint}</p>}
         </div>
     );
 }
@@ -143,10 +179,12 @@ export default function CompanyForm() {
     }, []);  // run once on mount
 
     const handleChange = (e) => {
-        const { name, value, files, type } = e.target;
+        const { name, value, files, type, checked } = e.target;
         if (type === "file" && files[0]) {
             setFormData(prev => ({ ...prev, [name]: files[0] }));
             setLogoPreview(URL.createObjectURL(files[0]));
+        } else if (type === "checkbox") {
+            setFormData(prev => ({ ...prev, [name]: checked }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
@@ -158,16 +196,32 @@ export default function CompanyForm() {
         setError(null);
 
         for (const field of ALL_FIELDS) {
-            if (field.type !== 'file' && !formData[field.name]) {
+            if (field.type !== 'file' && !field.optional && !formData[field.name]) {
                 setError(`"${field.label}" is required.`);
                 setLoading(false);
                 return;
             }
         }
 
+        const upiId = (formData.upi_id || '').trim();
+        if (upiId && !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,254}@[a-zA-Z][a-zA-Z0-9]{1,63}$/.test(upiId)) {
+            setError('Enter a valid UPI ID in the form name@bank, e.g. acme@okaxis.');
+            setLoading(false);
+            return;
+        }
+        if (formData.show_upi_qr && !upiId) {
+            setError('Add a UPI ID before turning on the invoice QR code.');
+            setLoading(false);
+            return;
+        }
+
         const data = new FormData();
         ALL_FIELDS.forEach((field) => {
-            if (formData[field.name]) {
+            if (field.type === "checkbox") {
+                // Always sent: the POST is a full update, so omitting an
+                // unticked box would leave the old value in place.
+                data.append(field.name, formData[field.name] ? "true" : "false");
+            } else if (formData[field.name]) {
                 if (field.type === "file") {
                     if (formData[field.name] instanceof File) data.append(field.name, formData[field.name]);
                 } else {
@@ -297,6 +351,22 @@ export default function CompanyForm() {
                             <div className="cf-grid">
                                 <SectionHeader title="🏦  Bank Details" />
                                 {BANK_FIELDS.map(f => (
+                                    <Field
+                                        key={f.name}
+                                        field={f}
+                                        value={formData[f.name]}
+                                        logoPreview={logoPreview}
+                                        onChange={handleChange}
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="cf-divider" />
+
+                            {/* UPI section */}
+                            <div className="cf-grid">
+                                <SectionHeader title="📱  UPI Payments" />
+                                {UPI_FIELDS.map(f => (
                                     <Field
                                         key={f.name}
                                         field={f}

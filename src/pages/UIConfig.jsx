@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { clientToken } from "@/axios";
 import { useSelector } from "react-redux";
+import UIConfigNumbering from "@/pages/UIConfigNumbering";
 
 const temp_ui_config = {
     formula: "",
@@ -43,7 +44,7 @@ const rowDelBtn = {
 };
 
 const UIConfig = () => {
-    const [activeTab, setActiveTab] = useState("productFields"); // "productFields" | "customFields"
+    const [activeTab, setActiveTab] = useState("productFields"); // "productFields" | "customFields" | "numbering"
 
     // Product UI Config States
     const [selected, setSelected] = useState(null);
@@ -284,7 +285,7 @@ const UIConfig = () => {
                         </p>
                     </div>
 
-                    {activeTab === "productFields" ? (
+                    {activeTab === "numbering" ? null : activeTab === "productFields" ? (
                         <button
                             onClick={() => {
                                 setFormData(temp_ui_config);
@@ -349,12 +350,24 @@ const UIConfig = () => {
                     >
                         🛠️ Company Custom Fields
                     </button>
+                    <button
+                        onClick={() => { setActiveTab("numbering"); }}
+                        style={{
+                            padding: '8px 16px', fontSize: '15px', fontWeight: activeTab === "numbering" ? 700 : 500,
+                            color: activeTab === "numbering" ? '#4f46e5' : '#64748b',
+                            border: 'none', background: 'none', cursor: 'pointer',
+                            borderBottom: activeTab === "numbering" ? '3px solid #4f46e5' : '3px solid transparent',
+                            marginBottom: '-11px', transition: 'all 0.15s'
+                        }}
+                    >
+                        🔢 Invoice Numbering
+                    </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
 
-                    {/* ── Left side: Config List ── */}
-                    <div style={{ flex: '1 1 300px', background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', alignSelf: 'flex-start' }}>
+                    {/* ── Left side: Config List (not used by the numbering tab) ── */}
+                    {activeTab !== "numbering" && <div style={{ flex: '1 1 300px', background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', alignSelf: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                             <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
                             <span style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -451,11 +464,13 @@ const UIConfig = () => {
                                 </div>
                             )
                         )}
-                    </div>
+                    </div>}
 
                     {/* ── Right side: Edit Form ── */}
-                    <div style={{ flex: '2 1 500px', background: 'white', borderRadius: '20px', padding: '32px 28px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', alignSelf: 'flex-start' }}>
-                        {activeTab === "productFields" ? (
+                    <div style={{ flex: activeTab === "numbering" ? '1 1 100%' : '2 1 500px', background: 'white', borderRadius: '20px', padding: '32px 28px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', alignSelf: 'flex-start' }}>
+                        {activeTab === "numbering" ? (
+                            <UIConfigNumbering canManage={canManage} showToast={showToast} />
+                        ) : activeTab === "productFields" ? (
                             selected ? (
                                 <>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>

@@ -10,6 +10,27 @@ const initialElements = [
     { id: '5', type: 'text', content: 'Total: $500.00', x: 400, y: 200, fontSize: 18, color: '#000000', fontWeight: 'bold' },
 ];
 
+/* Stand-in for the UPI QR on the design canvas. The real code can only be
+   generated once the invoice total is known, which happens server-side at
+   export time, so the editor shows a same-shaped square instead of a QR that
+   would encode nothing. */
+const UPI_QR_PLACEHOLDER =
+    'data:image/svg+xml;utf8,' + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+            <rect width="160" height="160" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+            <rect x="18" y="18" width="34" height="34" fill="none" stroke="#334155" stroke-width="7"/>
+            <rect x="108" y="18" width="34" height="34" fill="none" stroke="#334155" stroke-width="7"/>
+            <rect x="18" y="108" width="34" height="34" fill="none" stroke="#334155" stroke-width="7"/>
+            <text x="80" y="86" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="700" fill="#334155">UPI QR</text>
+            <text x="80" y="103" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#64748b">added on export</text>
+        </svg>`
+    );
+
+/* Shape of an exported template file. `format` is checked on import so a
+   stray JSON file fails with a sentence instead of an empty canvas. */
+const TEMPLATE_FILE_FORMAT = 'invoice-template-blocks';
+const BLOCK_TYPES = ['text', 'line', 'html', 'image', 'product_table'];
+
 const COLUMN_PLACEHOLDERS = [
     { name: "Sr. No", value: "{{ forloop.counter }}" },
     { name: "Item Name", value: "{{ product.props.item }}" },
@@ -47,7 +68,9 @@ const ALL_PLACEHOLDERS = [
             { label: "Company Address", token: "{{ company.company_address }}", desc: "Your company address" },
             { label: "Company Phone", token: "{{ company.company_phone }}", desc: "Your company phone number" },
             { label: "Company Email", token: "{{ company.company_email }}", desc: "Your company email address" },
-            { label: "Company GST Number", token: "{{ company.company_gst_number }}", desc: "Your company GSTIN" }
+            { label: "Company GST Number", token: "{{ company.company_gst_number }}", desc: "Your company GSTIN" },
+            { label: "UPI ID", token: "{{ company.upi_id }}", desc: "Your UPI id / VPA, from Company Details" },
+            { label: "UPI Payment QR", token: "{{ company.upi_qr }}", desc: "QR image for this invoice's total \u2014 use as an <img> src" }
         ]
     },
     {
@@ -81,24 +104,62 @@ const generateTableHtml = (el) => {
     const borderCol = el.borderColor || '#e5e7eb';
     const fs = el.fontSize || 12;
 
+    /* Border and spacing knobs. Every default below is the value that used to
+       be hard-coded here, so a table saved before these existed recompiles to
+       exactly the same markup. */
+    const bw = el.borderWidth ?? 1;
+    const bs = el.borderStyle || 'solid';
+    const radius = el.borderRadius || 0;
+    const pad = el.cellPadding ?? 6;
+    const grid = el.gridLines || 'rows';   // 'outer' | 'rows' | 'full'
+
+    const edge = (width) => `${width}px ${bs} ${borderCol}`;
+
+    /* A collapsed table ignores border-radius, and the separate border model
+       never paints borders set on a <tr>. So a rounded table switches models
+       and carries its rules on the cells instead, with the top corners rounded
+       on the end header cells so the header fill cannot square them off. */
+    const separate = radius > 0;
+    const ruled = grid !== 'outer';
+
     let ths = '';
     let tds = '';
-    columns.forEach(col => {
+    columns.forEach((col, idx) => {
         const align = col.align === 'right' ? 'text-align: right;' : 'text-align: left;';
         const w = col.width ? `width: ${col.width};` : '';
-        ths += `<th style="padding: 6px; color: ${headerText}; ${align} ${w}">${col.label}</th>\n`;
-        tds += `<td style="padding: 6px; color: ${textCol}; ${align}">${col.value}</td>\n`;
+        const vRule = (grid === 'full' && idx < columns.length - 1)
+            ? ` border-right: ${edge(bw)};` : '';
+        const headRule = (separate && ruled) ? ` border-bottom: ${edge(bw * 2)};` : '';
+        const rowRule = (separate && ruled) ? ` border-bottom: ${edge(bw)};` : '';
+        let corner = '';
+        if (separate && idx === 0) corner = ` border-top-left-radius: ${radius}px;`;
+        else if (separate && idx === columns.length - 1) corner = ` border-top-right-radius: ${radius}px;`;
+
+        ths += `<th style="padding: ${pad}px; color: ${headerText}; ${align} ${w}${vRule}${headRule}${corner}">${col.label}</th>\n`;
+        tds += `<td style="padding: ${pad}px; color: ${textCol}; ${align}${rowRule}${vRule}">${col.value}</td>\n`;
     });
 
-    return `<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: ${fs}px; font-family: sans-serif; border: 1px solid ${borderCol};">
+    /* table-layout: fixed makes the per-column widths authoritative. Without
+       it the browser sizes columns to their content, so a column set to 5%
+       still grows to fit its heading - and on a ruled form the printed rules
+       no longer line up with the text. */
+    const model = separate
+        ? 'border-collapse: separate; border-spacing: 0; table-layout: fixed;'
+        : 'border-collapse: collapse; table-layout: fixed;';
+    const radiusCss = radius ? ` border-radius: ${radius}px;` : '';
+    const headerTrRule = (!separate && ruled) ? ` border-bottom: ${edge(bw * 2)};` : '';
+    const bodyTr = (!separate && ruled)
+        ? `<tr style="border-bottom: ${edge(bw)};">` : '<tr>';
+
+    return `<table style="width: 100%; ${model} text-align: left; font-size: ${fs}px; font-family: sans-serif; border: ${edge(bw)};${radiusCss}">
   <thead>
-    <tr style="background-color: ${headerBg}; border-bottom: 2px solid ${borderCol};">
+    <tr style="background-color: ${headerBg};${headerTrRule}">
       ${ths}
     </tr>
   </thead>
   <tbody>
     {% for product in invoice.products %}
-    <tr style="border-bottom: 1px solid ${borderCol};">
+    ${bodyTr}
       ${tds}
     </tr>
     {% endfor %}
@@ -195,25 +256,74 @@ const WeasyprintPreview = () => {
         setElements(elements.map(el => el.id === currentEl.id ? { ...updatedEl, content: newContent } : el));
     };
 
+    /* Sample values for the "show preview data" canvas. Keyed by token path so
+       text blocks and html/table blocks resolve the same set - a block template
+       is mostly text blocks, and showing them raw {{ tokens }} while the table
+       next to them shows real words is what makes a layout unreadable. */
+    const previewValues = () => ({
+        'invoice.invoice_number': 'INV-2026-0001',
+        'invoice.date': 'Oct 25, 2026',
+        'invoice.due_date': 'Nov 25, 2026',
+        'invoice.total_final_amount': '1,180.00',
+        'invoice.gst_final_amount': '180.00',
+        'invoice.receiver_name': 'Acme Client Corp',
+        'invoice.receiver_address': '42 Market Road, Dehradun, Uttarakhand',
+        'invoice.receiver_gst_number': '05AAAAA0000A1Z5',
+        'invoice.receiver_phone': '+91 98765 43210',
+        'invoice.receiver_email': 'accounts@client.com',
+        'invoice.payment_method': 'UPI',
+        'company.company_name': companyInfo?.company_name || 'Acme Corporation',
+        'company.company_logo': companyInfo?.company_logo || 'https://via.placeholder.com/150',
+        'company.company_address': companyInfo?.company_address || '123 Business Lane, Suite 100, Financial District',
+        'company.company_phone': companyInfo?.company_phone || '+1 (555) 019-2834',
+        'company.company_email': companyInfo?.company_email_id || 'billing@acme.com',
+        'company.company_email_id': companyInfo?.company_email_id || 'billing@acme.com',
+        'company.gst_number': companyInfo?.company_gst_number || '22AAAAA0000A1Z5',
+        'company.company_gst_number': companyInfo?.company_gst_number || '22AAAAA0000A1Z5',
+        'company.company_state': companyInfo?.state || 'Uttarakhand',
+        'company.bank_name': companyInfo?.bank_name || 'State Bank of India',
+        'company.account_number': companyInfo?.account_number || '000123456789',
+        'company.ifsc_code': companyInfo?.ifsc_code || 'SBIN0000123',
+        'company.upi_id': companyInfo?.upi_id || 'acme@okaxis',
+        // Canvas preview only: the real QR is generated server-side at export
+        // time, because it has to encode the finished invoice total.
+        'company.upi_qr': UPI_QR_PLACEHOLDER,
+        'footer.total_amount_with_out_gst': '1,000.00',
+        'footer.total_taxable_amount_with_extra_non_gst': '1,000.00',
+        'footer.gst': '18',
+        'footer.center_gst': '9',
+        'footer.state_gst': '9',
+        'footer.gst_amount': '180.00',
+        'footer.center_gst_amount': '90.00',
+        'footer.state_gst_amount': '90.00',
+        'footer.total_amount_with_gst': '1,180.00',
+        'footer.total_amount_in_text': 'One Thousand One Hundred Eighty',
+    });
+
+    /* Tokens carry Django filters ({{ company.company_name|upper }},
+       {{ product.props.rate|default:"0" }}), so match an optional filter tail
+       rather than only the bare path. */
+    const substituteTokens = (str, values) => {
+        let out = str;
+        Object.entries(values).forEach(([path, value]) => {
+            const escaped = path.replace(/\./g, '\\.');
+            out = out.replace(
+                new RegExp('\\{\\{\\s*' + escaped + '\\s*(\\|[^}]*?)?\\s*\\}\\}', 'g'),
+                value
+            );
+        });
+        return out;
+    };
+
     const getPreviewContent = (content, type) => {
         if (!showPreviewData || !content) return content;
 
-        const companyName = companyInfo?.company_name || 'Acme Corporation';
-        const companyLogo = companyInfo?.company_logo || 'https://via.placeholder.com/150';
-        const companyAddress = companyInfo?.company_address || '123 Business Lane, Suite 100, Financial District';
-        const companyPhone = companyInfo?.company_phone || '+1 (555) 019-2834';
-        const companyEmail = companyInfo?.company_email_id || 'billing@acme.com';
-        const companyGst = companyInfo?.company_gst_number || '22AAAAA0000A1Z5';
+        const values = previewValues();
 
         if (type === 'text') {
-            let result = content;
-            result = result.replace(/\{\{\s*invoice\.invoice_number\s*\}\}/g, 'INV-2026-0001');
-            result = result.replace(/\{\{\s*invoice\.date\s*\}\}/g, 'Oct 25, 2026');
-            result = result.replace(/\{\{\s*invoice\.total_final_amount\s*\}\}/g, '1,180.00');
-            result = result.replace(/\{\{\s*invoice\.receiver_name\s*\}\}/g, 'Acme Client Corp');
-            result = result.replace(/\{\{\s*company\.company_name\s*\}\}/g, companyName);
-            result = result.replace(/\{\{\s*company\.company_logo\s*\}\}/g, companyLogo);
-            return result;
+            // Tags such as {% if %} guard optional lines; the canvas shows the
+            // line they wrap, not the tag itself.
+            return substituteTokens(content, values).replace(/\{%.*?%\}/g, '');
         }
 
         if (type === 'product_table' || type === 'html') {
@@ -240,54 +350,38 @@ const WeasyprintPreview = () => {
                         { counter: 2, item: 'Cloud Hosting Setup', description: 'AWS Deployment & Configuration', qty: 2, rate: 100, total: 200, amount: 200 }
                     ];
                     return products.map(p => {
-                        let row = innerTemplate;
-                        row = row.replace(/\{\{\s*forloop\.counter\s*\}\}/g, p.counter);
-                        row = row.replace(/\{\{\s*product\.props\.item\|default:product\.props\.description\s*\}\}/g, p.item);
-                        row = row.replace(/\{\{\s*product\.props\.item\s*\}\}/g, p.item);
-                        row = row.replace(/\{\{\s*product\.props\.description\s*\}\}/g, p.description);
-                        row = row.replace(/\{\{\s*product\.props\.quantity\s*\}\}/g, p.qty);
-                        row = row.replace(/\{\{\s*product\.props\.rate\s*\}\}/g, p.rate);
-                        row = row.replace(/\{\{\s*product\.total_amount\s*\}\}/g, p.total);
-                        // Also support direct properties (for products_data):
-                        row = row.replace(/\{\{\s*product\.item\|default:product\.description\s*\}\}/g, p.item);
-                        row = row.replace(/\{\{\s*product\.item\s*\}\}/g, p.item);
-                        row = row.replace(/\{\{\s*product\.description\s*\}\}/g, p.description);
-                        row = row.replace(/\{\{\s*product\.quantity\|default:"[^"]*"\s*\}\}/g, p.qty);
-                        row = row.replace(/\{\{\s*product\.quantity\s*\}\}/g, p.qty);
-                        row = row.replace(/\{\{\s*product\.rate\|default:"[^"]*"\s*\}\}/g, p.rate);
-                        row = row.replace(/\{\{\s*product\.rate\s*\}\}/g, p.rate);
-                        row = row.replace(/\{\{\s*product\.amount\|default:"[^"]*"\s*\}\}/g, p.amount);
-                        row = row.replace(/\{\{\s*product\.amount\s*\}\}/g, p.amount);
+                        /* Column values are user-defined, so the named cases below
+                           cover the built-in columns and the trailing sweep gives
+                           every other product column ("making", "hns", …) a
+                           stand-in instead of leaving a raw token on the canvas. */
+                        let row = substituteTokens(innerTemplate, {
+                            'forloop.counter': p.counter,
+                            'product.props.item': p.item,
+                            'product.props.description': p.description,
+                            'product.props.quantity': p.qty,
+                            'product.props.rate': p.rate,
+                            'product.props.amount': p.amount,
+                            'product.total_amount': p.total,
+                            'product.item': p.item,
+                            'product.description': p.description,
+                            'product.quantity': p.qty,
+                            'product.rate': p.rate,
+                            'product.amount': p.amount,
+                        });
+                        row = row.replace(/\{\{\s*product(\.props)?\.[a-z0-9_]+\s*(\|[^}]*?)?\s*\}\}/gi,
+                            p.counter === 1 ? 'Sample' : '--');
                         return row;
                     }).join('');
                 });
             }
 
-            // Replace standard scalar placeholders
-            result = result.replace(/\{\{\s*invoice\.invoice_number\s*\}\}/g, 'INV-2026-0001');
-            result = result.replace(/\{\{\s*invoice\.date\s*\}\}/g, 'Oct 25, 2026');
-            result = result.replace(/\{\{\s*invoice\.total_final_amount\s*\}\}/g, '1,180.00');
-            result = result.replace(/\{\{\s*invoice\.receiver_name\s*\}\}/g, 'Acme Client Corp');
-            result = result.replace(/\{\{\s*company\.company_name\s*\}\}/g, companyName);
-            result = result.replace(/\{\{\s*company\.company_logo\s*\}\}/g, companyLogo);
-            result = result.replace(/\{\{\s*company\.company_address\s*\}\}/g, companyAddress);
-            result = result.replace(/\{\{\s*company\.company_phone\s*\}\}/g, companyPhone);
-            result = result.replace(/\{\{\s*company\.company_email\s*\}\}/g, companyEmail);
-            result = result.replace(/\{\{\s*company\.gst_number\s*\}\}/g, companyGst);
-            result = result.replace(/\{\{\s*company\.company_gst_number\s*\}\}/g, companyGst);
-
-            // Footer data placeholders
-            result = result.replace(/\{\{\s*footer\.total_amount_with_out_gst\s*\}\}/g, '1,000.00');
-            result = result.replace(/\{\{\s*footer\.gst\s*\}\}/g, '18');
-            result = result.replace(/\{\{\s*footer\.gst_amount\s*\}\}/g, '180.00');
-            result = result.replace(/\{\{\s*footer\.total_amount_with_gst\s*\}\}/g, '1,180.00');
-            result = result.replace(/\{\{\s*footer\.total_amount_in_text\s*\}\}/g, 'One Thousand One Hundred Eighty Rupees Only');
+            result = substituteTokens(result, values);
 
             // Strip any remaining django template tags (like {% ... %})
             result = result.replace(/\{%.*?%\}/g, '');
             return result;
         }
-        return content;
+        return substituteTokens(content, values);
     };
 
     // ── Local Storage & Cloud Persistence ──
@@ -355,8 +449,12 @@ const WeasyprintPreview = () => {
                 const lh = el.lineHeight || 1.2;
                 const ls = el.letterSpacing ? `letter-spacing: ${el.letterSpacing}px; ` : '';
                 const rot = el.rotate ? `transform: rotate(${el.rotate}deg); transform-origin: center; ` : '';
+                /* Without a width a text block is shrink-to-fit and only stops
+                   at the page edge, so it cannot wrap inside a column and
+                   text-align has nothing to align against. */
+                const tw = el.width ? `width: ${el.width}px; ` : '';
                 const formattedContent = (el.content || '').replace(/\n/g, '<br>');
-                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; font-size: ${fs}px; color: ${c}; font-weight: ${fw}; font-family: ${ff}; text-align: ${ta}; font-style: ${fst}; text-decoration: ${td}; line-height: ${lh}; ${ls}${rot}white-space: pre-wrap;">${formattedContent}</div>\n`;
+                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; font-size: ${fs}px; color: ${c}; font-weight: ${fw}; font-family: ${ff}; text-align: ${ta}; font-style: ${fst}; text-decoration: ${td}; line-height: ${lh}; ${tw}${ls}${rot}white-space: pre-wrap;">${formattedContent}</div>\n`;
             } else if (el.type === 'line') {
                 const w = el.width || 100;
                 const h = el.height || 2;
@@ -371,7 +469,7 @@ const WeasyprintPreview = () => {
                 const w = el.width || 200;
                 const h = el.height || 100;
                 const rot = el.rotate ? `transform: rotate(${el.rotate}deg); transform-origin: center; ` : '';
-                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${w}px; height: ${h}px; ${rot}">${el.content || ''}</div>\n`;
+                innerHtml += `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${w}px; height: ${h}px; overflow: hidden; ${rot}">${el.content || ''}</div>\n`;
             } else if (el.type === 'image') {
                 const w = el.width || 100;
                 const h = el.height || 100;
@@ -628,6 +726,82 @@ ${innerHtml}
         setSelectedId(newEl.id);
     };
 
+    // ── Export / Import ──
+    /* The file carries the blocks, not the compiled HTML: the HTML is derived
+       from them on save (and by install_jewellery_template.py), so shipping
+       both would let the two disagree. */
+    const exportTemplateFile = () => {
+        const payload = {
+            format: TEMPLATE_FILE_FORMAT,
+            version: 1,
+            template_name: templateName,
+            elements,
+        };
+        const url = URL.createObjectURL(
+            new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        );
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${(templateName || 'template').replace(/[^a-z0-9]+/gi, '_').toLowerCase()}.blocks.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const readImportedElements = (parsed) => {
+        /* A file written by another tool is fine as long as it holds blocks -
+           only a file that declares a different format is refused. */
+        if (parsed?.format && parsed.format !== TEMPLATE_FILE_FORMAT) {
+            throw new Error(`unexpected format "${parsed.format}"`);
+        }
+        const list = Array.isArray(parsed) ? parsed : parsed?.elements;
+        if (!Array.isArray(list)) throw new Error('no "elements" array in this file');
+        const blocks = list
+            .filter(el => el && BLOCK_TYPES.includes(el.type))
+            .map((el, idx) => {
+                const block = {
+                    ...el,
+                    id: String(el.id || `${Date.now()}-${idx}`),
+                    x: Number(el.x) || 0,
+                    y: Number(el.y) || 0,
+                };
+                /* A hand-written definition may carry only the column config;
+                   derive the markup from it the same way editing a column does. */
+                if (block.type === 'product_table' && !block.content) {
+                    block.content = generateTableHtml(block);
+                }
+                return block;
+            });
+        if (!blocks.length) throw new Error('no blocks in this file that the editor understands');
+        return blocks;
+    };
+
+    const importTemplateFile = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';   // so re-picking the same file fires onChange
+        if (!file) return;
+        try {
+            const parsed = JSON.parse(await file.text());
+            const blocks = readImportedElements(parsed);
+            const ok = window.confirm(
+                `Load ${blocks.length} block(s) from ${file.name}?\n\n` +
+                'This replaces the layout on the canvas. It comes in as a new ' +
+                'template, so "Save to Cloud" will create one rather than ' +
+                'overwriting the template currently open.'
+            );
+            if (!ok) return;
+            setElements(blocks);
+            setSelectedId(null);
+            setTemplateId(null);
+            if (parsed.template_name) setTemplateName(parsed.template_name);
+            setPdfUrl(null);
+        } catch (err) {
+            console.error('Template import failed', err);
+            alert(`Could not import this file: ${err.message}`);
+        }
+    };
+
     const importFullHtmlTemplate = () => {
         const confirm = window.confirm("This will overwrite your entire existing visual layout and replace it with a single HTML block. Are you sure you want to continue?");
         if (confirm) {
@@ -660,6 +834,25 @@ ${innerHtml}
                             className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                         />
                         <span>Preview Dummy Data</span>
+                    </label>
+                    <button
+                        onClick={exportTemplateFile}
+                        title="Download this template's blocks as a .json file"
+                        className="px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-600 hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
+                    >
+                        ⬇ Export
+                    </button>
+                    <label
+                        title="Load blocks from an exported .json file"
+                        className="px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-200 text-gray-600 hover:bg-gray-50 active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                    >
+                        <input
+                            type="file"
+                            accept="application/json,.json"
+                            onChange={importTemplateFile}
+                            className="hidden"
+                        />
+                        ⬆ Import
                     </label>
                     <button
                         onClick={saveTemplateToCloud}
@@ -713,6 +906,7 @@ ${innerHtml}
                                             left: el.x,
                                             top: el.y,
                                             ...(el.type === 'text' ? {
+                                                width: el.width,
                                                 fontSize: el.fontSize,
                                                 color: el.color,
                                                 fontWeight: el.fontWeight,
@@ -735,7 +929,7 @@ ${innerHtml}
                                             // Visual aid to make dragging shapes easier if they are thin
                                             padding: el.type === 'line' && el.height <= 2 ? '5px 0' : '0',
                                             backgroundClip: 'content-box',
-                                            overflow: el.type === 'html' ? 'hidden' : 'visible',
+                                            overflow: (el.type === 'html' || el.type === 'product_table') ? 'hidden' : 'visible',
                                             transform: el.rotate ? `rotate(${el.rotate}deg)` : undefined,
                                             transformOrigin: 'center'
                                         }}
@@ -749,10 +943,10 @@ ${innerHtml}
                                         ) : el.type === 'text' ? (
                                             getPreviewContent(el.content, el.type)
                                         ) : el.type === 'image' ? (
-                                            <img src={showPreviewData && el.url && el.url.includes('{{ company.company_logo }}') ? (companyInfo?.company_logo || 'https://via.placeholder.com/150') : el.url} className="w-full h-full object-contain pointer-events-none" alt="element" />
+                                            <img src={showPreviewData && el.url && el.url.includes('{{ company.upi_qr }}') ? UPI_QR_PLACEHOLDER : (showPreviewData && el.url && el.url.includes('{{ company.company_logo }}') ? (companyInfo?.company_logo || 'https://via.placeholder.com/150') : el.url)} className="w-full h-full object-contain pointer-events-none" alt="element" />
                                         ) : null}
                                         {/* Resize Handle */}
-                                        {isSelected && el.type !== 'text' && (
+                                        {isSelected && (
                                             <div
                                                 onPointerDown={(e) => handleResizeStart(e, el.id)}
                                                 className="absolute bottom-0 right-0 w-3 h-3 bg-indigo-600 border border-white cursor-se-resize z-20 hover:scale-125 transition-transform"
@@ -827,7 +1021,7 @@ ${innerHtml}
                                 {selectedEl ? (
                                     <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-200">
                                         <div className="flex justify-between items-center mb-2">
-                                            <h3 className="text-sm font-bold text-gray-800">Edit {selectedEl.type === 'text' ? 'Text' : selectedEl.type === 'html' ? 'HTML Block' : 'Shape'}</h3>
+                                            <h3 className="text-sm font-bold text-gray-800">Edit {selectedEl.label || (selectedEl.type === 'text' ? 'Text' : selectedEl.type === 'html' ? 'HTML Block' : 'Shape')}</h3>
                                             <div className="flex gap-2">
                                                 <button onClick={duplicateSelected} className="text-xs text-indigo-600 hover:underline">Duplicate</button>
                                                 <button onClick={deleteSelected} className="text-xs text-red-600 hover:underline">Delete</button>
@@ -950,6 +1144,11 @@ ${innerHtml}
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
+                                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Width (px)</label>
+                                                        <input type="number" min="0" value={selectedEl.width || 0} onChange={e => updateSelected('width', Number(e.target.value) || undefined)} className="w-full text-sm p-2 border rounded-md" placeholder="0 = fit text" />
+                                                        <p className="text-[10px] text-gray-400 mt-1 leading-snug">0 fits the text and never wraps. A width wraps the text and makes Text Align work.</p>
+                                                    </div>
+                                                    <div>
                                                         <label className="block text-xs font-semibold text-gray-500 mb-1">Line Height</label>
                                                         <input type="number" step="0.1" value={selectedEl.lineHeight || 1.2} onChange={e => updateSelected('lineHeight', Number(e.target.value))} className="w-full text-sm p-2 border rounded-md" />
                                                     </div>
@@ -1022,12 +1221,47 @@ ${innerHtml}
                                                             <input type="color" value={selectedEl.borderColor || '#e5e7eb'} onChange={e => updateTableProperty('borderColor', e.target.value, selectedEl)} className="w-full h-8 p-1 border rounded-md" />
                                                         </div>
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-3">
+                                                    <div className="grid grid-cols-2 gap-3 mb-2">
                                                         <div>
                                                             <label className="block text-[11px] font-semibold text-gray-500 mb-1">Font Size (px)</label>
                                                             <input type="number" value={selectedEl.fontSize || 12} onChange={e => updateTableProperty('fontSize', Number(e.target.value), selectedEl)} className="w-full text-xs p-1.5 border rounded-md" />
                                                         </div>
+                                                        <div>
+                                                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Cell Padding (px)</label>
+                                                            <input type="number" min="0" value={selectedEl.cellPadding ?? 6} onChange={e => updateTableProperty('cellPadding', Number(e.target.value), selectedEl)} className="w-full text-xs p-1.5 border rounded-md" />
+                                                        </div>
                                                     </div>
+                                                    <div className="grid grid-cols-2 gap-3 mb-2">
+                                                        <div>
+                                                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Border Width (px)</label>
+                                                            <input type="number" min="0" step="0.5" value={selectedEl.borderWidth ?? 1} onChange={e => updateTableProperty('borderWidth', Number(e.target.value), selectedEl)} className="w-full text-xs p-1.5 border rounded-md" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Corner Radius (px)</label>
+                                                            <input type="number" min="0" value={selectedEl.borderRadius || 0} onChange={e => updateTableProperty('borderRadius', Number(e.target.value), selectedEl)} className="w-full text-xs p-1.5 border rounded-md" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Border Style</label>
+                                                            <select value={selectedEl.borderStyle || 'solid'} onChange={e => updateTableProperty('borderStyle', e.target.value, selectedEl)} className="w-full text-xs p-1.5 border rounded-md bg-white">
+                                                                <option value="solid">Solid</option>
+                                                                <option value="dashed">Dashed</option>
+                                                                <option value="dotted">Dotted</option>
+                                                                <option value="double">Double</option>
+                                                                <option value="none">None</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Grid Lines</label>
+                                                            <select value={selectedEl.gridLines || 'rows'} onChange={e => updateTableProperty('gridLines', e.target.value, selectedEl)} className="w-full text-xs p-1.5 border rounded-md bg-white">
+                                                                <option value="outer">Outer border only</option>
+                                                                <option value="rows">Rules between rows</option>
+                                                                <option value="full">Full grid (rows + columns)</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-400 mt-2 leading-snug">A corner radius switches the table to spaced borders, the only model that rounds corners - row rules then sit on the cells, so spacing can shift by a pixel.</p>
                                                 </div>
 
                                                 {/* Columns sub-section */}
@@ -1183,8 +1417,15 @@ ${innerHtml}
                                                     >
                                                         💼 Use Company Logo
                                                     </button>
+                                                    <button
+                                                        onClick={() => updateSelected('url', '{{ company.upi_qr }}')}
+                                                        className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-xl border border-emerald-150 hover:bg-emerald-100 transition-all active:scale-95"
+                                                    >
+                                                        📱 Use UPI QR
+                                                    </button>
                                                 </div>
                                                 <p className="text-[10px] text-gray-400 mt-1 mb-2">You can also use <code className="bg-gray-100 px-1 rounded">{`{{ company.company_logo }}`}</code> here if the logo exists!</p>
+                                                <p className="text-[10px] text-gray-400 mt-1 mb-2"><code className="bg-gray-100 px-1 rounded">{`{{ company.upi_qr }}`}</code> renders a QR carrying this invoice's grand total. Set a UPI ID in Company Details and turn the QR on there first. Keep it at least 90×90px so it stays scannable.</p>
 
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>

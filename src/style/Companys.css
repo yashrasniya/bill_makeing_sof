@@ -363,38 +363,257 @@
     opacity: 1;
 }
 
+/* ── Page head: title + Add/Delete actions ── */
+.companys_page_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 24px 24px 0;
+    margin-bottom: 24px;
+}
+
+.companys_page_head h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.companys_page_head .head_actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* ── Filters card ── */
+.companys_filters_card {
+    position: relative;
+    z-index: 10;
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    margin: 0 24px 28px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.companys_filters_row {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.companys_filters_grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.companys_filter_actions {
+    display: flex;
+    gap: 8px;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+}
+
+/* ── Error banner ── */
+.companys_error_banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 1280px;
+    margin: 16px auto;
+    padding: 12px 16px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #dc2626;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ── Mobile card select-all bar ── */
+.customer_cards_selectall {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+/* ── Mobile customer cards (the table's stand-in below md) ── */
+.customer_card {
+    background: white;
+    border: 1px solid #eef2ff;
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.customer_card_head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.customer_card_name {
+    flex: 1;
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #4f46e5;
+    line-height: 1.3;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+
+/* label/value pairs — two per row, one on the narrowest screens */
+.customer_card_facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    margin-top: 12px;
+}
+
+.customer_card_fact span {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+
+.customer_card_fact strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: #374151;
+    overflow-wrap: anywhere;
+}
+
+.customer_card_stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.customer_card_actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.customer_card_actions button {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+/* below this the two fact columns stop fitting a GSTIN side by side */
+@media (max-width: 330px) {
+    .customer_card_facts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 /* ── Responsive ── */
-@media (max-width: 700px) {
-    .companys_header_raper {
-        flex-direction: column;
-        align-items: flex-start;
+/* 767px, not 700: this is where the JSX swaps the table for the card list
+   via Tailwind's `md` breakpoint, and the page chrome has to switch with it */
+@media (max-width: 767px) {
+    .companys_page_head {
+        flex-wrap: wrap;
+        padding: 16px 16px 0;
+        margin-bottom: 16px;
+    }
+
+    .companys_page_head h1 {
+        font-size: 20px;
+    }
+
+    /* actions drop to their own full-width row and split it evenly */
+    .companys_page_head .head_actions {
+        width: 100%;
+    }
+
+    .companys_page_head .head_actions .button {
+        flex: 1;
+        justify-content: center;
+        /* the global .button is 1.3rem/0.8rem — two of those side by side
+           overflow a 375px screen */
+        font-size: 15px;
+        padding: 11px 14px;
+        border-radius: 12px;
+        white-space: nowrap;
+    }
+
+    .companys_filters_card {
+        margin: 0 16px 20px;
         padding: 16px;
-        padding-top: 16px;
+        gap: 16px;
     }
 
-    .title-div {
+    /* search and the filter toggle stack rather than squeeze */
+    .companys_filters_row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .companys_filters_row .filters_toggle {
         width: 100%;
+        justify-content: center;
     }
 
-    .companys_header_raper p {
-        font-size: 7vw;
-    }
-
-    .button-div {
-        flex-direction: row;
+    .companys_filter_actions {
         width: 100%;
-        justify-content: space-between;
+        justify-content: stretch;
+    }
+
+    .companys_filter_actions > * {
+        flex: 1;
+    }
+
+    .companys_filter_actions .export-wrapper .button {
+        width: 100%;
+        justify-content: center;
     }
 
     .companys_table_raper {
         padding: 0 12px 80px;
     }
 
-    .pop-up-box_inputs {
-        flex-direction: column;
+    .companys_error_banner {
+        margin: 16px;
     }
 
+    /* iOS Safari zooms the whole page in when a focused field's text is
+       under 16px. `!important` because these sizes are set inline in the
+       JSX; without it the zoom-on-tap stays. */
+    .companys_filters_row input,
+    .companys_filters_grid select,
+    .pop-up-box_inputs input,
+    .pop-up-box_inputs select {
+        font-size: 16px !important;
+    }
+
+    /* One field per row. `!important` because the JSX helper sets flexBasis
+       inline per field, and a stylesheet can't otherwise reach it. Staying a
+       wrapping row (rather than a column) keeps flex-basis on the width axis
+       — as a column it becomes a *height* basis and the fields stretch. */
     .form_box {
+        flex-basis: 100% !important;
         width: 100%;
     }
 }

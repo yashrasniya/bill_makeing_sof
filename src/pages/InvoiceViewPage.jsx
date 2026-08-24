@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { clientToken } from "@/axios";
 import { ArrowLeft, Pencil, FileText, Trash2 } from "lucide-react";
+import ExportDropdown from "@/comonant/Bill/ExportDropdown";
+import PdfOpener from "@/utility/pdf_opener";
 
 const card = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24 };
 const btn = {
@@ -23,6 +25,7 @@ export default function InvoiceViewPage() {
 
     const [invoice, setInvoice] = useState(null);   // null=loading, false=not found
     const [error, setError] = useState("");
+    const [toast, setToast] = useState(null);       // { message, type }
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 640);
 
     useEffect(() => {
@@ -82,6 +85,26 @@ export default function InvoiceViewPage() {
         }
     };
 
+    const showToast = (message, type = "error") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3500);
+    };
+
+    const handelExport = (id, template_id) =>
+        clientToken.get(`pdf/?id=${id}&template_id=${template_id}`, { responseType: "blob" })
+            // PdfOpener rewrites `receiver` on the object it is handed, so give
+            // it a copy rather than the invoice in state; resolving the name
+            // up front also keeps it from looking one up in a company list we
+            // don't load on this page
+            .then((r) => PdfOpener(r, {
+                ...invoice,
+                receiver: { name: invoice.receiver_name || invoice.vendor_name || "invoice" },
+            }, []))
+            .catch((e) => {
+                console.error("Error downloading the PDF:", e);
+                showToast(e.response?.data?.detail || "Failed to export the invoice PDF.");
+            });
+
     const removeInvoice = async () => {
         if (!window.confirm("Delete this invoice? This cannot be undone.")) return;
         try {
@@ -104,6 +127,23 @@ export default function InvoiceViewPage() {
 
     return (
         <div style={{ background: "#fff", minHeight: "100vh", paddingBottom: isMobile ? 90 : 0 }}>
+            {toast && (
+                <div style={{
+                    position: "fixed", top: 20, right: 20, zIndex: 99999,
+                    display: "flex", alignItems: "center", gap: 10,
+                    background: toast.type === "error" ? "#fee2e2" : toast.type === "warning" ? "#fef9c3" : "#dcfce7",
+                    borderLeft: `4px solid ${toast.type === "error" ? "#ef4444" : toast.type === "warning" ? "#eab308" : "#22c55e"}`,
+                    color: toast.type === "error" ? "#991b1b" : toast.type === "warning" ? "#713f12" : "#14532d",
+                    padding: "12px 16px", borderRadius: 10, maxWidth: 360,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.12)", fontSize: 14, fontWeight: 500,
+                }}>
+                    <span>{toast.message}</span>
+                    <button
+                        onClick={() => setToast(null)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.6 }}
+                    >✕</button>
+                </div>
+            )}
             <div style={{ padding: isMobile ? 12 : 24, maxWidth: 900, margin: "0 auto" }}>
                 <div style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -112,7 +152,17 @@ export default function InvoiceViewPage() {
                     <button style={btnGhost} onClick={() => navigate("/bill_list")}>
                         <ArrowLeft size={14} /> {isMobile ? "Back" : "Back to invoices"}
                     </button>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        {invoice && (
+                            <ExportDropdown
+                                InvoiceData={invoice}
+                                handelExport={handelExport}
+                                showToast={showToast}
+                                buttonClassName="cursor-pointer select-none"
+                                buttonStyle={btnGhost}
+                                menuAlign="right"
+                            />
+                        )}
                         {canDelete && invoice && (
                             <button style={{ ...btnGhost, color: "#ef4444" }} onClick={removeInvoice}>
                                 <Trash2 size={14} /> Delete

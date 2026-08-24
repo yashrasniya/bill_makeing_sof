@@ -10,6 +10,14 @@ import ExportDropdown from "../comonant/ExportDropdown";
 
 // Multi-select dropdown with checkboxes
 
+// a removable "you arrived here with a filter applied" pill
+const CHIP = {
+    display: 'inline-flex', alignItems: 'center', gap: '8px',
+    background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe',
+    borderRadius: '99px', padding: '6px 14px', cursor: 'pointer',
+    fontSize: '13px', fontWeight: 700,
+};
+
 
 const Bill_list = ({ setLoading }) => {
     const navigate = useNavigate();
@@ -19,12 +27,14 @@ const Bill_list = ({ setLoading }) => {
     //   ?payment_status=overdue   → one exact status
     //   ?status_group=open        → everything still owing
     //   ?type=purchase            → opens purchase invoices list
+    //   ?customer=<id>            → one customer's bills (Customers page)
     const initialStatus = searchParams.get("payment_status") || "";
     const initialGroup = searchParams.get("status_group") || "";
     const initialType = searchParams.get("type") || "sales";
+    const initialCustomer = searchParams.get("customer");
     const [filters, setFilters] = useState({
         s: "",
-        customer: [],
+        customer: initialCustomer ? [Number(initialCustomer)] : [],
         date_from: "",
         date_to: "",
         invoice_type: initialType,
@@ -38,6 +48,25 @@ const Bill_list = ({ setLoading }) => {
         { open: "Awaiting payment", overdue: "Overdue" }[filters.status_group]
         || { overdue: "Overdue", unpaid: "Unpaid", paid: "Paid", partially_paid: "Partially paid" }[filters.payment_status]
         || "";
+    // Name for the customer chip. The customers list is paginated, so the
+    // options fetch below only covers the first page — ask for this one row
+    // by id instead of hoping the deep-linked customer is in there.
+    const [customerLabel, setCustomerLabel] = useState("");
+    useEffect(() => {
+        if (filters.customer.length !== 1) { setCustomerLabel(""); return; }
+        let alive = true;
+        clientToken.get(`companies/?id=${filters.customer[0]}`)
+            .then((r) => {
+                const hit = (r.data.results || r.data || [])[0];
+                if (alive) setCustomerLabel(hit?.name || "");
+            })
+            .catch(() => { if (alive) setCustomerLabel(""); });
+        return () => { alive = false; };
+    }, [filters.customer]);
+
+    const clearCustomerFilter = () =>
+        setFilters(prev => ({ ...prev, customer: [] }));
+
     const clearStatusFilter = () =>
         setFilters(prev => {
             const next = { ...prev };
@@ -445,23 +474,23 @@ const Bill_list = ({ setLoading }) => {
                     )}
                 </div>
 
-                {/* ── Active status filter (arrived via a dashboard card) ── */}
-                {activeStatusLabel && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 16px' }}>
+                {/* ── Filters we arrived with: a dashboard card, or one
+                       customer from the Customers page ── */}
+                {(activeStatusLabel || customerLabel) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 16px', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Showing:</span>
-                        <button
-                            onClick={clearStatusFilter}
-                            title="Remove this filter"
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe',
-                                borderRadius: '99px', padding: '6px 14px', cursor: 'pointer',
-                                fontSize: '13px', fontWeight: 700,
-                            }}
-                        >
-                            {activeStatusLabel}
-                            <span style={{ fontSize: '15px', lineHeight: 1 }}>×</span>
-                        </button>
+                        {customerLabel && (
+                            <button onClick={clearCustomerFilter} title="Remove this filter" style={CHIP}>
+                                {customerLabel}
+                                <span style={{ fontSize: '15px', lineHeight: 1 }}>×</span>
+                            </button>
+                        )}
+                        {activeStatusLabel && (
+                            <button onClick={clearStatusFilter} title="Remove this filter" style={CHIP}>
+                                {activeStatusLabel}
+                                <span style={{ fontSize: '15px', lineHeight: 1 }}>×</span>
+                            </button>
+                        )}
                     </div>
                 )}
 

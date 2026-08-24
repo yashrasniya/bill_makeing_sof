@@ -7,6 +7,7 @@ import PdfOpener from "@/utility/pdf_opener";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
 import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
+import BulkEditModal from "@/comonant/Bill/BulkEditModal";
 
 const formatHeaderTitle = (title) => {
     if (!title) return '';
@@ -96,6 +97,7 @@ function NewBillBody({ id }) {
     const [showCFPopup, setShowCFPopup] = useState(false);
     const [cfValues, setCFValues] = useState({});
     const [uploadingImg, setUploadingImg] = useState(false);
+    const [showBulkEdit, setShowBulkEdit] = useState(false);
     let navigate = useNavigate()
     const location = useLocation()
 
@@ -172,6 +174,9 @@ function NewBillBody({ id }) {
     }, [refresh, canInventory]);
 
     useEffect(() => {
+        // Already in sync (e.g. the server just sent us an auto-generated
+        // number) -- re-saving would fire a redundant second POST.
+        if (InvoiceData.invoice_number === invoiceNumber) return;
         const handler = setTimeout(() => {
             // Debounced update (runs only after 500ms pause)
             setInvoiceData((prev) => ({ ...prev, invoice_number: invoiceNumber }));
@@ -207,15 +212,19 @@ function NewBillBody({ id }) {
         if (!id && !hasData) return;
 
         let form = new FormData()
+        // Keys that must be sent even when empty, so they can be cleared.
+        // Only on update: omitting invoice_number on create is what asks the
+        // server to auto-generate one.
+        const alwaysSend = url === 'invoice/' ? [] : ['invoice_number']
         Object.keys(InvoiceData).map((obj) => {
 
-            if (('products' !== obj) && (InvoiceData[obj])) {
+            if (('products' !== obj) && (InvoiceData[obj] || alwaysSend.includes(obj))) {
                 if((obj == 'receiver' || obj == 'vendor') && typeof InvoiceData[obj] =='object'){
                     form.append(obj, InvoiceData[obj].id)
                 } else if (obj === 'custom_header_field') {
                     form.append(obj, typeof InvoiceData[obj] === 'object' ? JSON.stringify(InvoiceData[obj]) : InvoiceData[obj])
                 } else {
-                    form.append(obj, InvoiceData[obj])
+                    form.append(obj, InvoiceData[obj] ?? '')
                 }
 
             }
@@ -229,7 +238,7 @@ function NewBillBody({ id }) {
         clientToken.post(url, form).then((response) => {
             if (response.status === 200) {
                 setInvoiceData(response.data)
-                setInvoiceNumber(response.data.invoice_number)
+                setInvoiceNumber(response.data.invoice_number ?? "")
                 if (url === 'invoice/') {
                     navigate(`/bill/${response.data.id}`)
                 }
@@ -568,6 +577,13 @@ function NewBillBody({ id }) {
         // setTable_content(array)
         // setCheckBox(check_list)
     }
+    // Bulk edit works on the checked rows, or on the whole table when nothing
+    // is checked — same selection convention as the bulk delete button.
+    const checkedRowIds = Object.keys(checkbox).filter((k) => checkbox[k]).map(Number);
+    const bulkEditRows = checkedRowIds.length
+        ? table_content.filter((row) => checkedRowIds.includes(+row.id))
+        : table_content;
+
     const handelOpen = (key) => {
         set_update(true)
         console.log(key.target.parentElement.id)
@@ -701,6 +717,23 @@ function NewBillBody({ id }) {
     return (
         <div className={'container space'}>
             <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+            {showBulkEdit && <BulkEditModal
+                rows={bulkEditRows}
+                billBodyItems={bill_body_items}
+                invoiceId={InvoiceData?.id}
+                calculateProductTotals={calculateProductTotals}
+                onClose={() => setShowBulkEdit(false)}
+                onSaved={() => {
+                    // First pass reloads the line items; the invoice's own
+                    // total_final_amount is derived from the *previous* render's
+                    // table_content, so a second pass is needed to persist it.
+                    // Same two-step the single-product add uses.
+                    setRefresh(r => !r)
+                    setTimeout(() => setRefresh(r => !r), 3000)
+                }}
+                showToast={showToast}
+            />}
 
             {/* Custom Header Fields Popup */}
             {showCFPopup && (
@@ -1087,6 +1120,28 @@ function NewBillBody({ id }) {
                 <div className={'button delete'} onClick={handelDelete}><svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
                     <path d="M11.25 20.25C11.5484 20.25 11.8345 20.1315 12.0455 19.9205C12.2565 19.7095 12.375 19.4234 12.375 19.125V12.375C12.375 12.0766 12.2565 11.7905 12.0455 11.5795C11.8345 11.3685 11.5484 11.25 11.25 11.25C10.9516 11.25 10.6655 11.3685 10.4545 11.5795C10.2435 11.7905 10.125 12.0766 10.125 12.375V19.125C10.125 19.4234 10.2435 19.7095 10.4545 19.9205C10.6655 20.1315 10.9516 20.25 11.25 20.25ZM22.5 6.75H18V5.625C18 4.72989 17.6444 3.87145 17.0115 3.23851C16.3786 2.60558 15.5201 2.25 14.625 2.25H12.375C11.4799 2.25 10.6214 2.60558 9.98851 3.23851C9.35558 3.87145 9 4.72989 9 5.625V6.75H4.5C4.20163 6.75 3.91548 6.86853 3.7045 7.0795C3.49353 7.29048 3.375 7.57663 3.375 7.875C3.375 8.17337 3.49353 8.45952 3.7045 8.6705C3.91548 8.88147 4.20163 9 4.5 9H5.625V21.375C5.625 22.2701 5.98058 23.1286 6.61351 23.7615C7.24645 24.3944 8.10489 24.75 9 24.75H18C18.8951 24.75 19.7536 24.3944 20.3865 23.7615C21.0194 23.1286 21.375 22.2701 21.375 21.375V9H22.5C22.7984 9 23.0845 8.88147 23.2955 8.6705C23.5065 8.45952 23.625 8.17337 23.625 7.875C23.625 7.57663 23.5065 7.29048 23.2955 7.0795C23.0845 6.86853 22.7984 6.75 22.5 6.75ZM11.25 5.625C11.25 5.32663 11.3685 5.04048 11.5795 4.8295C11.7905 4.61853 12.0766 4.5 12.375 4.5H14.625C14.9234 4.5 15.2095 4.61853 15.4205 4.8295C15.6315 5.04048 15.75 5.32663 15.75 5.625V6.75H11.25V5.625ZM19.125 21.375C19.125 21.6734 19.0065 21.9595 18.7955 22.1705C18.5845 22.3815 18.2984 22.5 18 22.5H9C8.70163 22.5 8.41548 22.3815 8.2045 22.1705C7.99353 21.9595 7.875 21.6734 7.875 21.375V9H19.125V21.375ZM15.75 20.25C16.0484 20.25 16.3345 20.1315 16.5455 19.9205C16.7565 19.7095 16.875 19.4234 16.875 19.125V12.375C16.875 12.0766 16.7565 11.7905 16.5455 11.5795C16.3345 11.3685 16.0484 11.25 15.75 11.25C15.4516 11.25 15.1655 11.3685 14.9545 11.5795C14.7435 11.7905 14.625 12.0766 14.625 12.375V19.125C14.625 19.4234 14.7435 19.7095 14.9545 19.9205C15.1655 20.1315 15.4516 20.25 15.75 20.25Z" fill="white" />
                 </svg>Delete</div>
+                {(table_content.length > 0 || InvoiceData?.id) && (
+                    <div
+                        className={'button'}
+                        onClick={() => {
+                            if (bill_body_items.length === 0) {
+                                showToast('Product fields are still loading', 'warning');
+                                return;
+                            }
+                            setShowBulkEdit(true);
+                        }}
+                        title={checkedRowIds.length
+                            ? `Edit ${checkedRowIds.length} selected line item(s)`
+                            : 'Edit all line items'}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                        Bulk Edit{checkedRowIds.length ? ` (${checkedRowIds.length})` : ''}
+                    </div>
+                )}
                 <div className={'button'} onClick={() => {
                     setPop_up_properties('flex')
                     set_update(false)

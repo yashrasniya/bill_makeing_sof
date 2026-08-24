@@ -10,6 +10,38 @@ const onFocusOut = e => { e.target.style.borderColor = '#e2e8f0'; e.target.style
 
 const EMPTY = { name: '', address: '', gst_number: '', state: '', state_code: '', phone_number: '' };
 
+// same formatting as the Customer Ledger page, which sits one click away —
+// a rounded total here would read as a mismatch against the statement there
+const money = (v) => new Intl.NumberFormat('en-IN', {
+    style: 'currency', currency: 'INR', maximumFractionDigits: 2,
+}).format(Number(v) || 0);
+
+const day = (iso) => (iso
+    ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '—');
+
+const ACTION_BTN = {
+    padding: '6px 12px', borderRadius: '9px', border: '1px solid #c7d2fe',
+    background: '#eef2ff', color: '#4338ca', fontSize: '12px', fontWeight: 700,
+    cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.15s',
+};
+
+// Billing stats ride along on the customers list only when the plan allows,
+// so every export builds its columns from these two sets rather than
+// hard-coding a shape the response might not have.
+const STAT_KEYS = ['invoice_count', 'total_billed', 'last_invoice_date'];
+const STAT_HEADERS = ['Bills', 'Total Billed', 'Last Bill'];
+
+// Printed cell value. `row[k] || '—'` would turn a genuine zero into an em
+// dash, which reads as "we don't know" instead of "never billed".
+const cell = (row, key) => {
+    const v = row[key];
+    if (key === 'total_billed') return money(v);
+    if (key === 'last_invoice_date') return day(v);
+    if (key === 'invoice_count') return String(Number(v) || 0);
+    return (v === 0 || v) ? v : '—';
+};
+
 const INDIAN_STATES = [
     { name: "Andaman and Nicobar Islands", code: "35" },
     { name: "Andhra Pradesh", code: "37" },
@@ -79,7 +111,17 @@ const toRelativeUrl = (absoluteUrl) => {
 function CompanysTable() {
     const navigate = useNavigate();
     const { userInfo } = useSelector(state => state.user);
-    const { features, status: accessStatus } = useSelector(state => state.access);
+    const { permissions, features, status: accessStatus } = useSelector(state => state.access);
+
+    // Billing stats and the two report shortcuts are part of advanced_reports.
+    // The ledger page is guarded by BOTH the feature and report.view, so gate
+    // on both here — otherwise the button just bounces the user back.
+    const canStats = accessStatus === 'succeeded'
+        && features.includes('advanced_reports')
+        && permissions.includes('report.view');
+    const canViewBills = canStats && permissions.includes('invoice.view');
+    // one URL so the table and every export agree on what they asked for
+    const exportUrl = `companies/?page_size=9999${canStats ? '&with_stats=1' : ''}`;
     const [table_content, set_table_content] = useState([]);
     const [filters, setFilters] = useState({ s: "", ordering: "-id", page_size: 10 });
     const [page, setPage] = useState(1);
@@ -104,6 +146,7 @@ function CompanysTable() {
         if (filters.ordering) params.set('ordering', filters.ordering);
         if (filters.page_size) params.set('page_size', filters.page_size);
         if (page > 1) params.set('page', page);
+        if (canStats) params.set('with_stats', '1');
 
         clientToken.get(`companies/?${params.toString()}`).then(response => {
             if (response.status === 200) {
@@ -117,7 +160,7 @@ function CompanysTable() {
             console.log(error);
             setPageError(`Failed to load customers. ${error.message || ''}`);
         });
-    }, [filters, page, refresh]);
+    }, [filters, page, refresh, canStats]);
 
     // Close export dropdown when clicking outside
     useEffect(() => {
@@ -205,15 +248,15 @@ function CompanysTable() {
     const handleExportCSV = useCallback(() => {
         setExporting(true);
         setExportOpen(false);
-        clientToken.get('companies/?page_size=9999', { responseType: 'json' })
+        clientToken.get(exportUrl, { responseType: 'json' })
             .then(response => {
                 const data = response.data.results || response.data;
                 if (!data || data.length === 0) {
                     setPageError('No customer data to export.');
                     return;
                 }
-                const headers = ['Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone Number'];
-                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number'];
+                const headers = ['Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone Number', ...(canStats ? STAT_HEADERS : [])];
+                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number', ...(canStats ? STAT_KEYS : [])];
                 const csvRows = [headers.join(',')];
                 data.forEach(row => {
                     const values = keys.map(k => {
@@ -238,19 +281,19 @@ function CompanysTable() {
                 setPageError('Failed to export CSV. Please try again.');
             })
             .finally(() => setExporting(false));
-    }, []);
+    }, [exportUrl, canStats]);
 
     const handleExportJSON = useCallback(() => {
         setExporting(true);
         setExportOpen(false);
-        clientToken.get('companies/?page_size=9999', { responseType: 'json' })
+        clientToken.get(exportUrl, { responseType: 'json' })
             .then(response => {
                 const data = response.data.results || response.data;
                 if (!data || data.length === 0) {
                     setPageError('No customer data to export.');
                     return;
                 }
-                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number'];
+                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number', ...(canStats ? STAT_KEYS : [])];
                 const cleanData = data.map(row => {
                     const obj = {};
                     keys.forEach(k => { obj[k] = row[k] || ''; });
@@ -272,12 +315,12 @@ function CompanysTable() {
                 setPageError('Failed to export JSON. Please try again.');
             })
             .finally(() => setExporting(false));
-    }, []);
+    }, [exportUrl, canStats]);
 
     const handleExportPDF = useCallback(() => {
         setExporting(true);
         setExportOpen(false);
-        clientToken.get('companies/?page_size=9999', { responseType: 'json' })
+        clientToken.get(exportUrl, { responseType: 'json' })
             .then(response => {
                 const data = response.data.results || response.data;
                 if (!data || data.length === 0) {
@@ -285,12 +328,12 @@ function CompanysTable() {
                     return;
                 }
                 const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number'];
-                const headers = ['#', 'Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone'];
+                const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number', ...(canStats ? STAT_KEYS : [])];
+                const headers = ['#', 'Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone', ...(canStats ? STAT_HEADERS : [])];
                 const rows = data.map((row, i) =>
                     `<tr>
                         <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#94a3b8;text-align:center;">${i + 1}</td>
-                        ${keys.map(k => `<td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;">${row[k] || '—'}</td>`).join('')}
+                        ${keys.map(k => `<td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;">${cell(row, k)}</td>`).join('')}
                     </tr>`
                 ).join('');
                 const html = `
@@ -331,6 +374,9 @@ function CompanysTable() {
                             <div class="stat">Total Customers<strong>${data.length}</strong></div>
                             <div class="stat">With GST<strong>${data.filter(r => r.gst_number).length}</strong></div>
                             <div class="stat">With Phone<strong>${data.filter(r => r.phone_number).length}</strong></div>
+                            ${canStats ? `
+                            <div class="stat">Total Bills<strong>${data.reduce((n, r) => n + (Number(r.invoice_count) || 0), 0)}</strong></div>
+                            <div class="stat">Total Billed<strong>${money(data.reduce((n, r) => n + (Number(r.total_billed) || 0), 0))}</strong></div>` : ''}
                         </div>
                         <div class="table-wrap">
                             <table>
@@ -353,7 +399,7 @@ function CompanysTable() {
                 setPageError('Failed to export PDF. Please try again.');
             })
             .finally(() => setExporting(false));
-    }, []);
+    }, [exportUrl, canStats]);
 
     const handlePrint = useCallback(() => {
         setExportOpen(false);
@@ -362,10 +408,10 @@ function CompanysTable() {
             setPageError('No customer data to print.');
             return;
         }
-        const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number'];
-        const headers = ['Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone'];
+        const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number', ...(canStats ? STAT_KEYS : [])];
+        const headers = ['Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone', ...(canStats ? STAT_HEADERS : [])];
         const rows = printContent.map(row =>
-            `<tr>${keys.map(k => `<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#374151;">${row[k] || '—'}</td>`).join('')}</tr>`
+            `<tr>${keys.map(k => `<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#374151;">${cell(row, k)}</td>`).join('')}</tr>`
         ).join('');
         const html = `
             <html>
@@ -398,7 +444,7 @@ function CompanysTable() {
         win.document.close();
         win.focus();
         setTimeout(() => { win.print(); }, 400);
-    }, [table_content]);
+    }, [table_content, canStats]);
 
     const selectedCount = Object.values(checkbox).filter(Boolean).length;
 
@@ -422,9 +468,9 @@ function CompanysTable() {
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 
             {/* ── Top Page Title & Actions ── */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: '0 24px', paddingTop: '24px' }}>
-                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>Customers</h1>
-                <div style={{ display: 'flex', gap: '12px' }}>
+            <div className="companys_page_head">
+                <h1>Customers</h1>
+                <div className="head_actions">
                     {selectedCount > 0 && (
                         <div className="button delete" onClick={handelMultiDelete}>
                             Delete ({selectedCount})
@@ -437,16 +483,9 @@ function CompanysTable() {
             </div>
 
             {/* ── Filters Section ── */}
-            <div style={{
-                position: 'relative', zIndex: 10,
-                background: 'white', borderRadius: '20px',
-                padding: '24px', margin: '0 24px 28px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-                animation: 'fadeUp 0.5s ease 0.1s both',
-                display: 'flex', flexDirection: 'column', gap: '20px'
-            }}>
-                {/* Top Row: Search & Toggle */}
-                <div style={{ width: '100%', display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+            <div className="companys_filters_card" style={{ animation: 'fadeUp 0.5s ease 0.1s both' }}>
+                {/* Top Row: Search & Toggle (stacks below 700px) */}
+                <div className="companys_filters_row">
                     <div style={{ flex: '1 1 auto' }}>
                         <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>Search Customers</label>
                         <div style={{ position: 'relative' }}>
@@ -468,6 +507,7 @@ function CompanysTable() {
                         </div>
                     </div>
                     <button
+                        className="filters_toggle"
                         onClick={() => setShowFilters(!showFilters)}
                         style={{
                             padding: '12px 20px', borderRadius: '12px', background: showFilters ? '#eef2ff' : '#f1f5f9',
@@ -483,7 +523,7 @@ function CompanysTable() {
 
                 {/* Bottom Row: Filters Grid (Collapsible) */}
                 {showFilters && (
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                    <div className="companys_filters_grid">
                         {/* Sort By Filter */}
                         <div style={{ flex: '1 1 180px' }}>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>Sort By</label>
@@ -525,7 +565,7 @@ function CompanysTable() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div style={{ display: 'flex', gap: '8px', flex: '1 1 auto', justifyContent: 'flex-end' }}>
+                        <div className="companys_filter_actions">
                             <button
                                 onClick={() => setFilters({ s: "", ordering: "-id", page_size: 10 })}
                                 style={{
@@ -583,7 +623,7 @@ function CompanysTable() {
             </div> 
 
             {pageError && (
-                <div style={{ margin: '16px 24px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', color: '#dc2626', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '1280px', marginLeft: 'auto', marginRight: 'auto' }}>
+                <div className="companys_error_banner">
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-9V7a1 1 0 10-2 0v2a1 1 0 102 0zm0 4a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
                     </svg>
@@ -614,8 +654,10 @@ function CompanysTable() {
                     </div>
                 ) : (
                     <>
-                        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)', background: 'white' }}>
-                            <table className="table" style={{ boxShadow: 'none', borderRadius: 0, minWidth: '700px' }}>
+                        {/* Desktop / tablet: the full table, scrolling sideways if
+                            the stat columns make it wider than the viewport */}
+                        <div className="hidden md:block" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)', background: 'white' }}>
+                            <table className="table" style={{ boxShadow: 'none', borderRadius: 0, minWidth: canStats ? '1120px' : '700px' }}>
                                 <thead>
                                     <tr>
                                         <td style={{ width: '40px' }}>
@@ -632,6 +674,14 @@ function CompanysTable() {
                                         <td>State</td>
                                         <td>State Code</td>
                                         <td>Phone</td>
+                                        {canStats && (
+                                            <>
+                                                <td style={{ textAlign: 'center' }}>Bills</td>
+                                                <td style={{ textAlign: 'right' }}>Total Billed</td>
+                                                <td>Last Bill</td>
+                                                <td>Reports</td>
+                                            </>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -651,11 +701,143 @@ function CompanysTable() {
                                             <td>{obj.state || '—'}</td>
                                             <td>{obj.state_code || '—'}</td>
                                             <td>{obj.phone_number || '—'}</td>
+                                            {canStats && (
+                                                <>
+                                                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                                                        {Number(obj.invoice_count) || 0}
+                                                    </td>
+                                                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                                                        {money(obj.total_billed)}
+                                                    </td>
+                                                    <td style={{ whiteSpace: 'nowrap', color: '#64748b' }}>
+                                                        {day(obj.last_invoice_date)}
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            {canViewBills && (
+                                                                <button
+                                                                    onClick={() => navigate(`/bill_list?customer=${obj.id}&type=sales`)}
+                                                                    title={`See every bill raised for ${obj.name || 'this customer'}`}
+                                                                    style={ACTION_BTN}
+                                                                    onMouseEnter={e => { e.currentTarget.style.background = '#e0e7ff'; }}
+                                                                    onMouseLeave={e => { e.currentTarget.style.background = '#eef2ff'; }}
+                                                                >
+                                                                    View Bills
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => navigate(`/customer-ledger?customer=${obj.id}`)}
+                                                                title={`Open the ledger report for ${obj.name || 'this customer'}`}
+                                                                style={ACTION_BTN}
+                                                                onMouseEnter={e => { e.currentTarget.style.background = '#e0e7ff'; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.background = '#eef2ff'; }}
+                                                            >
+                                                                Ledger
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Mobile: one card per customer. A 6-to-10 column table
+                            on a phone is a sideways scroll nobody makes. */}
+                        <div className="md:hidden">
+                            {/* the table header carries select-all on desktop; the
+                                cards need their own */}
+                            <label className="customer_cards_selectall">
+                                <input type="checkbox" className="check-box"
+                                    checked={selectedCount > 0 && selectedCount === table_content.length}
+                                    onChange={e => {
+                                        const list = {};
+                                        Object.keys(checkbox).forEach(id => { list[id] = e.target.checked; });
+                                        setCheckBox(list);
+                                    }}
+                                />
+                                {selectedCount > 0 ? `${selectedCount} selected` : 'Select all'}
+                            </label>
+                            {table_content.map((obj, key) => (
+                                <div className="customer_card" key={obj.id}>
+                                    <div className="customer_card_head">
+                                        <input type="checkbox" className="check-box"
+                                            style={{ marginTop: '4px' }}
+                                            checked={!!checkbox[obj.id]}
+                                            onChange={e => setCheckBox({ ...checkbox, [obj.id]: e.target.checked })}
+                                            aria-label={`Select ${obj.name || 'customer'}`}
+                                        />
+                                        <div className="customer_card_name" onClick={() => handelItemsOpen(key)}>
+                                            {obj.name || '—'}
+                                        </div>
+                                        <button
+                                            onClick={() => handelItemsOpen(key)}
+                                            aria-label="Edit customer"
+                                            style={{ ...ACTION_BTN, padding: '6px 10px' }}
+                                        >
+                                            Edit
+                                        </button>
+                                    </div>
+
+                                    <div className="customer_card_facts">
+                                        <div className="customer_card_fact">
+                                            <span>GST Number</span>
+                                            <strong>{obj.gst_number || '—'}</strong>
+                                        </div>
+                                        <div className="customer_card_fact">
+                                            <span>Phone</span>
+                                            <strong>{obj.phone_number || '—'}</strong>
+                                        </div>
+                                        <div className="customer_card_fact">
+                                            <span>State</span>
+                                            <strong>{obj.state || '—'}</strong>
+                                        </div>
+                                        <div className="customer_card_fact">
+                                            <span>State Code</span>
+                                            <strong>{obj.state_code || '—'}</strong>
+                                        </div>
+                                    </div>
+
+                                    {canStats && (
+                                        <>
+                                            <div className="customer_card_stats">
+                                                <div className="customer_card_fact">
+                                                    <span>Bills</span>
+                                                    <strong style={{ color: '#0f172a' }}>{Number(obj.invoice_count) || 0}</strong>
+                                                </div>
+                                                <div className="customer_card_fact">
+                                                    <span>Total Billed</span>
+                                                    <strong style={{ color: '#0f172a' }}>{money(obj.total_billed)}</strong>
+                                                </div>
+                                                <div className="customer_card_fact">
+                                                    <span>Last Bill</span>
+                                                    <strong>{day(obj.last_invoice_date)}</strong>
+                                                </div>
+                                            </div>
+                                            <div className="customer_card_actions">
+                                                {canViewBills && (
+                                                    <button
+                                                        onClick={() => navigate(`/bill_list?customer=${obj.id}&type=sales`)}
+                                                        style={ACTION_BTN}
+                                                    >
+                                                        View Bills
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => navigate(`/customer-ledger?customer=${obj.id}`)}
+                                                    style={ACTION_BTN}
+                                                >
+                                                    Ledger
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
                         {/* Pagination */}
                         <div className="paging">
                             {urls.previous && <div id="previous" onClick={handelUrl}>← Previous</div>}
