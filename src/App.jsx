@@ -15,6 +15,7 @@ import TemplateDesign from "./pages/template_design";
 import Navbar from "./comonant/navbar";
 import SignUp from "@/pages/signup";
 import CompanyForm from "@/pages/CompanyForm";
+import ChooseTemplate from "@/pages/ChooseTemplate";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser, logoutUser } from "./store/userSlice";
 import { fetchAccess, clearAccess } from "./store/accessSlice";
@@ -255,6 +256,14 @@ function App() {
                         <RequireCompanyAdminOrOnboarding>
                             <CompanyForm />
                         </RequireCompanyAdminOrOnboarding>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/choose-template"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <ChooseTemplate />
                     </PrivateRoute>
                 }
             />

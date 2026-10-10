@@ -234,8 +234,11 @@ export default function CompanyForm() {
         clientToken.post('user-companies/', data, { headers: { "Content-Type": "multipart/form-data" } })
             .then((res) => {
                 if (res.status === 201 && !userInfo?.is_company_varified) {
-                    dispatch(fetchUser());
-                    navigate('/home', { replace: true });
+                    // Refresh first: the route guard bounces unverified users
+                    // back here, so /choose-template must see a verified user.
+                    return dispatch(fetchUser()).then(() => {
+                        navigate('/choose-template', { replace: true });
+                    });
                 }
             })
             .catch((err) => {

@@ -1,0 +1,92 @@
+.ct-root {
+  display: flex;
+  min-height: 100vh;
+  background: #f1f5f9;
+  font-family: Inter, system-ui, sans-serif;
+}
+.ct-side {
+  width: 340px;
+  flex-shrink: 0;
+  padding: 32px 24px;
+  background: #fff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+.ct-title { margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; }
+.ct-note {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #3730a3;
+  background: #eef2ff;
+  border-radius: 10px;
+}
+.ct-list { display: flex; flex-direction: column; gap: 8px; }
+.ct-item {
+  text-align: left;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ct-item:hover { border-color: #cbd5e1; }
+.ct-item:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.ct-item--selected { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
+.ct-item__name { font-size: 14px; font-weight: 600; color: #0f172a; }
+.ct-item__cat { font-size: 12px; color: #64748b; }
+.ct-error { margin: 0; font-size: 13px; color: #dc2626; }
+.ct-actions { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+.ct-btn {
+  padding: 12px;
+  font: 700 14px/1 inherit;
+  font-family: inherit;
+  border: 1.5px solid #4f46e5;
+  border-radius: 10px;
+  background: #fff;
+  color: #4f46e5;
+  cursor: pointer;
+}
+.ct-btn--primary { background: #4f46e5; color: #fff; }
+.ct-btn:disabled { opacity: 0.6; cursor: default; }
+.ct-link {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px;
+}
+.ct-stage {
+  flex: 1;
+  min-width: 0;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ct-preview {
+  width: 100%;
+  height: calc(100vh - 48px);
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12);
+  object-fit: contain;
+}
+.ct-loading { color: #64748b; font-size: 14px; }
+
+@media (max-width: 800px) {
+  .ct-root { flex-direction: column; }
+  .ct-side { width: auto; max-height: none; border-right: none; border-bottom: 1px solid #e2e8f0; }
+  .ct-preview { height: 70vh; }
+}
