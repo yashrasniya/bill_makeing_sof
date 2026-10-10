@@ -15,6 +15,7 @@ const COMPANY_FIELDS = [
     { label: "State", name: "state", type: "text", placeholder: "Karnataka" },
     { label: "State Code", name: "state_code", type: "number", placeholder: "29" },
     { label: "Company Email", name: "company_email_id", type: "email", placeholder: "info@acme.com" },
+    { label: "Company Phone", name: "company_phone", type: "tel", placeholder: "+91 98765 43210", optional: true },
     { label: "Company Logo", name: "company_logo", type: "file", col: 2 },
 ];
 

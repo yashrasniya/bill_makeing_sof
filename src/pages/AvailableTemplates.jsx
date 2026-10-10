@@ -18,6 +18,7 @@ export default function AvailableTemplates() {
     const [activeTab, setActiveTab] = useState('my'); // 'my' | 'gallery'
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [adminFilter, setAdminFilter] = useState('all');
+    const [preview, setPreview] = useState(null); // { template, url, loading, error }
     const navigate = useNavigate();
 
     const loadTemplates = () => {
@@ -94,6 +95,27 @@ export default function AvailableTemplates() {
             console.error("Failed to clone template:", error);
         } finally {
             setCloningId(null);
+        }
+    };
+
+    const closePreview = () => {
+        setPreview((p) => {
+            if (p?.url) URL.revokeObjectURL(p.url);
+            return null;
+        });
+    };
+
+    const handlePreviewTemplate = async (e, template) => {
+        e.stopPropagation();
+        setPreview({ template, url: null, loading: true, error: null });
+        try {
+            const response = await clientToken.get(`yaml/gallery/${template.id}/preview/`, { responseType: 'blob' });
+            const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+            setPreview((p) => (p && p.template.id === template.id ? { ...p, url, loading: false } : (URL.revokeObjectURL(url), p)));
+        } catch (err) {
+            setPreview((p) => (p && p.template.id === template.id
+                ? { ...p, loading: false, error: 'Live preview is not available for this template.' }
+                : p));
         }
     };
 
@@ -370,7 +392,7 @@ export default function AvailableTemplates() {
                                                 <img
                                                     src={template.pdf_template}
                                                     alt={template.template_name}
-                                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                    className="w-full h-full object-contain object-top bg-white transition-transform duration-700 group-hover:scale-105"
                                                 />
                                             ) : (
                                                 <div className="w-full h-full bg-gradient-to-br from-indigo-50/80 to-blue-50/50 p-6 flex flex-col pt-8 transition-transform duration-700 group-hover:scale-105">
@@ -553,7 +575,7 @@ export default function AvailableTemplates() {
                                                 <img
                                                     src={template.pdf_template}
                                                     alt={template.template_name}
-                                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                    className="w-full h-full object-contain object-top bg-white transition-transform duration-700 group-hover:scale-105"
                                                 />
                                             ) : (
                                                 <div className="w-full h-full bg-gradient-to-br from-purple-50/80 via-indigo-50/80 to-blue-50/50 p-6 flex flex-col pt-8 transition-transform duration-700 group-hover:scale-105">
@@ -571,7 +593,15 @@ export default function AvailableTemplates() {
                                                 </div>
                                             )}
                                             {/* Hover overlay */}
-                                            <div className="absolute inset-0 bg-indigo-900/0 group-hover:bg-indigo-900/10 backdrop-blur-[0px] group-hover:backdrop-blur-[2px] transition-all duration-300 flex items-center justify-center">
+                                            <div className="absolute inset-0 bg-indigo-900/0 group-hover:bg-indigo-900/10 backdrop-blur-[0px] group-hover:backdrop-blur-[2px] transition-all duration-300 flex flex-col gap-2 items-center justify-center">
+                                                {template.is_html && (
+                                                    <button
+                                                        onClick={(e) => handlePreviewTemplate(e, template)}
+                                                        className="opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-400 bg-white/90 backdrop-blur-sm text-gray-700 font-bold px-5 py-2.5 rounded-full shadow-lg text-sm border border-white/50 flex items-center gap-2 hover:bg-white"
+                                                    >
+                                                        <span className="text-lg leading-none">👁</span> Preview
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={(e) => handleCloneTemplate(e, template)}
                                                     disabled={cloningId === template.id}
@@ -631,7 +661,19 @@ export default function AvailableTemplates() {
                                                 </div>
                                             )}
 
-                                            <div className="mt-4 pt-4 border-t border-gray-50">
+                                            <div className="mt-4 pt-4 border-t border-gray-50 flex flex-col gap-2">
+                                                {template.is_html && (
+                                                    <button
+                                                        onClick={(e) => handlePreviewTemplate(e, template)}
+                                                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                        Preview
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={(e) => handleCloneTemplate(e, template)}
                                                     disabled={cloningId === template.id}
@@ -668,6 +710,56 @@ export default function AvailableTemplates() {
                     </>
                 )}
             </div>
+
+            {preview && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={closePreview}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl h-[90vh] flex flex-col overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-100">
+                            <div className="min-w-0">
+                                <h3 className="text-lg font-bold text-gray-900 truncate">{preview.template.template_name}</h3>
+                                <p className="text-xs text-gray-400">Preview with sample data</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <button
+                                    onClick={(e) => { handleCloneTemplate(e, preview.template).then(closePreview); }}
+                                    disabled={cloningId === preview.template.id}
+                                    className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 disabled:opacity-60"
+                                >
+                                    {cloningId === preview.template.id ? 'Adding…' : 'Use This Template'}
+                                </button>
+                                <button
+                                    onClick={closePreview}
+                                    className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                                    aria-label="Close preview"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 bg-gray-100 relative">
+                            {preview.loading && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                                </div>
+                            )}
+                            {preview.error && (
+                                <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm px-6 text-center">
+                                    {preview.error}
+                                </div>
+                            )}
+                            {preview.url && (
+                                <iframe src={preview.url} title="Template preview" className="w-full h-full border-0" />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
