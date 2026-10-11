@@ -11,6 +11,7 @@ export default function ChooseTemplate() {
     const [templates, setTemplates] = useState(null); // null = loading
     const [selectedId, setSelectedId] = useState(null);
     const [previews, setPreviews] = useState({}); // id -> blob URL | 'error'
+    const [loaded, setLoaded] = useState({}); // id -> preview finished painting
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
     const requested = useRef(new Set());
@@ -28,8 +29,11 @@ export default function ChooseTemplate() {
 
     const selected = templates?.find((t) => t.id === selectedId);
 
-    /* Fetch the preview through axios (not an <iframe src>) so it works
-       whatever the auth transport is. */
+    /* Fetch the preview through axios (not a bare <img src>) so it works
+       whatever the auth transport is. The server renders the first page as
+       a PNG: an <img> reports a real load event (so the spinner clears
+       exactly when the page is visible) and every phone browser can show
+       it, unlike a PDF inside an iframe. */
     useEffect(() => {
         if (!selected || requested.current.has(selected.id)) return;
         requested.current.add(selected.id);
@@ -37,10 +41,10 @@ export default function ChooseTemplate() {
             setPreviews((p) => ({ ...p, [selected.id]: selected.pdf_template ? { img: selected.pdf_template } : "error" }));
             return;
         }
-        clientToken.get(selected.preview_url, { responseType: "blob" })
+        clientToken.get(selected.preview_url, { params: { output: "png" }, responseType: "blob" })
             .then((res) => {
                 const url = URL.createObjectURL(res.data);
-                setPreviews((p) => ({ ...p, [selected.id]: { pdf: url } }));
+                setPreviews((p) => ({ ...p, [selected.id]: { img: url, blob: true } }));
             })
             .catch(() => {
                 setPreviews((p) => ({
@@ -52,7 +56,7 @@ export default function ChooseTemplate() {
 
     useEffect(() => () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        Object.values(previewsRef.current).forEach((v) => v?.pdf && URL.revokeObjectURL(v.pdf));
+        Object.values(previewsRef.current).forEach((v) => v?.blob && URL.revokeObjectURL(v.img));
     }, []);
     const previewsRef = useRef(previews);
     previewsRef.current = previews;
@@ -72,6 +76,8 @@ export default function ChooseTemplate() {
     if (templates === null) return <div className="ct-root"><p className="ct-loading">Loading templates…</p></div>;
 
     const preview = previews[selectedId];
+    const markLoaded = () => setLoaded((l) => ({ ...l, [selectedId]: true }));
+    const previewLoading = preview === undefined || (preview !== "error" && !loaded[selectedId]);
 
     return (
         <div className="ct-root">
@@ -82,6 +88,7 @@ export default function ChooseTemplate() {
                     customise the selected template right away.
                 </p>
 
+                <p className="ct-pick">Tap a template to change the preview</p>
                 <div className="ct-list" role="radiogroup" aria-label="Invoice template">
                     {templates.map((t) => (
                         <button
@@ -114,12 +121,15 @@ export default function ChooseTemplate() {
             </aside>
 
             <main className="ct-stage">
-                {preview === undefined && <p className="ct-loading">Loading preview…</p>}
-                {preview === "error" && <p className="ct-loading">No preview available for this template.</p>}
-                {preview?.img && <img className="ct-preview" src={preview.img} alt={`${selected.template_name} preview`} />}
-                {preview?.pdf && (
-                    <iframe className="ct-preview" title={`${selected.template_name} preview`} src={`${preview.pdf}#toolbar=0&navpanes=0`} />
+                <h3 className="ct-stage__title">Preview · {selected?.template_name}</h3>
+                {previewLoading && (
+                    <div className="ct-spinner" role="status" aria-live="polite">
+                        <span className="ct-spinner__ring" aria-hidden="true" />
+                        <span>Loading preview…</span>
+                    </div>
                 )}
+                {preview === "error" && <p className="ct-loading">No preview available for this template.</p>}
+                {preview?.img && <img className="ct-preview" src={preview.img} alt={`${selected.template_name} preview`} onLoad={markLoaded} onError={markLoaded} />}
             </main>
         </div>
     );

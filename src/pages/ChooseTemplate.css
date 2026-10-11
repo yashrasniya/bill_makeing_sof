@@ -83,10 +83,45 @@
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12);
   object-fit: contain;
 }
+.ct-stage { position: relative; }
+.ct-spinner {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: rgba(241, 245, 249, 0.92); border-radius: 12px;
+  color: #475569; font-size: 14px; font-weight: 600;
+}
+.ct-spinner__ring {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid #c7d2fe; border-top-color: #4f46e5;
+  animation: ct-spin 0.8s linear infinite;
+}
+@keyframes ct-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ct-spinner__ring { animation-duration: 2.4s; } }
 .ct-loading { color: #64748b; font-size: 14px; }
 
+.ct-stage__title, .ct-pick { display: none; }
+
+/* Phones: preview first, template chips right under it, actions pinned at
+   the bottom — so tapping a template visibly changes what is on screen. */
 @media (max-width: 800px) {
-  .ct-root { flex-direction: column; }
-  .ct-side { width: auto; max-height: none; border-right: none; border-bottom: 1px solid #e2e8f0; }
-  .ct-preview { height: 70vh; }
+  .ct-root { flex-direction: column; padding-bottom: 150px; }
+  .ct-side { display: contents; }
+  .ct-title { order: 1; padding: 16px 16px 0; font-size: 20px; }
+  .ct-note { display: none; }
+  .ct-stage { order: 2; flex: none; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; padding: 12px 16px 0; }
+  .ct-stage__title { display: block; margin: 0; font-size: 14px; font-weight: 700; color: #4f46e5; }
+  .ct-preview { height: 52vh; }
+  .ct-stage { min-height: calc(52vh + 40px); }
+  .ct-spinner { inset: 40px 16px 0; }
+  .ct-pick { order: 3; display: block; margin: 0; padding: 14px 16px 0; font-size: 13px; color: #64748b; }
+  .ct-list { order: 4; flex-direction: row; overflow-x: auto; gap: 8px; padding: 8px 16px; scroll-snap-type: x proximity; }
+  .ct-item { flex: 0 0 auto; min-width: 140px; scroll-snap-align: start; }
+  .ct-error { order: 5; padding: 0 16px; }
+  .ct-actions {
+    order: 6; position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 12px 16px;
+    background: #fff; border-top: 1px solid #e2e8f0; box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.08);
+  }
+  .ct-actions .ct-btn { flex: 1 1 0; min-width: 0; }
+  .ct-actions .ct-link { flex: 1 0 100%; padding: 2px; }
 }
