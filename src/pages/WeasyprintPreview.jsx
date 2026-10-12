@@ -46,15 +46,16 @@ const COLUMN_PLACEHOLDERS = [
 
 /* The backend exposes each UI Config field on `product.props` under its
    lower-cased title and under each word of it (see invoice/export.py), and
-   Django cannot reach a key containing a space. A multi-word title is
-   therefore offered by its first word, the same way the built-in item/rate/
-   quantity columns are addressed. Titles that would not be a valid variable
-   name are left out rather than offered as something that renders blank. */
+   Django cannot reach a key containing a space or a symbol, so the full title
+   is offered with other characters turned into "_" ("PRODUCT/Description" ->
+   product_description), which the backend also publishes. Titles that would
+   not be a valid variable name are left out rather than offered as something
+   that renders blank. */
 const uiConfigColumnOptions = (titles) => {
     const seen = new Set(COLUMN_PLACEHOLDERS.map(p => p.value));
     const out = [];
     titles.forEach((title) => {
-        const key = String(title).trim().toLowerCase().split(/\s+/)[0];
+        const key = String(title).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
         if (!/^[a-z_][a-z0-9_]*$/.test(key)) return;
         const value = `{{ product.props.${key} }}`;
         if (seen.has(value)) return;
