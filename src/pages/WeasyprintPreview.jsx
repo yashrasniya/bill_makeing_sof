@@ -1003,7 +1003,15 @@ const WeasyprintPreview = () => {
             // An empty {{ }} cannot be compiled and makes every export of this
             // template fail, so refuse to save it rather than break the PDF.
             if (/\{\{\s*\}\}/.test(htmlContent)) {
-                alert("This template contains an empty {{ }} placeholder. Remove it or pick a field, then save again.");
+                const empty = /\{\{\s*\}\}/;
+                const bad = elements.find(el =>
+                    empty.test(el.content || '') || empty.test(el.url || '')
+                    || (el.columns || []).some(c => empty.test(c.value || '')));
+                if (bad) setSelectedId(bad.id);
+                const where = bad
+                    ? `It is in the selected block (${bad.type}${bad.content ? `: "${String(bad.content).replace(/\{\{\s*\}\}/g, '[empty]').slice(0, 40)}"` : ''}). Look for the red "empty variable" chip, delete it, then save again.`
+                    : "Check the HTML blocks and table cells, then save again.";
+                alert(`This template contains an empty {{ }} placeholder. ${where}`);
                 return;
             }
             if (templateId) {
