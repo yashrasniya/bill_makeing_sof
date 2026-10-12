@@ -1,0 +1,589 @@
+/* ══════════════════════════════════════════════════════════════════
+   CompanyForm — presentation layer.
+
+   Extracted from inline style objects so that state that CSS owns
+   (:hover, :focus-visible, :disabled, media queries, reduced motion)
+   is expressed as CSS instead of JS mouse handlers. Inline styles
+   can't express a focus ring that only shows for keyboard users, and
+   JS hover handlers leave the element stuck in its hover state when
+   the pointer leaves during a re-render.
+
+   Nothing here changes the form's fields, validation or requests.
+   ══════════════════════════════════════════════════════════════════ */
+
+.cf-root {
+  /* palette */
+  --cf-indigo: #4f46e5;
+  --cf-indigo-dark: #4338ca;
+  --cf-violet: #7c3aed;
+  --cf-navy: #312e81;
+  --cf-ink: #0f172a;
+  --cf-body: #374151;
+  --cf-muted: #94a3b8;
+  --cf-line: #e2e8f0;
+  --cf-line-soft: #f1f5f9;
+  --cf-surface: #f8fafc;
+  --cf-danger: #dc2626;
+
+  --cf-brand: linear-gradient(135deg, var(--cf-indigo), var(--cf-violet));
+  --cf-ring: 0 0 0 3px rgba(79, 70, 229, 0.18);
+  --cf-radius: 14px;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: var(--cf-ink);
+  -webkit-font-smoothing: antialiased;
+  accent-color: var(--cf-indigo);
+}
+
+.cf-split {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+}
+
+/* ── Left / onboarding panel ───────────────────────────────────── */
+
+.cf-left {
+  flex: 0 0 36%;
+  /* `position: sticky` — the original declared `relative` and then
+     `sticky` on the same rule, so the first was dead. */
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  min-height: 100vh;
+  max-height: 100vh;
+  padding: 48px 36px;
+  background:
+    radial-gradient(120% 80% at 20% 0%, rgba(255, 255, 255, 0.10) 0%, transparent 55%),
+    linear-gradient(145deg, var(--cf-navy) 0%, var(--cf-indigo) 45%, var(--cf-violet) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.cf-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.07);
+  animation: cf-float 14s ease-in-out infinite;
+}
+
+.cf-orb--a { top: -90px;    left: -90px;   width: 340px; height: 340px; }
+.cf-orb--b { bottom: -110px; right: -70px; width: 380px; height: 380px;
+             background: rgba(255, 255, 255, 0.05); animation-delay: -5s; }
+.cf-orb--c { top: 60%;      right: -50px;  width: 160px; height: 160px;
+             background: rgba(255, 255, 255, 0.06); animation-delay: -9s; }
+
+@keyframes cf-float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(0, -18px, 0) scale(1.04); }
+}
+
+.cf-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.cf-badge img { width: 90%; height: 90%; object-fit: contain; }
+
+.cf-wordmark {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.cf-left h2 {
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.8px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.cf-lede {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+  line-height: 1.7;
+  max-width: 260px;
+  margin-bottom: 36px;
+}
+
+.cf-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  max-width: 290px;
+  margin-bottom: 9px;
+  padding: 13px 16px;
+  border-radius: var(--cf-radius);
+  background: rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+
+.cf-step:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateX(3px);
+}
+
+.cf-step__icon { font-size: 20px; flex-shrink: 0; line-height: 1.2; }
+.cf-step__title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.cf-step__desc { font-size: 11px; color: rgba(255, 255, 255, 0.65); line-height: 1.45; }
+
+/* ── Right / form panel ────────────────────────────────────────── */
+
+.cf-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background: var(--cf-surface);
+  padding: 32px 24px 80px;
+  position: relative;
+}
+
+.cf-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cf-glow--a {
+  top: -50px; right: -50px; width: 240px; height: 240px;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.07) 0%, transparent 70%);
+}
+
+.cf-glow--b {
+  bottom: -40px; left: -40px; width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.06) 0%, transparent 70%);
+}
+
+.cf-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 640px;
+  margin-top: 8px;
+  padding: 36px 38px;
+  background: #fff;
+  border-radius: 24px;
+  box-sizing: border-box;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 16px 56px rgba(16, 24, 40, 0.08),
+    0 0 0 1px rgba(16, 24, 40, 0.04);
+  animation: cf-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cf-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Card header ───────────────────────────────────────────────── */
+
+.cf-head { margin-bottom: 28px; }
+
+.cf-brandline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.cf-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--cf-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+}
+
+.cf-mark img { width: 90%; height: 90%; object-fit: contain; }
+
+.cf-brandname {
+  font-size: 15px;
+  font-weight: 800;
+  background: var(--cf-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cf-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--cf-ink);
+  letter-spacing: -0.6px;
+  margin-bottom: 6px;
+}
+
+.cf-subtitle {
+  font-size: 14px;
+  color: var(--cf-muted);
+  line-height: 1.6;
+}
+
+/* ── Sections & grid ───────────────────────────────────────────── */
+
+.cf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 16px;
+  margin-bottom: 24px;
+}
+
+.field-span-2 { grid-column: span 2; }
+.field-span-1 { grid-column: span 1; }
+
+.cf-section-header {
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 4px 0 8px;
+}
+
+.cf-section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--cf-line), transparent);
+}
+
+.cf-section-header__bar {
+  width: 4px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--cf-indigo), var(--cf-violet));
+  flex-shrink: 0;
+}
+
+.cf-section-header__text {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cf-indigo);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.cf-divider {
+  height: 1px;
+  background: var(--cf-line-soft);
+  margin: 4px 0 24px;
+}
+
+/* ── Fields ────────────────────────────────────────────────────── */
+
+.cf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cf-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cf-body);
+  letter-spacing: 0.02em;
+}
+
+.cf-req { color: #ef4444; margin-left: 1px; }
+
+/* helper copy under a field — explains what the value is used for */
+.cf-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+/* opt-in toggle (UPI QR); the whole row is the click target */
+.cf-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  background: var(--cf-surface);
+  border: 1.5px solid var(--cf-line);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.cf-check:hover { border-color: #cbd5e1; }
+
+.cf-check input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cf-indigo);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.cf-check:focus-within {
+  border-color: var(--cf-indigo);
+  box-shadow: var(--cf-ring);
+}
+
+.cf-check__label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--cf-body);
+}
+
+.cf-input {
+  width: 100%;
+  padding: 11px 13px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--cf-ink);
+  background: var(--cf-surface);
+  border: 1.5px solid var(--cf-line);
+  border-radius: 10px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.cf-input::placeholder { color: #b6c2d2; }
+
+.cf-input:hover:not(:focus) { border-color: #cbd5e1; }
+
+/* real focus state — replaces the JS onFocus/onBlur handlers */
+.cf-input:focus {
+  border-color: var(--cf-indigo);
+  background: #fff;
+  box-shadow: var(--cf-ring);
+}
+
+/* strip the number spinner from State Code — it invites scroll-wheel edits */
+.cf-input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+.cf-input[type='number']::-webkit-outer-spin-button,
+.cf-input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* ── Logo dropzone ─────────────────────────────────────────────── */
+
+.cf-drop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 2px dashed #c7d2fe;
+  border-radius: 12px;
+  background: #fafbff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.cf-drop:hover {
+  border-color: var(--cf-indigo);
+  background: #f5f6ff;
+}
+
+.cf-drop:active { transform: scale(0.995); }
+
+/* keyboard users get the same affordance as the mouse hover */
+.cf-drop:focus-within {
+  border-color: var(--cf-indigo);
+  box-shadow: var(--cf-ring);
+}
+
+.cf-drop__preview {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--cf-line);
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.cf-drop__placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background: #eef2ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cf-drop__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cf-indigo);
+  margin-bottom: 2px;
+}
+
+.cf-drop__hint { font-size: 11px; color: var(--cf-muted); }
+
+/* ── Submit ────────────────────────────────────────────────────── */
+
+.cf-submit {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #fff;
+  background: var(--cf-brand);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.cf-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(79, 70, 229, 0.45);
+}
+
+.cf-submit:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+}
+
+.cf-submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px rgba(79, 70, 229, 0.5);
+}
+
+.cf-submit:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.6) brightness(1.15);
+  box-shadow: none;
+}
+
+.cf-spinner { animation: cf-spin 0.9s linear infinite; }
+
+@keyframes cf-spin { to { transform: rotate(360deg); } }
+
+/* ── Error toast ───────────────────────────────────────────────── */
+
+.cf-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 380px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cf-danger);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  animation: cf-toast-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cf-toast-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.cf-toast__msg { flex: 1; line-height: 1.45; }
+
+.cf-toast__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--cf-danger);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.cf-toast__close:hover { background: rgba(220, 38, 38, 0.1); }
+
+.cf-tailspace { height: 40px; }
+
+/* ── Responsive ────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .cf-left { flex: 0 0 32%; padding: 32px 20px; }
+  .cf-card { padding: 32px 28px; }
+}
+
+@media (max-width: 768px) {
+  .cf-left { display: none; }
+  .cf-right { padding: 12px 10px 100px; }
+
+  .cf-card {
+    padding: 22px 18px;
+    border-radius: 18px;
+    margin-top: 0;
+  }
+
+  .cf-title { font-size: 20px; }
+  .cf-grid { grid-template-columns: 1fr; gap: 14px; }
+  .field-span-2,
+  .field-span-1,
+  .cf-section-header { grid-column: 1 / -1; }
+
+  /* 16px keeps iOS from zooming the viewport on focus */
+  .cf-input { font-size: 16px; padding: 12px 14px; }
+
+  .cf-toast {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    max-width: none;
+  }
+}
+
+/* ── Motion & contrast preferences ─────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-root *,
+  .cf-root *::before,
+  .cf-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .cf-input { border-color: #64748b; }
+  .cf-subtitle,
+  .cf-drop__hint { color: #475569; }
+}

@@ -42,7 +42,18 @@ const UPI_FIELDS = [
     },
 ];
 
-const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS];
+/* Pro-plan feature: rendered only when the plan includes it (see
+   FEATURES_FIELDS usage below), but always part of ALL_FIELDS so save/
+   submit doesn't need special-casing for a company that can't see it. */
+const FEATURES_FIELDS = [
+    {
+        label: "Line item images", name: "enable_line_item_images", type: "checkbox",
+        optional: true, col: 2,
+        hint: "Let line items carry an attached photo on invoices. Off by default.",
+    },
+];
+
+const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS, ...FEATURES_FIELDS];
 
 const ONBOARDING_STEPS = [
     { icon: '🏢', title: 'Company Details', desc: 'Name, address, GST & email' },
@@ -161,6 +172,8 @@ export default function CompanyForm() {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { userInfo } = useSelector((state) => state.user);
+    const { features: planFeatures } = useSelector((state) => state.access);
+    const canLineItemImages = planFeatures.includes('line_item_images');
 
     /* Fetch company data on mount:
        - If is_varified === true  → pre-fill form fields + show Navbar
@@ -380,6 +393,24 @@ export default function CompanyForm() {
                                     />
                                 ))}
                             </div>
+
+                            {canLineItemImages && (
+                                <>
+                                    <div className="cf-divider" />
+                                    <div className="cf-grid">
+                                        <SectionHeader title="🖼️  Features" />
+                                        {FEATURES_FIELDS.map(f => (
+                                            <Field
+                                                key={f.name}
+                                                field={f}
+                                                value={formData[f.name]}
+                                                logoPreview={logoPreview}
+                                                onChange={handleChange}
+                                            />
+                                        ))}
+                                    </div>
+                                </>
+                            )}
 
                             {/* Submit */}
                             <button type="submit" className="cf-submit" disabled={loading}>

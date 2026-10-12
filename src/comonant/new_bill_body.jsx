@@ -3,11 +3,37 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { clientToken } from "@/axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import Cropper from "react-easy-crop";
 import PdfOpener from "@/utility/pdf_opener";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
 import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
 import BulkEditModal from "@/comonant/Bill/BulkEditModal";
+
+/* Renders the cropped region of `imageSrc` onto an offscreen canvas and
+   resolves a JPEG Blob — the standard react-easy-crop recipe. */
+function getCroppedImageBlob(imageSrc, cropAreaPixels) {
+    return new Promise((resolve, reject) => {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(cropAreaPixels.width);
+            canvas.height = Math.round(cropAreaPixels.height);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(
+                img,
+                cropAreaPixels.x, cropAreaPixels.y, cropAreaPixels.width, cropAreaPixels.height,
+                0, 0, canvas.width, canvas.height
+            );
+            canvas.toBlob((blob) => {
+                if (blob) resolve(blob); else reject(new Error('Crop failed'));
+            }, 'image/jpeg', 0.92);
+        };
+        img.onerror = reject;
+        img.src = imageSrc;
+    });
+}
 
 const formatHeaderTitle = (title) => {
     if (!title) return '';
@@ -85,9 +111,12 @@ function NewBillBody({ id }) {
     const [InvoiceData, setInvoiceData] = useState({})
     const [url, setUrl] = useState(id ? `invoice/${id}/update/` : 'invoice/')
     const [refresh, setRefresh] = useState(false)
-    const { features: planFeatures, permissions: userPermissions, status: accessStatus } = useSelector((s) => s.access);
+    const { features: planFeatures, permissions: userPermissions, status: accessStatus, lineItemImagesEnabled } = useSelector((s) => s.access);
     const canInventory = accessStatus !== 'succeeded' ||
         (planFeatures.includes('inventory') && userPermissions.includes('inventory.manage'));
+    // Pro-plan feature AND the company's own opt-in toggle (off by default,
+    // set in Company Settings) — both must be true for this to show at all.
+    const canLineItemImages = planFeatures.includes('line_item_images') && lineItemImagesEnabled;
     const [newDataFormat, setNewDataFormat] = useState({})
     const [invoiceNumber, setInvoiceNumber] = useState(InvoiceData?.invoice_number ?? "");
     const [inventoryProducts, setInventoryProducts] = useState([]);
@@ -98,6 +127,15 @@ function NewBillBody({ id }) {
     const [cfValues, setCFValues] = useState({});
     const [uploadingImg, setUploadingImg] = useState(false);
     const [showBulkEdit, setShowBulkEdit] = useState(false);
+    const [showImagePicker, setShowImagePicker] = useState(false);
+    const [productImages, setProductImages] = useState([]);
+    const [imagePickerNext, setImagePickerNext] = useState(null);
+    const imageFileInputRef = useRef(null);
+    const [cropAspect, setCropAspect] = useState(1);
+    const [cropModal, setCropModal] = useState(null); // { src, file } | null
+    const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
+    const [cropZoom, setCropZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
     let navigate = useNavigate()
     const location = useLocation()
 
@@ -129,6 +167,18 @@ function NewBillBody({ id }) {
             setCustomFields(data.filter(cf => !cf.hidden));
         }).catch(err => console.error("Failed to load custom fields:", err));
     }, []);
+
+    useEffect(() => {
+        // Steers the upload-time crop tool so a photo isn't force-squashed
+        // later — falls back to a square silently if it can't be read.
+        // Skipped entirely when the feature is off: the endpoint 403s then,
+        // and there is nothing to crop for either.
+        if (!canLineItemImages) return;
+        clientToken.get("product-images/crop-ratio/", { suppressErrorToast: true }).then((response) => {
+            const { width, height } = response.data || {};
+            if (width && height) setCropAspect(width / height);
+        }).catch(() => {});
+    }, [canLineItemImages]);
 
     useEffect(() => {
         if (InvoiceData?.custom_header_field) {
@@ -356,6 +406,7 @@ function NewBillBody({ id }) {
                 const productUpdateForm = new FormData()
                 productUpdateForm.append('gst_amount', totals.gst_amount)
                 productUpdateForm.append('total_amount', totals.total_amount)
+                productUpdateForm.append('image_id', new_product.image?.id ?? '')
                 return clientToken.post(`product/${new_product.id}/update/`, productUpdateForm)
             }).then(() => {
                 setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
@@ -385,6 +436,7 @@ function NewBillBody({ id }) {
             form.append('product_properties', '')
             form.append('gst_amount', totals.gst_amount)
             form.append('total_amount', totals.total_amount)
+            form.append('image_id', new_product.image?.id ?? '')
 
             // Helper: ensure we have an invoice ID before adding products.
             // On a brand-new invoice the auto-save may not have fired yet,
@@ -541,6 +593,74 @@ function NewBillBody({ id }) {
         setSelectedInventoryProductId(product.id);
         setNewProduct({ ...new_product, product_properties: array });
     };
+
+    const loadProductImages = (url = 'product-images/') => {
+        clientToken.get(url).then((res) => {
+            if (res.status === 200) {
+                const rows = res.data.results || res.data || [];
+                setProductImages(prev => url === 'product-images/' ? rows : [...prev, ...rows]);
+                setImagePickerNext(res.data.next || null);
+            }
+        }).catch((error) => {
+            console.log(error)
+            showToast(`Error ${error?.request?.status ?? ''}: Failed to load images`)
+        });
+    };
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        // Cropping happens before upload, not after — open the crop modal
+        // instead of posting straight away.
+        setCropModal({ src: URL.createObjectURL(file), file });
+        setCropPosition({ x: 0, y: 0 });
+        setCropZoom(1);
+        setCroppedAreaPixels(null);
+    };
+
+    const onCropComplete = useCallback((_croppedArea, areaPixels) => {
+        setCroppedAreaPixels(areaPixels);
+    }, []);
+
+    const cancelCrop = () => {
+        if (cropModal) URL.revokeObjectURL(cropModal.src);
+        setCropModal(null);
+        if (imageFileInputRef.current) imageFileInputRef.current.value = '';
+    };
+
+    const confirmCrop = async () => {
+        if (!cropModal || !croppedAreaPixels) return;
+        setUploadingImg(true);
+        try {
+            const blob = await getCroppedImageBlob(cropModal.src, croppedAreaPixels);
+            const form = new FormData();
+            form.append('image', blob, cropModal.file.name);
+            const res = await clientToken.post('product-images/', form, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            if (res.status === 201 || res.status === 200) {
+                setNewProduct(prev => ({ ...prev, image: res.data }));
+                setProductImages(prev => [res.data, ...prev]);
+            }
+        } catch (error) {
+            console.log(error)
+            showToast(`Error ${error?.request?.status ?? ''}: Failed to upload image`)
+        } finally {
+            setUploadingImg(false);
+            URL.revokeObjectURL(cropModal.src);
+            setCropModal(null);
+            if (imageFileInputRef.current) imageFileInputRef.current.value = '';
+        }
+    };
+
+    const selectExistingImage = (img) => {
+        setNewProduct(prev => ({ ...prev, image: img }));
+        setShowImagePicker(false);
+    };
+
+    const removeProductImage = () => {
+        setNewProduct(prev => ({ ...prev, image: null }));
+    };
     const handelCheckBox = (obj) => {
         console.log(obj.target.checked)
         setCheckBox({ ...checkbox, [obj.target.id]: obj.target.checked })
@@ -688,6 +808,13 @@ function NewBillBody({ id }) {
                         onChange={handelCheckBox}
                     />
                 </td>
+                {canLineItemImages && (
+                    <td onClick={handelOpen}>
+                        {obj.image?.image
+                            ? <img src={obj.image.image} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6 }} />
+                            : '—'}
+                    </td>
+                )}
 
                 {obj.product_properties
                     .sort(
@@ -734,6 +861,129 @@ function NewBillBody({ id }) {
                 }}
                 showToast={showToast}
             />}
+
+            {/* Crop a newly picked image before it's uploaded */}
+            {canLineItemImages && cropModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 10001,
+                    background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <div style={{
+                        background: 'white', borderRadius: 16, padding: 20,
+                        width: 'min(480px, 92vw)', boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                    }}>
+                        <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                            Crop Image
+                        </h3>
+                        <div style={{ position: 'relative', width: '100%', height: 320, background: '#111', borderRadius: 10, overflow: 'hidden' }}>
+                            <Cropper
+                                image={cropModal.src}
+                                crop={cropPosition}
+                                zoom={cropZoom}
+                                aspect={cropAspect}
+                                onCropChange={setCropPosition}
+                                onZoomChange={setCropZoom}
+                                onCropComplete={onCropComplete}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0' }}>
+                            <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Zoom</span>
+                            <input
+                                type="range" min={1} max={3} step={0.05}
+                                value={cropZoom}
+                                onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                                style={{ flex: 1 }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={cancelCrop}
+                                disabled={uploadingImg}
+                                style={{
+                                    padding: '8px 16px', borderRadius: 8, border: '1.5px solid #e2e8f0',
+                                    background: 'white', color: '#334155', fontWeight: 600, fontSize: 13,
+                                    cursor: uploadingImg ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmCrop}
+                                disabled={uploadingImg || !croppedAreaPixels}
+                                style={{
+                                    padding: '8px 18px', borderRadius: 8, border: 'none',
+                                    background: (uploadingImg || !croppedAreaPixels) ? '#a5b4fc' : '#4f46e5',
+                                    color: 'white', fontWeight: 700, fontSize: 13,
+                                    cursor: (uploadingImg || !croppedAreaPixels) ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                {uploadingImg ? 'Uploading…' : 'Crop & Upload'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Existing-image picker */}
+            {canLineItemImages && showImagePicker && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 10000,
+                    background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <div style={{
+                        background: 'white', borderRadius: 20, padding: 24,
+                        width: 'min(560px, 92vw)', maxHeight: '80vh', overflowY: 'auto',
+                        boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>Choose an Image</h3>
+                            <button
+                                onClick={() => setShowImagePicker(false)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}
+                            >✕</button>
+                        </div>
+                        {productImages.length === 0 ? (
+                            <div style={{ padding: '30px 10px', textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
+                                No images uploaded yet. Use "Upload New" to add one.
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10 }}>
+                                {productImages.map((img) => (
+                                    <div
+                                        key={img.id}
+                                        onClick={() => selectExistingImage(img)}
+                                        title={img.original_filename}
+                                        style={{ cursor: 'pointer', border: '2px solid transparent', borderRadius: 10, overflow: 'hidden' }}
+                                    >
+                                        <img
+                                            src={img.image}
+                                            alt={img.original_filename}
+                                            style={{ width: '100%', height: 90, objectFit: 'cover', display: 'block' }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {imagePickerNext && (
+                            <div style={{ textAlign: 'center', marginTop: 16 }}>
+                                <button
+                                    onClick={() => loadProductImages(imagePickerNext)}
+                                    style={{
+                                        padding: '6px 16px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+                                        border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer',
+                                    }}
+                                >
+                                    Load more
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Custom Header Fields Popup */}
             {showCFPopup && (
@@ -918,6 +1168,74 @@ function NewBillBody({ id }) {
                         </a>
 
                         <p>New Product</p>
+
+                        {canLineItemImages && (
+                        <div className="mb-4 mt-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">
+                                Line Item Image
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                {new_product?.image?.image ? (
+                                    <div style={{ position: 'relative' }}>
+                                        <img
+                                            src={new_product.image.image}
+                                            alt=""
+                                            style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 10, border: '1.5px solid #e2e8f0' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={removeProductImage}
+                                            title="Remove image"
+                                            style={{
+                                                position: 'absolute', top: -8, right: -8, width: 22, height: 22,
+                                                borderRadius: '50%', background: '#ef4444', color: 'white', border: 'none',
+                                                cursor: 'pointer', fontSize: 12, lineHeight: '22px', padding: 0,
+                                            }}
+                                        >✕</button>
+                                    </div>
+                                ) : (
+                                    <div style={{
+                                        width: 64, height: 64, borderRadius: 10, border: '1.5px dashed #cbd5e1',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: '#94a3b8', fontSize: 11, textAlign: 'center',
+                                    }}>
+                                        No image
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => imageFileInputRef.current?.click()}
+                                        disabled={uploadingImg}
+                                        style={{
+                                            padding: '6px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+                                            border: '1.5px solid #e2e8f0', background: 'white',
+                                            cursor: uploadingImg ? 'not-allowed' : 'pointer',
+                                        }}
+                                    >
+                                        {uploadingImg ? 'Uploading…' : 'Upload New'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowImagePicker(true); loadProductImages(); }}
+                                        style={{
+                                            padding: '6px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+                                            border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer',
+                                        }}
+                                    >
+                                        Choose Existing
+                                    </button>
+                                    <input
+                                        ref={imageFileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        style={{ display: 'none' }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        )}
 
                         {!update && canInventory && (
                             <div className="mb-4 mt-2">
@@ -1171,6 +1489,7 @@ function NewBillBody({ id }) {
                                             }}
                                         />
                                     </td>
+                                    {canLineItemImages && <td>Image</td>}
                                     {bill_body_items.map((obj) =>
                                         obj.is_show ? <td key={obj.input_title}>{formatHeaderTitle(obj.input_title)}</td> : null
                                     )}

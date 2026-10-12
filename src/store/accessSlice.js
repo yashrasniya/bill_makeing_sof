@@ -35,6 +35,10 @@ const initialState = {
     companyName: null,
     isTenantAdmin: false,
     isProductOwner: false,
+    // Company-level opt-in switches, distinct from `features` (what the
+    // plan allows) — off by default even when the plan includes the
+    // matching feature.
+    lineItemImagesEnabled: false,
     status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
     // when the currently-applied payload was requested (for guard 2)
     appliedAt: 0,
@@ -68,6 +72,7 @@ const accessSlice = createSlice({
                 state.companyName = action.payload.company_name;
                 state.isTenantAdmin = !!action.payload.is_tenant_admin;
                 state.isProductOwner = !!action.payload.is_product_owner;
+                state.lineItemImagesEnabled = !!action.payload.line_item_images_enabled;
             })
             .addCase(fetchAccess.rejected, (state) => {
                 // Deliberately leaves permissions/features intact: a failed

@@ -17,6 +17,7 @@
     "lucide-react": "^0.539.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
+    "react-easy-crop": "^6.2.3",
     "react-konva": "^19.0.7",
     "react-pdf-html": "^1.2.0",
     "react-redux": "^9.2.0",

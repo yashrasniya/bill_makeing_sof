@@ -22,6 +22,13 @@ const inputStyle = {
 const focIn = e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.12)'; };
 const focOut = e => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; };
 
+// Columns the exporter computes itself; valid labels for Row Content blocks
+// alongside the fields defined in UI Config.
+const CALCULATED_ROW_LABELS = [
+    's.no', 'amount', 'Amount_after_GST', 'row_total_with_out_gst',
+    'extra_cal', 'gst', 'gst_amount', 'C_GST', 'S_GST',
+];
+
 const InvoiceTemplateEditor = () => {
     const [config, setConfig] = useState(null);
     const { userInfo } = useSelector((state) => state.user);
@@ -56,6 +63,7 @@ const InvoiceTemplateEditor = () => {
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
     const [lastSavedConfig, setLastSavedConfig] = useState(null);
     const [uploadingImg, setUploadingImg] = useState(false);
+    const [uiConfigTitles, setUiConfigTitles] = useState([]);
 
     useEffect(() => {
         if (autoSaveEnabled && config && lastSavedConfig) {
@@ -94,6 +102,15 @@ const InvoiceTemplateEditor = () => {
             }
         }).catch(e => alert(e.response?.data?.detail || "Failed to load template"));
     }, [id, selectedVersionId]);
+
+    // Row Content blocks can only be bound to a field defined in UI Config
+    // (or a calculated column), so load the company's field titles.
+    useEffect(() => {
+        clientToken.get('new/product/in/frontend/').then((r) => {
+            const rows = Array.isArray(r.data) ? r.data : (r.data?.results || []);
+            setUiConfigTitles([...new Set(rows.map((x) => x.input_title).filter(Boolean))]);
+        }).catch(() => setUiConfigTitles([]));
+    }, []);
 
     useEffect(() => {
         setIsJsonEditMode(false);
@@ -326,14 +343,24 @@ const InvoiceTemplateEditor = () => {
     const addNewElement = (section, type) => {
         const newConfig = JSON.parse(JSON.stringify(config));
         const newKey = `new_${type}_${Date.now()}`;
+        const isImage = type === 'image';
 
         const defaultObject = {
-            type: type,
+            // An "image" block is a rectangle under the hood — the export
+            // code tells it apart from a plain box via rectangles_type.
+            type: isImage ? 'rectangles' : type,
+            rectangles_type: isImage ? 'image' : undefined,
+            // For a Row Content image the exporter finds this field by label
+            // (case-insensitive "image") and fills it with whatever photo is
+            // attached to that line item — there is no fixed `src` to set.
+            // Elsewhere, `src` stays editable in the property panel for a
+            // static picture (e.g. another logo).
+            label: isImage ? 'image' : undefined,
             x: 50,
             y: 750, // High up on canvas (bottom-anchored)
             value: type === 'text' ? 'New Text' : undefined,
-            width: type === 'rectangles' ? 100 : undefined,
-            height: type === 'rectangles' ? 50 : undefined,
+            width: (type === 'rectangles' || isImage) ? 100 : undefined,
+            height: (type === 'rectangles' || isImage) ? 50 : undefined,
             x2: type === 'line' ? 150 : undefined,
             y2: type === 'line' ? 750 : undefined,
             font_size: type === 'text' ? 12 : undefined,
@@ -623,9 +650,26 @@ const InvoiceTemplateEditor = () => {
 
             if (shape.rectangles_type === "image" || shape.src) {
                 const [image] = useImage(shape.src);
+                // A per-row image (Row Content section) has no fixed src —
+                // its picture only exists per-invoice at export time — so it
+                // needs a permanent placeholder to stay visible/positionable
+                // on the design canvas, not just an outline while selected.
+                const isPlaceholder = !shape.src;
                 return (
                     <Group {...commonProps} x={shape.x} y={shape.canvasY} onDragEnd={dragEnd}>
-                        {isSelected && <Rect width={shape.width} height={shape.height} stroke="#4f46e5" strokeWidth={2} dash={[4, 4]} />}
+                        {(isSelected || isPlaceholder) && (
+                            <Rect
+                                width={shape.width} height={shape.height}
+                                stroke="#4f46e5" strokeWidth={isSelected ? 2 : 1} dash={[4, 4]}
+                                fill={isPlaceholder ? 'rgba(79,70,229,0.06)' : undefined}
+                            />
+                        )}
+                        {isPlaceholder && (
+                            <Text
+                                text="IMAGE" width={shape.width} height={shape.height}
+                                align="center" verticalAlign="middle" fontSize={10} fill="#4f46e5"
+                            />
+                        )}
                         <KonvaImage image={image} width={shape.width} height={shape.height} />
                     </Group>
                 );
@@ -876,6 +920,42 @@ const InvoiceTemplateEditor = () => {
                                     />
                                 </div>
 
+                                {/* Row Spacing (gap between product-table line items) */}
+                                <div style={{
+                                    marginBottom: '24px', padding: '12px', background: '#f8fafc',
+                                    borderRadius: '10px', border: '1.5px solid #e2e8f0',
+                                }}>
+                                    <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>Row Spacing</label>
+                                    <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 8px' }}>
+                                        Vertical gap between line items in the product table.
+                                    </p>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={config.Bill?.product?.product_config?.product_gap ?? ''}
+                                        placeholder="e.g. 20"
+                                        onChange={(e) => {
+                                            const val = e.target.value === '' ? undefined : parseInt(e.target.value);
+                                            setConfig(prev => ({
+                                                ...prev,
+                                                Bill: {
+                                                    ...prev.Bill,
+                                                    product: {
+                                                        ...prev.Bill.product,
+                                                        product_config: {
+                                                            ...(prev.Bill.product.product_config || {}),
+                                                            product_gap: val,
+                                                        },
+                                                    },
+                                                },
+                                            }));
+                                        }}
+                                        style={{ ...inputStyle, padding: '10px' }}
+                                        onFocus={focIn}
+                                        onBlur={focOut}
+                                    />
+                                </div>
+
                                 {/* Save & Export Block */}
                                 <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: '14px', border: '1px solid #bae6fd', marginBottom: '16px' }}>
                                     <label style={{ fontSize: '11px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.05em' }}>
@@ -961,6 +1041,23 @@ const InvoiceTemplateEditor = () => {
                                                 <option value="product">Row Content</option>
                                                 <option value="footer">Footer Area</option>
                                             </select>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                            <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>Type</label>
+                                            <select value={addElementType} onChange={e => setAddElementType(e.target.value)} style={{ ...inputStyle, padding: '6px 10px' }}>
+                                                <option value="text">Text</option>
+                                                <option value="rectangles">Rectangle / Box</option>
+                                                <option value="line">Line</option>
+                                                <option value="image">
+                                                    {addSection === 'product' ? 'Image (per line item)' : 'Image (fixed picture)'}
+                                                </option>
+                                            </select>
+                                            {addElementType === 'image' && addSection === 'product' && (
+                                                <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>
+                                                    Draws whichever photo is attached to that line item on export —
+                                                    there's nothing to upload here, just position the box.
+                                                </p>
+                                            )}
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             <button onClick={() => setIsAddMode(false)} style={{ flex: 1, padding: '8px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
@@ -1108,6 +1205,28 @@ const InvoiceTemplateEditor = () => {
                                                         <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Mapping Label (ID)</label>
                                                         <span style={{ fontSize: '10px', color: '#94a3b8' }}>Key: {activeEl.key}</span>
                                                     </div>
+                                                    {activeEl.section === 'product' && activeEl.type !== 'rectangles' && activeEl.type !== 'line' ? (() => {
+                                                        const current = activeEl.label || '';
+                                                        const known = [...uiConfigTitles, ...CALCULATED_ROW_LABELS];
+                                                        const isLegacy = current && !known.some((k) => k.toLowerCase() === current.toLowerCase());
+                                                        return (
+                                                            <select
+                                                                value={current}
+                                                                onChange={(e) => updateElement(activeEl.id, { label: e.target.value })}
+                                                                style={{ ...inputStyle, fontWeight: 600, color: '#4f46e5' }}
+                                                                title="Pick a field from UI Config. Add new fields on the UI Config page."
+                                                            >
+                                                                <option value="">Select a field…</option>
+                                                                {isLegacy && <option value={current}>{current} (not in UI Config)</option>}
+                                                                <optgroup label="UI Config fields">
+                                                                    {uiConfigTitles.map((t) => <option key={t} value={t}>{t}</option>)}
+                                                                </optgroup>
+                                                                <optgroup label="Calculated columns">
+                                                                    {CALCULATED_ROW_LABELS.map((t) => <option key={t} value={t}>{t}</option>)}
+                                                                </optgroup>
+                                                            </select>
+                                                        );
+                                                    })() : (
                                                     <input
                                                         type="text"
                                                         value={activeEl.label || activeEl.key || ''}
@@ -1118,6 +1237,7 @@ const InvoiceTemplateEditor = () => {
                                                         onBlur={focOut}
                                                         title="This ID is used by the API to inject data into this specific block."
                                                     />
+                                                    )}
                                                 </div>
 
                                                 {/* Shared X, Y Inputs */}
