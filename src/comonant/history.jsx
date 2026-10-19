@@ -7,9 +7,11 @@ import { ChevronLeft, ChevronRight, Download, FileText, MoreVertical, Plus, Tras
 import { clientToken } from "../axios";
 import PdfOpener from "@/utility/pdf_opener";
 import { day, money } from "@/utility/money";
-import { Hint, Pill, initials, isOpen } from "./invoiceBits";
+import { GST_STATES } from "@/constants/gst";
+import { DueDate, Hint, Pill, dueNote, initials, isOpen } from "./invoiceBits";
 
 const partyOf = (obj) => (obj.invoice_type === "purchase" ? obj.vendor_name : obj.receiver_name) || "—";
+const stateOf = (code) => GST_STATES.find((s) => s.code === code)?.name || (code ? String(code) : "—");
 
 function RowMenu({ obj, canDelete, onDelete }) {
     const [open, setOpen] = useState(false);
@@ -60,6 +62,17 @@ function History({ filters = {}, hasFilters = false, onClearFilters, onChanged }
     const [loading, setLoading] = useState(true);
     const [refresh, setRefresh] = useState(0);
     const [error, setError] = useState("");
+    // Which optional fields the company shows (UI Config -> Invoice Fields). A company that hides due date
+    // or place of supply gets no column for it. If the settings can't be read, show them.
+    const [headerCfg, setHeaderCfg] = useState(null);
+    useEffect(() => {
+        clientToken.get("invoice-header-config/", { suppressErrorToast: true })
+            .then((r) => setHeaderCfg(r.data?.fields || null))
+            .catch(() => setHeaderCfg(null));
+    }, []);
+    const isPurchase = filters.invoice_type === "purchase";
+    const showDue = headerCfg?.payment_terms?.visible !== false;
+    const showPlace = !isPurchase && headerCfg?.place_of_supply?.visible !== false;
 
     // a different filter set starts again from page one
     useEffect(() => { setPage(1); }, [filters]);
@@ -136,6 +149,8 @@ function History({ filters = {}, hasFilters = false, onClearFilters, onChanged }
                                     <th>Invoice</th>
                                     <th>{filters.invoice_type === "purchase" ? "Vendor" : "Customer"}</th>
                                     <th>Date</th>
+                                    {showDue && <th>Due date</th>}
+                                    {showPlace && <th>Place of supply</th>}
                                     <th className="num">Amount</th>
                                     <th className="num">Balance due</th>
                                     <th>Status</th>
@@ -153,6 +168,8 @@ function History({ filters = {}, hasFilters = false, onClearFilters, onChanged }
                                             </div>
                                         </td>
                                         <td style={{ whiteSpace: "nowrap" }}>{day(obj.date)}</td>
+                                        {showDue && <td><DueDate obj={obj} /></td>}
+                                        {showPlace && <td>{obj.place_of_supply ? stateOf(obj.place_of_supply) : <span className="muted">Customer's state</span>}</td>}
                                         <td className="num strong">{money(obj.total_final_amount)}</td>
                                         <td className={`num ${isOpen(obj) ? "owed" : "muted"}`}>
                                             {isOpen(obj) ? money(obj.balance_due) : "—"}
@@ -177,6 +194,12 @@ function History({ filters = {}, hasFilters = false, onClearFilters, onChanged }
                                 <div className="meta">
                                     <div>
                                         <div style={{ fontWeight: 600, color: "#4338ca", marginBottom: 4 }}>{obj.invoice_number || "No number"} · {day(obj.date)}</div>
+                                        {showDue && obj.due_date && (
+                                            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+                                                Due {day(obj.due_date)}
+                                                {dueNote(obj) && <span className={`inv_hint${dueNote(obj).late ? " late" : ""}`} style={{ display: "inline", marginLeft: 6 }}>· {dueNote(obj).text}</span>}
+                                            </div>
+                                        )}
                                         <Pill obj={obj} />
                                     </div>
                                     <div className="amt">
