@@ -21,7 +21,7 @@ function ProductsTable() {
     }
 
     const fetchProducts = () => {
-        const url = `/inventory/products/${searchQuery ? `?search=${searchQuery}` : ''}`;
+        const url = `/inventory/products/${searchQuery ? `?s=${encodeURIComponent(searchQuery)}` : ''}`;
         clientToken.get(url).then(res => setProducts(res.data.results || res.data)).catch(console.error);
     };
 
@@ -76,9 +76,9 @@ function ProductsTable() {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-gray-800">Inventory Products</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-slate-800">Inventory Products</h3>
                 <div className="flex gap-4">
                     <input
                         type="text"
@@ -87,7 +87,7 @@ function ProductsTable() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <button onClick={openCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                    <button onClick={openCreate} className="px-4 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors">
                         + Add Product
                     </button>
                 </div>
@@ -95,7 +95,7 @@ function ProductsTable() {
 
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50 text-gray-500 text-sm">
+                    <thead className="bg-slate-50 text-slate-500 text-sm">
                         <tr>
                             <th className="px-6 py-4 font-medium">SKU</th>
                             <th className="px-6 py-4 font-medium">Product Name</th>
@@ -106,7 +106,7 @@ function ProductsTable() {
                             <th className="px-6 py-4 font-medium text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-slate-100">
                         {products.length === 0 && (
                             <tr>
                                 <td colSpan="7" className="px-6 py-12 text-center">
@@ -114,9 +114,9 @@ function ProductsTable() {
                                         <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
                                             <span className="text-2xl">📦</span>
                                         </div>
-                                        <h3 className="text-lg font-medium text-gray-900 mb-1">No products found</h3>
-                                        <p className="text-gray-500 mb-4">Get started by creating your first product.</p>
-                                        <button onClick={openCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                                        <h3 className="text-lg font-medium text-slate-900 mb-1">No products found</h3>
+                                        <p className="text-slate-500 mb-4">Get started by creating your first product.</p>
+                                        <button onClick={openCreate} className="px-4 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors">
                                             + Add Product
                                         </button>
                                     </div>
@@ -124,23 +124,23 @@ function ProductsTable() {
                             </tr>
                         )}
                         {products.map(prod => (
-                            <tr key={prod.id} className="hover:bg-gray-50/50 transition-colors">
-                                <td className="px-6 py-4 font-mono text-sm text-gray-600">{prod.sku}</td>
-                                <td className="px-6 py-4 font-medium text-gray-800">
+                            <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-6 py-4 font-mono text-sm text-slate-600">{prod.sku}</td>
+                                <td className="px-6 py-4 font-medium text-slate-800">
                                     <div>{prod.name}</div>
-                                    <div className="text-xs text-gray-400 font-normal mt-0.5">{prod.vendor_name || prod.supplier_name || 'No Vendor'}</div>
+                                    <div className="text-xs text-slate-400 font-normal mt-0.5">{prod.vendor_name || prod.supplier_name || 'No Vendor'}</div>
                                 </td>
-                                <td className="px-6 py-4 text-gray-600">
-                                    <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-medium">
+                                <td className="px-6 py-4 text-slate-600">
+                                    <span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-medium">
                                         {prod.category_name || '-'}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-gray-800 font-medium">₹{prod.price}</td>
-                                <td className="px-6 py-4 text-gray-800 font-medium">{prod.gst_percentage}%</td>
+                                <td className="px-6 py-4 text-slate-800 font-medium">₹{prod.price}</td>
+                                <td className="px-6 py-4 text-slate-800 font-medium">{prod.gst_percentage}%</td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-2">
                                         <div className={`w-2 h-2 rounded-full ${prod.current_stock <= prod.reorder_level ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                                        <span className="font-medium text-gray-800">{prod.current_stock}</span>
+                                        <span className="font-medium text-slate-800">{prod.current_stock}</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-right">
@@ -156,82 +156,82 @@ function ProductsTable() {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                            <h2 className="text-2xl font-bold text-gray-800">{editingId ? 'Edit Product' : 'New Product'}</h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <h2 className="text-2xl font-bold text-slate-800">{editingId ? 'Edit Product' : 'New Product'}</h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
                         </div>
 
                         <div className="p-6 overflow-y-auto">
                             <form id="productForm" onSubmit={handleSave} className="grid grid-cols-2 gap-5">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">SKU *</label>
                                     <input required type="text" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
                                     <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
                                 </div>
 
                                 <div className="col-span-2 grid grid-cols-2 gap-5">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
                                         <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white outline-none">
                                             <option value="">Select Category</option>
                                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Vendor</label>
                                         <select value={formData.vendor} onChange={e => setFormData({ ...formData, vendor: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white outline-none">
                                             <option value="">Select Vendor</option>
                                             {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                                         </select>
-                                        <p className="text-xs text-gray-400 mt-1">Same vendors as the Purchases page.</p>
+                                        <p className="text-xs text-slate-400 mt-1">Same vendors as the Purchases page.</p>
                                     </div>
                                 </div>
 
-                                <div className="col-span-2 mt-2 pt-4 border-t border-gray-100">
-                                    <h4 className="font-semibold text-gray-700 mb-3 block">Pricing & Stock</h4>
+                                <div className="col-span-2 mt-2 pt-4 border-t border-slate-100">
+                                    <h4 className="font-semibold text-slate-700 mb-3 block">Pricing & Stock</h4>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 col-span-2">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Price *</label>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
+                                            <span className="absolute left-3 top-2.5 text-slate-500">₹</span>
                                             <input required type="number" step="0.01" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="w-full pl-8 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">GST (%) *</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">GST (%) *</label>
                                         <div className="relative">
                                             <input required type="number" step="0.01" value={formData.gst_percentage} onChange={e => setFormData({ ...formData, gst_percentage: e.target.value })} className="w-full pr-8 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                            <span className="absolute right-3 top-2.5 text-gray-500">%</span>
+                                            <span className="absolute right-3 top-2.5 text-slate-500">%</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
-                                        <input type="number" disabled={editingId ? true : false} value={formData.current_stock} onChange={e => setFormData({ ...formData, current_stock: e.target.value })} className="w-full px-4 py-2 border rounded-lg bg-gray-50" title={editingId ? "Use Stock Movement to adjust inventory" : ""} />
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Stock</label>
+                                        <input type="number" disabled={editingId ? true : false} value={formData.current_stock} onChange={e => setFormData({ ...formData, current_stock: e.target.value })} className="w-full px-4 py-2 border rounded-lg bg-slate-50" title={editingId ? "Use Stock Movement to adjust inventory" : ""} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Reorder At</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Reorder At</label>
                                         <input type="number" value={formData.reorder_level} onChange={e => setFormData({ ...formData, reorder_level: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
                                     </div>
                                 </div>
 
                                 <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                                     <textarea rows="2" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
                                 </div>
                             </form>
                         </div>
 
-                        <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 rounded-b-xl">
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium">Cancel</button>
-                            <button type="submit" form="productForm" className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors shadow-sm">Save Product</button>
+                        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 rounded-b-xl">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors font-medium">Cancel</button>
+                            <button type="submit" form="productForm" className="px-6 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors shadow-sm">Save Product</button>
                         </div>
                     </div>
                 </div>

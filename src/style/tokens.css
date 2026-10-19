@@ -1,0 +1,90 @@
+/* Design tokens — source of truth: DESIGN_SYSTEM.md §12 */
+:root {
+  /* brand */
+  --brand-indigo: #4f46e5;
+  --brand-violet: #7c3aed;
+  --brand-dark: #4338ca;
+  --brand-deeper: #312e81;
+  --brand-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+
+  /* indigo tints */
+  --tint-50: #f5f3ff;
+  --tint-100: #eef2ff;
+  --tint-200: #e0e7ff;
+  --tint-300: #c7d2fe;
+
+  /* neutrals */
+  --text: #0f172a;
+  --text-label: #334155;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --divider: #f1f5f9;
+  --page-bg: #f8fafc;
+  --surface: #ffffff;
+
+  /* sidebar */
+  --sidebar-bg: #1e1b4b;
+  --sidebar-text: rgba(255, 255, 255, 0.7);
+  --sidebar-muted: rgba(255, 255, 255, 0.4);
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-active: rgba(79, 70, 229, 0.4);
+
+  /* semantic */
+  --danger: #dc2626;
+  --danger-strong: #b91c1c;
+  --danger-bg: #fef2f2;
+  --danger-bg-hover: #fee2e2;
+  --danger-border: #fecaca;
+  --danger-gradient: linear-gradient(135deg, #ef4444, #dc2626);
+  --success: #166534;
+  --success-bg: #dcfce7;
+  --success-money: #16a34a;
+  --warning: #b45309;
+  --warning-bg: #fef3c7;
+  --overdue: #9f1239;
+  --overdue-bg: #fecdd3;
+
+  /* shape */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-menu: 14px;
+  --radius-card: 16px;
+  --radius-panel: 20px;
+  --radius-modal: 22px;
+  --radius-pill: 999px;
+
+  /* shadow */
+  --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.06);
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.04);
+  --shadow-brand: 0 4px 14px rgba(79, 70, 229, 0.3);
+  --shadow-brand-hover: 0 8px 20px rgba(79, 70, 229, 0.4);
+  --shadow-menu: 0 12px 40px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.2);
+  --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.12);
+
+  /* type */
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 44px; padding: 0 18px; border: 0; border-radius: var(--radius-lg);
+  background: var(--brand-gradient); color: #fff;
+  font: 700 14px var(--font); cursor: pointer; white-space: nowrap;
+  box-shadow: var(--shadow-brand);
+  transition: transform .15s, box-shadow .15s;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-brand-hover); }
+
+.btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 16px; border-radius: var(--radius-lg);
+  border: 1px solid var(--tint-300); background: var(--tint-100); color: var(--brand-dark);
+  font: 700 14px var(--font); cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+}
+.btn-secondary:hover { background: var(--tint-200); }

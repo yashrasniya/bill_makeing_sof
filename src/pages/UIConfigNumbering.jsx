@@ -144,7 +144,7 @@ const UIConfigNumbering = ({ canManage, showToast }) => {
                         ) : (
                             <>
                                 <span style={{ color: '#64748b' }}>Next invoice will be </span>
-                                <span style={{ color: '#15803d', fontWeight: 800, fontFamily: "'SFMono-Regular',Consolas,monospace" }}>
+                                <span style={{ color: '#166534', fontWeight: 800, fontFamily: "'SFMono-Regular',Consolas,monospace" }}>
                                     {preview?.preview}
                                 </span>
                                 <span style={{ color: '#94a3b8' }}>

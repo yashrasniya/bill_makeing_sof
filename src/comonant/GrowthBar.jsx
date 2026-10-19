@@ -17,7 +17,7 @@ export default function GrowthBar({ percentageChange,invoices_this_month_count }
                 <div className="text-sm font-medium text-slate-700">{invoices_this_month_count}</div>
                 <div
                     className={`text-sm font-semibold ${
-                        isPositive ? "text-button_blue" : isNegative ? "text-rose-600" : "to-[#071952]"
+                        isPositive ? "text-indigo-600" : isNegative ? "text-red-600" : "text-slate-500"
                     }`}
                 >
                     {/* the API sends null when there is no prior period to compare against */}
@@ -30,9 +30,9 @@ export default function GrowthBar({ percentageChange,invoices_this_month_count }
                 <div
                     className={`h-full transition-all duration-500 ease-out ${
                         isPositive
-                            ? "bg-[#071952]"
+                            ? "bg-[#4f46e5]"
                             : isNegative
-                                ? "bg-rose-400"
+                                ? "bg-red-400"
                                 : "bg-transparent"
                     }`}
                     style={{ width }}

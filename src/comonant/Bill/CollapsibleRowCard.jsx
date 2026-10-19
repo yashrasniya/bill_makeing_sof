@@ -88,11 +88,11 @@ const CollapsibleRowCard = ({
         <div
             key={rowIndex}
             id={rowData.id}
-            className="p-4  rounded-lg shadow-xl border border-[#5d9a9a] space-y-2 cursor-pointer"
+            className="p-4  rounded-lg shadow-xl border border-[#e2e8f0] space-y-2 cursor-pointer"
             onClick={() => setIsOpen(!isOpen)}
         >
             {/* Collapsed view */}
-            <div className="flex justify-between text-sm border-b border-[#5d9a9a] pb-1">
+            <div className="flex justify-between text-sm border-b border-[#e2e8f0] pb-1">
         {/*<span className="font-medium">*/}
         {/*  {rowData.product_properties[0]?.new_product_in_frontend.input_title}*/}
         {/*</span>*/}
@@ -106,7 +106,7 @@ const CollapsibleRowCard = ({
                 /> <span className={'font-bold'}>{formatHeaderTitle(rowData.product_properties[0]?.new_product_in_frontend.input_title)}:</span> {rowData.product_properties[0]?.value}</span>
                 <span className={'text-xs'}>{isOpen ? "▲" : "▼"}</span>
             </div>
-            <div className="flex justify-between text-sm border-b border-[#5d9a9a] pb-1">
+            <div className="flex justify-between text-sm border-b border-[#e2e8f0] pb-1">
                 <span className={'font-bold'}>Total Amount: <span className={'font-semibold'}>{parseFloat(total + gstAmount + extraCal).toFixed(2)}</span></span>
 
             </div>
@@ -127,7 +127,7 @@ const CollapsibleRowCard = ({
                                     <div
                                         key={i}
                                         onClick={handelOpen}
-                                        className="flex justify-between text-sm border-b border-[#5d9a9a] py-1"
+                                        className="flex justify-between text-sm border-b border-[#e2e8f0] py-1"
                                     >
                     <span className="font-medium">
                       {formatHeaderTitle(headObj.new_product_in_frontend.input_title)}
@@ -143,7 +143,7 @@ const CollapsibleRowCard = ({
 
                     <div
                         onClick={handelOpen}
-                        className="flex justify-between text-sm border-b  border-[#5d9a9a] py-1"
+                        className="flex justify-between text-sm border-b  border-[#e2e8f0] py-1"
                     >
                         <span className="font-medium">GST Amount</span>
                         <span>{parseFloat(gstAmount).toFixed(2)}</span>

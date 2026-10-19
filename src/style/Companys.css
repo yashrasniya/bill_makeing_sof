@@ -79,6 +79,7 @@
 }
 
 .companys_header_raper .button,
+.companys_page_head .head_actions .button,
 .button-div .button {
     display: inline-flex;
     align-items: center;
@@ -97,16 +98,19 @@
     white-space: nowrap;
 }
 
+.companys_page_head .head_actions .button:hover,
 .button-div .button:hover {
     transform: translateY(-1px);
     box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
 }
 
+.companys_page_head .head_actions .button.delete,
 .button-div .button.delete {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     box-shadow: 0 4px 14px rgba(239, 68, 68, 0.28);
 }
 
+.companys_page_head .head_actions .button.delete:hover,
 .button-div .button.delete:hover {
     box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
 }
@@ -159,7 +163,7 @@
     font-family: 'Inter', sans-serif;
     font-size: 13px;
     font-weight: 600;
-    color: #374151;
+    color: #334155;
     cursor: pointer;
     border-radius: 10px;
     transition: background 0.15s, color 0.15s;
@@ -236,7 +240,7 @@
     padding: 13px 12px;
     font-size: 14px;
     font-weight: 600;
-    color: #374151;
+    color: #334155;
     text-align: left;
 }
 
@@ -344,7 +348,7 @@
     gap: 5px;
     font-size: 12px;
     font-weight: 700;
-    color: #374151;
+    color: #334155;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -373,11 +377,24 @@
     margin-bottom: 24px;
 }
 
+.companys_title { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.companys_title_icon {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center; color: white;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+}
 .companys_page_head h1 {
     margin: 0;
-    font-size: 24px;
-    font-weight: 800;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
     color: #0f172a;
+}
+.companys_page_head .companys_title p {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: #64748b;
 }
 
 .companys_page_head .head_actions {
@@ -438,100 +455,10 @@
     font-weight: 500;
 }
 
-/* ── Mobile card select-all bar ── */
-.customer_cards_selectall {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 4px 10px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #64748b;
-}
-
-/* ── Mobile customer cards (the table's stand-in below md) ── */
-.customer_card {
-    background: white;
-    border: 1px solid #eef2ff;
-    border-radius: 16px;
-    padding: 14px 16px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-}
-
-.customer_card_head {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.customer_card_name {
-    flex: 1;
-    min-width: 0;
-    font-size: 16px;
-    font-weight: 800;
-    color: #4f46e5;
-    line-height: 1.3;
-    cursor: pointer;
-    overflow-wrap: anywhere;
-}
-
-/* label/value pairs — two per row, one on the narrowest screens */
-.customer_card_facts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 14px;
-    margin-top: 12px;
-}
-
-.customer_card_fact span {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #94a3b8;
-    margin-bottom: 2px;
-}
-
-.customer_card_fact strong {
-    font-size: 14px;
-    font-weight: 700;
-    color: #374151;
-    overflow-wrap: anywhere;
-}
-
-.customer_card_stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-    gap: 8px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px dashed #e2e8f0;
-}
-
-.customer_card_actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-}
-
-.customer_card_actions button {
-    flex: 1;
-    padding: 10px 12px;
-    font-size: 13px;
-}
-
-/* below this the two fact columns stop fitting a GSTIN side by side */
-@media (max-width: 330px) {
-    .customer_card_facts {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
 
 /* ── Responsive ── */
-/* 767px, not 700: this is where the JSX swaps the table for the card list
-   via Tailwind's `md` breakpoint, and the page chrome has to switch with it */
+/* 767px: below this the list/detail split collapses to a single column and
+   the page chrome switches with it */
 @media (max-width: 767px) {
     .companys_page_head {
         flex-wrap: wrap;
@@ -540,7 +467,12 @@
     }
 
     .companys_page_head h1 {
-        font-size: 20px;
+        font-size: 19px;
+    }
+
+    .companys_title_icon {
+        width: 38px;
+        height: 38px;
     }
 
     /* actions drop to their own full-width row and split it evenly */
@@ -616,4 +548,101 @@
         flex-basis: 100% !important;
         width: 100%;
     }
+}
+/* ── Customers: list + detail ── */
+.cust_chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.cust_chip {
+    font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 999px;
+    border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;
+    transition: all 0.15s;
+}
+.cust_chip:hover { border-color: #c7d2fe; }
+.cust_chip.on { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+
+.cust_split {
+    display: grid;
+    grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+    background: white; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+}
+.cust_list { border-right: 1px solid #e2e8f0; min-width: 0; }
+.cust_list_head {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    font-size: 13px; font-weight: 600; color: #64748b; border-bottom: 1px solid #e2e8f0;
+}
+.cust_row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.15s;
+}
+.cust_row:hover { background: #f8fafc; }
+.cust_row.active { background: #eef2ff; }
+.cust_av {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe;
+}
+/* on the selected (indigo-tint) row the avatar flips to white so it stays visible */
+.cust_row.active .cust_av { background: white; }
+.cust_av_lg {
+    width: 48px; height: 48px; font-size: 16px; color: white; border: 0;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed); box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+}
+.cust_row_main { flex: 1; min-width: 0; }
+.cust_row_name { font-size: 14px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cust_row_sub { font-size: 12px; color: #64748b; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cust_row_amt { font-size: 13px; font-weight: 700; white-space: nowrap; }
+
+.cust_list .paging { justify-content: flex-end; align-items: center; padding: 12px 16px; }
+.paging_summary { margin-right: auto; font-size: 13px; color: #64748b; }
+
+.cust_detail { padding: 20px 24px; min-width: 0; align-self: start; position: sticky; top: 16px; }
+.cust_back { display: none; background: none; border: 0; padding: 0 0 12px; color: #4338ca; font-weight: 700; font-size: 14px; cursor: pointer; }
+.cust_detail_head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.cust_detail_title { flex: 1; min-width: 0; }
+.cust_detail_title h2 { margin: 0; font-size: 18px; font-weight: 800; color: #0f172a; }
+.cust_detail_title p { margin: 2px 0 0; font-size: 13px; color: #64748b; overflow-wrap: anywhere; }
+
+.cust_kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.cust_kpi { background: #f8fafc; border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.cust_kpi span { display: block; font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+.cust_kpi strong { font-size: 20px; font-weight: 800; color: #0f172a; overflow-wrap: anywhere; }
+
+.cust_facts { margin: 0 0 20px; }
+.cust_facts > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.cust_facts dt { color: #64748b; flex-shrink: 0; }
+.cust_facts dd { margin: 0; font-weight: 600; color: #0f172a; text-align: right; overflow-wrap: anywhere; }
+
+.cust_actions { display: flex; flex-direction: column; gap: 10px; }
+.cust_actions_row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cust_btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 0 16px; height: 40px; border-radius: 12px;
+    border: 1px solid #c7d2fe; background: #eef2ff; color: #4338ca;
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.cust_btn:hover { background: #e0e7ff; }
+.cust_btn.primary {
+    height: 44px; border: 0; color: white;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+}
+.cust_btn.primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4); }
+.cust_detail_head .cust_btn { height: 34px; padding: 0 14px; font-size: 13px; border-radius: 10px; }
+.cust_head_actions { display: flex; gap: 8px; flex-shrink: 0; }
+.cust_btn.danger { width: 34px; padding: 0; color: #dc2626; background: #fef2f2; border-color: #fecaca; }
+.cust_btn.danger:hover { background: #fee2e2; border-color: #fca5a5; }
+
+@media (max-width: 767px) {
+    .cust_split { grid-template-columns: minmax(0, 1fr); }
+    .cust_list { border-right: 0; }
+    /* the detail becomes a full-screen sheet, opened by tapping a row */
+    .cust_detail {
+        display: none; position: fixed; inset: 0; z-index: 3000; top: 0;
+        background: white; overflow-y: auto; padding: 16px 16px 40px;
+    }
+    .cust_split.detail_open .cust_detail { display: block; }
+    .cust_back { display: block; }
 }

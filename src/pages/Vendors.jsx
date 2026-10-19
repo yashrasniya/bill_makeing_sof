@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Store } from 'lucide-react';
+import PageIcon from '../comonant/PageIcon';
 import Navbar from "../comonant/navbar.jsx";
 import { clientToken } from "@/axios";
 
@@ -106,7 +108,7 @@ export default function Vendors() {
 
     const fetchVendors = useCallback(() => {
         setLoading(true);
-        clientToken.get(`vendors/?page_size=999${search ? `&search=${search}` : ""}`)
+        clientToken.get(`vendors/?page_size=999${search ? `&s=${encodeURIComponent(search)}` : ""}`)
             .then(res => setVendors(res.data.results || res.data))
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
@@ -144,12 +146,17 @@ export default function Vendors() {
                 {/* ── Header ── */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px", animation: "fadeUp 0.4s ease both" }}>
                     <div>
-                        <h1 style={{ fontSize: "28px", fontWeight: 900, color: "#0f172a", letterSpacing: "-0.5px", margin: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <PageIcon icon={Store} />
+                            <div>
+                        <h1 style={{ fontSize: '22px', fontWeight: 700, color: "#0f172a", letterSpacing: "-0.01em", margin: 0 }}>
                             Vendors
                         </h1>
                         <p style={{ fontSize: "14px", color: "#64748b", fontWeight: 500, marginTop: "6px", marginBottom: 0 }}>
                             Manage all your purchase vendors in one place.
                         </p>
+                        </div>
+                        </div>
                     </div>
                     <button
                         onClick={() => { setShowForm(true); setError(""); }}
@@ -303,7 +310,7 @@ export default function Vendors() {
                                 disabled={saving}
                                 style={{
                                     padding: "11px 28px", borderRadius: "12px", border: "none",
-                                    background: saving ? "linear-gradient(135deg,#a5b4fc,#c4b5fd)" : "linear-gradient(135deg,#4f46e5,#7c3aed)",
+                                    background: saving ? "linear-gradient(135deg,#c7d2fe,#c7d2fe)" : "linear-gradient(135deg,#4f46e5,#7c3aed)",
                                     color: "white", fontWeight: 800, fontSize: "14px",
                                     cursor: saving ? "not-allowed" : "pointer",
                                     boxShadow: "0 4px 14px rgba(79,70,229,0.3)",
@@ -335,7 +342,7 @@ export default function Vendors() {
 function Field({ label, children, col }) {
     return (
         <div style={{ gridColumn: col === 2 ? "1 / -1" : "auto" }}>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>
                 {label}
             </label>
             {children}

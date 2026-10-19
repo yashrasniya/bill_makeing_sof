@@ -30,7 +30,7 @@ const Field = ({ label, name, type = 'text', placeholder = '', value, errorMsg, 
   const hasError = errorMsg;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-      <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.02em' }}>
+      <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155', letterSpacing: '0.02em' }}>
         {label}
       </label>
       {name === 'password' ? (
@@ -91,20 +91,11 @@ function SignUp() {
   const [showPass, setShowPass] = useState(false);
 
   const [user_details, set_user_details] = useState({
-    username: '',
     email: '',
     first_name: '',
     last_name: '',
     mobile_number: '',
     password: '',
-    company: {
-      name: '', legal_name: '', email: '', phone_number: '',
-      website: '', address: '', city: '', district: '',
-      state: '', state_code: '', pincode: '', gst_number: '',
-      pan_number: '', bank_name: '', account_number: '',
-      ifsc_code: '', branch: '', incorporation_date: '',
-      business_type: 'sole_prop',
-    }
   });
 
   const [error, setError] = useState({});
@@ -268,12 +259,8 @@ function SignUp() {
           </div>
 
           <div className="signup-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-            <Field label="Username" name="username" placeholder="johndoe" value={user_details.username} errorMsg={error?.username} onChange={handelChange} />
-            <Field label="Mobile Number" name="mobile_number" type="tel" placeholder="9876543210" value={user_details.mobile_number} errorMsg={error?.mobile_number} onChange={handelChange} />
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
             <Field label="Email Address" name="email" type="email" placeholder="john@example.com" value={user_details.email} errorMsg={error?.email} onChange={handelChange} />
+            <Field label="Mobile Number" name="mobile_number" type="tel" placeholder="9876543210" value={user_details.mobile_number} errorMsg={error?.mobile_number} onChange={handelChange} />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
@@ -296,7 +283,7 @@ function SignUp() {
               width: '100%', padding: '13px', fontSize: '15px', fontWeight: 700,
               color: 'white',
               background: loading
-                ? 'linear-gradient(135deg, #818cf8, #a78bfa)'
+                ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
                 : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
               border: 'none', borderRadius: '12px',
               cursor: loading ? 'not-allowed' : 'pointer',
@@ -346,7 +333,7 @@ function SignUp() {
             <span
               onClick={() => navigate('/login')}
               style={{ color: '#4f46e5', fontWeight: 700, cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#6366f1'}
+              onMouseEnter={e => e.currentTarget.style.color = '#4f46e5'}
               onMouseLeave={e => e.currentTarget.style.color = '#4f46e5'}
             >
               Sign in →

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { ScanLine } from 'lucide-react';
+import PageIcon from '../comonant/PageIcon';
 import Navbar from "../comonant/navbar.jsx";
 import { clientToken } from "@/axios";
 import { useNavigate } from "react-router-dom";
@@ -6,8 +8,8 @@ import { useSelector } from "react-redux";
 
 /* ── status presentation ── */
 const STATE_META = {
-    completed: { label: "Completed", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
-    processing: { label: "Processing", color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
+    completed: { label: "Completed", color: "#16a34a", bg: "#dcfce7", border: "#dcfce7" },
+    processing: { label: "Processing", color: "#b45309", bg: "#fef3c7", border: "#fef3c7" },
     failed: { label: "Failed", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
 };
 
@@ -206,8 +208,8 @@ const OcrInvoices = () => {
             {toast && (
                 <div style={{
                     position: 'fixed', top: '20px', right: '20px', zIndex: 9999,
-                    background: toast.type === 'success' ? '#f0fdf4' : '#fef2f2',
-                    border: `1px solid ${toast.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+                    background: toast.type === 'success' ? '#dcfce7' : '#fef2f2',
+                    border: `1px solid ${toast.type === 'success' ? '#dcfce7' : '#fecaca'}`,
                     color: toast.type === 'success' ? '#166534' : '#dc2626',
                     padding: '12px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '14px',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.1)', maxWidth: '380px',
@@ -221,12 +223,17 @@ const OcrInvoices = () => {
                 {/* Header */}
                 <div className="ocr-header" style={{ marginBottom: '24px', animation: 'fadeUp 0.4s ease both' }}>
                     <div>
-                        <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px', marginBottom: '6px' }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <PageIcon icon={ScanLine} />
+                            <div>
+                        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', marginBottom: '6px' }}>
                             OCR Invoice Scanning
                         </h1>
                         <p style={{ fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
                             Upload a purchase invoice and let OCR read the details for you.
                         </p>
+                        </div>
+                        </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -268,7 +275,7 @@ const OcrInvoices = () => {
 
                 {!hasOcrFeature && accessStatus === 'succeeded' && (
                     <div style={{
-                        background: '#fffbeb', border: '1.5px solid #fde68a', color: '#92400e',
+                        background: '#fef3c7', border: '1.5px solid #fef3c7', color: '#92400e',
                         padding: '14px 18px', borderRadius: '14px', marginBottom: '20px',
                         fontSize: '14px', fontWeight: 600,
                     }}>
@@ -325,8 +332,8 @@ const OcrInvoices = () => {
 
                 {/* WhatsApp upload route */}
                 <div style={{
-                    background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
-                    border: '1.5px solid #bbf7d0', borderRadius: '20px',
+                    background: 'linear-gradient(135deg, #dcfce7 0%, #dcfce7 100%)',
+                    border: '1.5px solid #dcfce7', borderRadius: '20px',
                     padding: '20px 22px', marginBottom: '24px',
                     display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
                     animation: 'fadeUp 0.45s ease 0.08s both',
@@ -342,10 +349,10 @@ const OcrInvoices = () => {
                     </div>
 
                     <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-                        <div style={{ fontSize: '15px', fontWeight: 800, color: '#065f46', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 800, color: '#166534', marginBottom: '4px' }}>
                             Or send your invoice on WhatsApp
                         </div>
-                        <div style={{ fontSize: '13.5px', color: '#047857', fontWeight: 500, lineHeight: 1.5 }}>
+                        <div style={{ fontSize: '13.5px', color: '#166534', fontWeight: 500, lineHeight: 1.5 }}>
                             Send a PDF or photo of your invoice to{' '}
                             <strong style={{ fontWeight: 800 }}>{WHATSAPP_NUMBER_DISPLAY}</strong>{' '}
                             from your <strong style={{ fontWeight: 800 }}>registered mobile number</strong> — it will be
@@ -358,7 +365,7 @@ const OcrInvoices = () => {
                             onClick={copyWhatsappNumber}
                             style={{
                                 padding: '10px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 800,
-                                border: '1.5px solid #bbf7d0', background: 'white', color: '#047857', cursor: 'pointer',
+                                border: '1.5px solid #dcfce7', background: 'white', color: '#166534', cursor: 'pointer',
                             }}
                         >
                             {copiedNumber ? 'Copied!' : 'Copy number'}
@@ -392,7 +399,7 @@ const OcrInvoices = () => {
                                 label="Scans This Month"
                                 value={usage?.this_month ?? 0}
                                 sub={monthlyLabel}
-                                color="linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%)"
+                                color="linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)"
                                 delay={0.05}
                             />
                             <StatCard
@@ -400,7 +407,7 @@ const OcrInvoices = () => {
                                 label="Uploads Today"
                                 value={`${usage?.today ?? 0} / ${usage?.daily_limit ?? 10}`}
                                 sub="Resets at midnight"
-                                color="linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                                color="linear-gradient(135deg, #b45309 0%, #b45309 100%)"
                                 delay={0.1}
                             />
                             <StatCard
@@ -408,7 +415,7 @@ const OcrInvoices = () => {
                                 label="Completed"
                                 value={counts.completed || 0}
                                 sub={`${counts.processing || 0} processing · ${counts.failed || 0} failed`}
-                                color="linear-gradient(135deg, #10b981 0%, #047857 100%)"
+                                color="linear-gradient(135deg, #16a34a 0%, #166534 100%)"
                                 delay={0.15}
                             />
                             <StatCard
@@ -416,7 +423,7 @@ const OcrInvoices = () => {
                                 label="Total Scanned"
                                 value={usage?.total ?? 0}
                                 sub="All time, company-wide"
-                                color="linear-gradient(135deg, #f43f5e 0%, #be123c 100%)"
+                                color="linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)"
                                 delay={0.2}
                             />
                         </div>

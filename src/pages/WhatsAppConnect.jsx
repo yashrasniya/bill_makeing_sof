@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { MessageCircle } from 'lucide-react';
+import PageIcon from '../comonant/PageIcon';
 import { clientToken } from '../axios.js';
 import Navbar from '../comonant/navbar';
 
@@ -123,11 +125,12 @@ const WhatsAppConnect = () => {
 
     // 4. Render UI
     return (
-        <div className="min-h-screen bg-gray-50 pb-12">
+        <div className="min-h-screen bg-slate-50 pb-12">
             <Navbar />
             <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-10 text-center">
-                <h1 className="text-3xl font-bold text-gray-800 mb-6">WhatsApp Account Connection</h1>
-                <p className="text-gray-600 mb-8 max-w-lg mx-auto">
+                <PageIcon icon={MessageCircle} style={{ margin: '0 auto 12px', display: 'flex' }} />
+                    <h1 className="text-[22px] font-bold tracking-tight text-slate-900 mb-6">WhatsApp Account Connection</h1>
+                <p className="text-slate-600 mb-8 max-w-lg mx-auto">
                     Securely connect your Meta Business Portfolio. Clicking the button below will open a secure window directly into Facebook to configure your WhatsApp permissions seamlessly.
                 </p>
 

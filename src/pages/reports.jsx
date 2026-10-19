@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PageIcon from '../comonant/PageIcon';
 import { clientToken } from '../axios';
 import Navbar from '../comonant/navbar';
 import {
@@ -11,7 +12,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { Calendar, TrendingUp, TrendingDown, IndianRupee, FileText } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, IndianRupee, FileText, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -72,42 +73,47 @@ export default function Reports() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <PageIcon icon={BarChart3} />
+                  <div>
+            <h1 className="text-[22px] font-bold tracking-tight text-slate-900">
               Financial Reports
             </h1>
-            <p className="mt-2 text-gray-500 font-medium">
+            <p className="mt-1 text-[13px] text-slate-500">
               Track your cash flow, revenue, and overall business health.
             </p>
+              </div>
+              </div>
           </div>
 
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap justify-end gap-3">
               <button 
                 onClick={() => navigate('/purchase-register')}
-                className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl font-semibold hover:bg-rose-100 transition-colors border border-rose-200"
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl font-semibold hover:bg-red-100 transition-colors border border-red-200"
               >
                 <FileText size={16} /> Purchase Register
               </button>
               <button 
                 onClick={() => navigate('/supplier-ledger')}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-600 rounded-xl font-semibold hover:bg-orange-100 transition-colors border border-orange-200"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-semibold hover:bg-amber-100 transition-colors border border-amber-200"
               >
                 <FileText size={16} /> Supplier Ledger
               </button>
             </div>
-            <div className="flex flex-wrap gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex flex-wrap gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
               <div className="flex flex-col px-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Interval</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Interval</label>
               <select
                 value={interval}
                 onChange={(e) => setInterval(e.target.value)}
-                className="bg-transparent text-sm font-semibold text-gray-800 focus:outline-none cursor-pointer"
+                className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer"
               >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
@@ -115,27 +121,27 @@ export default function Reports() {
               </select>
             </div>
             
-            <div className="w-px bg-gray-200 mx-1 hidden sm:block"></div>
+            <div className="w-px bg-slate-200 mx-1 hidden sm:block"></div>
             
             <div className="flex flex-col px-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Start Date</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Start Date</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent text-sm font-semibold text-gray-800 focus:outline-none"
+                className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none"
               />
             </div>
 
-            <div className="w-px bg-gray-200 mx-1 hidden sm:block"></div>
+            <div className="w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
             <div className="flex flex-col px-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">End Date</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">End Date</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent text-sm font-semibold text-gray-800 focus:outline-none"
+                className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none"
               />
             </div>
             </div>
@@ -144,29 +150,29 @@ export default function Reports() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-emerald-50 relative overflow-hidden group">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-green-50 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <TrendingUp size={64} className="text-emerald-500" />
+              <TrendingUp size={64} className="text-green-500" />
             </div>
-            <div className="text-sm font-semibold text-emerald-600 mb-2 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <div className="text-sm font-semibold text-green-600 mb-2 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
               Total Inflow
             </div>
-            <h3 className="text-3xl font-bold text-gray-900">{formatCurrency(summary.totalInflow)}</h3>
+            <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(summary.totalInflow)}</h3>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-rose-50 relative overflow-hidden group">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-red-50 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <TrendingDown size={64} className="text-rose-500" />
+              <TrendingDown size={64} className="text-red-500" />
             </div>
-            <div className="text-sm font-semibold text-rose-600 mb-2 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+            <div className="text-sm font-semibold text-red-600 mb-2 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
               Total Outflow
             </div>
-            <h3 className="text-3xl font-bold text-gray-900">{formatCurrency(summary.totalOutflow)}</h3>
+            <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(summary.totalOutflow)}</h3>
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-md border border-indigo-500 relative overflow-hidden group">
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 shadow-md border border-indigo-500 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <IndianRupee size={64} className="text-white" />
             </div>
@@ -179,9 +185,9 @@ export default function Reports() {
         </div>
 
         {/* Chart Area */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-8">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-bold text-gray-900">Cash Flow Trends</h2>
+            <h2 className="text-xl font-bold text-slate-900">Cash Flow Trends</h2>
             {isLoading && (
               <div className="flex items-center gap-2 text-sm text-indigo-600 font-semibold animate-pulse">
                 <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
@@ -199,12 +205,12 @@ export default function Reports() {
                 >
                   <defs>
                     <linearGradient id="colorInflow" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#16a34a" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorOutflow" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   
@@ -241,28 +247,28 @@ export default function Reports() {
                     type="monotone" 
                     name="Inflow (Revenue)"
                     dataKey="inflow" 
-                    stroke="#10b981" 
+                    stroke="#16a34a" 
                     strokeWidth={3}
                     fillOpacity={1} 
                     fill="url(#colorInflow)" 
-                    activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: '#16a34a' }}
                   />
                   
                   <Area 
                     type="monotone" 
                     name="Outflow (Expenses)"
                     dataKey="outflow" 
-                    stroke="#f43f5e" 
+                    stroke="#dc2626" 
                     strokeWidth={3}
                     fillOpacity={1} 
                     fill="url(#colorOutflow)" 
-                    activeDot={{ r: 6, strokeWidth: 0, fill: '#f43f5e' }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: '#dc2626' }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
               !isLoading && (
-                <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
                   <Calendar size={48} className="mb-4 opacity-50" />
                   <p className="text-lg font-medium">No data available for this range</p>
                 </div>

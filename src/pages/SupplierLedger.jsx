@@ -60,31 +60,33 @@ export default function SupplierLedger() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <BookOpen size={32} className="text-rose-600" />
-              <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-rose-600 to-orange-600">
+              <div className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center text-white bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.25)]">
+                <BookOpen size={20} />
+              </div>
+              <h1 className="text-[22px] font-bold tracking-tight text-slate-900">
                 Supplier Ledger
               </h1>
             </div>
-            <p className="mt-2 text-gray-500 font-medium">
+            <p className="mt-1 text-[13px] text-slate-500">
               View comprehensive transaction history and running balances.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3 items-center">
-            <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-3">
+            <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-3">
               <div className="flex flex-col px-2 min-w-[200px]">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Select Supplier</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Supplier</label>
                 <select
                   value={selectedSupplierId}
                   onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  className="bg-transparent text-sm font-semibold text-gray-800 focus:outline-none cursor-pointer truncate"
+                  className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer truncate"
                 >
                   <option value="" disabled>Select Supplier</option>
                   {suppliers.map(s => (
@@ -93,27 +95,27 @@ export default function SupplierLedger() {
                 </select>
               </div>
 
-              <div className="w-px bg-gray-200 mx-1 hidden sm:block"></div>
+              <div className="w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
               <div className="flex flex-col px-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Start Date</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Start Date</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="bg-transparent text-sm font-semibold text-gray-800 focus:outline-none"
+                  className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none"
                 />
               </div>
 
-              <div className="w-px bg-gray-200 mx-1 hidden sm:block"></div>
+              <div className="w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
               <div className="flex flex-col px-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">End Date</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">End Date</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="bg-transparent text-sm font-semibold text-gray-800 focus:outline-none"
+                  className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none"
                 />
               </div>
             </div>
@@ -130,74 +132,74 @@ export default function SupplierLedger() {
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Opening Balance</p>
-                <h3 className="text-xl font-bold text-gray-800">{formatCurrency(ledgerData.opening_balance)}</h3>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Opening Balance</p>
+                <h3 className="text-xl font-bold text-slate-800">{formatCurrency(ledgerData.opening_balance)}</h3>
               </div>
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Purchases</p>
-                <h3 className="text-xl font-bold text-rose-600">{formatCurrency(ledgerData.total_purchases)}</h3>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Purchases</p>
+                <h3 className="text-xl font-bold text-red-600">{formatCurrency(ledgerData.total_purchases)}</h3>
               </div>
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Payments Made</p>
-                <h3 className="text-xl font-bold text-emerald-600">{formatCurrency(ledgerData.total_payments_made)}</h3>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Payments Made</p>
+                <h3 className="text-xl font-bold text-green-600">{formatCurrency(ledgerData.total_payments_made)}</h3>
               </div>
-              <div className="bg-gradient-to-br from-rose-50 to-orange-50 p-5 rounded-2xl shadow-sm border border-rose-100">
-                <p className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-1">Closing Balance</p>
-                <h3 className="text-2xl font-bold text-rose-700">{formatCurrency(ledgerData.closing_balance)}</h3>
+              <div className="bg-gradient-to-br from-red-50 to-amber-50 p-5 rounded-2xl shadow-sm border border-red-100">
+                <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Closing Balance</p>
+                <h3 className="text-2xl font-bold text-red-700">{formatCurrency(ledgerData.closing_balance)}</h3>
               </div>
             </div>
 
             {/* Ledger Table */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 border-b border-gray-200">
+                    <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
                       <th className="px-6 py-4 font-bold">Date</th>
                       <th className="px-6 py-4 font-bold">Particulars</th>
                       <th className="px-6 py-4 font-bold">Vch Type</th>
                       <th className="px-6 py-4 font-bold">Vch No.</th>
                       <th className="px-6 py-4 font-bold text-right">Debit</th>
                       <th className="px-6 py-4 font-bold text-right">Credit</th>
-                      <th className="px-6 py-4 font-bold text-right bg-gray-50">Balance</th>
+                      <th className="px-6 py-4 font-bold text-right bg-slate-50">Balance</th>
                     </tr>
                   </thead>
                   <tbody>
                     {/* Opening Balance Row */}
-                    <tr className="border-b border-gray-100 bg-gray-50/50">
-                      <td className="px-6 py-4 font-medium text-gray-500">{dateFrom}</td>
-                      <td className="px-6 py-4 font-bold text-gray-700" colSpan="5">Opening Balance</td>
-                      <td className="px-6 py-4 font-bold text-right text-rose-600 bg-rose-50/30">
+                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <td className="px-6 py-4 font-medium text-slate-500">{dateFrom}</td>
+                      <td className="px-6 py-4 font-bold text-slate-700" colSpan="5">Opening Balance</td>
+                      <td className="px-6 py-4 font-bold text-right text-red-600 bg-red-50/30">
                         {formatCurrency(ledgerData.opening_balance)}
                       </td>
                     </tr>
 
                     {isLoading ? (
                       <tr>
-                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                        <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
                           <div className="flex justify-center items-center gap-3">
-                            <div className="w-5 h-5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div>
-                            <span className="font-semibold text-rose-600">Loading ledger...</span>
+                            <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="font-semibold text-red-600">Loading ledger...</span>
                           </div>
                         </td>
                       </tr>
                     ) : ledgerData.transactions.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500 font-medium">
+                        <td colSpan="7" className="px-6 py-12 text-center text-slate-500 font-medium">
                           No transactions found for the selected date range.
                         </td>
                       </tr>
                     ) : (
                       ledgerData.transactions.map((t, idx) => (
-                        <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{t.date}</td>
-                          <td className="px-6 py-4 font-medium text-gray-800">{t.particulars}</td>
-                          <td className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">{t.vch_type}</td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{t.vch_no || '-'}</td>
-                          <td className="px-6 py-4 text-right text-gray-700 font-medium">{t.debit ? formatCurrency(t.debit) : '-'}</td>
-                          <td className="px-6 py-4 text-right text-gray-700 font-medium">{t.credit ? formatCurrency(t.credit) : '-'}</td>
-                          <td className="px-6 py-4 text-right font-bold text-rose-700 bg-rose-50/30">
+                        <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{t.date}</td>
+                          <td className="px-6 py-4 font-medium text-slate-800">{t.particulars}</td>
+                          <td className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">{t.vch_type}</td>
+                          <td className="px-6 py-4 text-sm text-slate-500">{t.vch_no || '-'}</td>
+                          <td className="px-6 py-4 text-right text-slate-700 font-medium">{t.debit ? formatCurrency(t.debit) : '-'}</td>
+                          <td className="px-6 py-4 text-right text-slate-700 font-medium">{t.credit ? formatCurrency(t.credit) : '-'}</td>
+                          <td className="px-6 py-4 text-right font-bold text-red-700 bg-red-50/30">
                             {formatCurrency(t.balance)}
                           </td>
                         </tr>

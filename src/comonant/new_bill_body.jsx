@@ -9,6 +9,7 @@ import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
 import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
 import BulkEditModal from "@/comonant/Bill/BulkEditModal";
+import { GST_STATES } from "@/constants/gst";
 
 /* Renders the cropped region of `imageSrc` onto an offscreen canvas and
    resolves a JPEG Blob — the standard react-easy-crop recipe. */
@@ -39,8 +40,98 @@ const formatHeaderTitle = (title) => {
     if (!title) return '';
     let formatted = title.replace(/_/g, ' ');
     return formatted.replace(/\w\S*/g, (txt) => {
+        const lower = txt.toLowerCase();
+        if (ACRONYMS.has(lower)) return txt.toUpperCase();
+        if (lower === 'hsn/sac') return 'HSN/SAC';
         return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
     });
+};
+
+const ACRONYMS = new Set(['gst', 'hsn', 'sac', 'sku', 'mrp', 'upi', 'igst', 'cgst', 'sgst']);
+
+// Quantity, rate, tax and amount columns are right-aligned so figures line up.
+const NUMERIC_TITLE = /^(qty|quantity|rate|price|mrp|gst|disc|discount|amount|total)\b/i;
+const isNumericColumn = (item) =>
+    !!item && (item.is_calculable || NUMERIC_TITLE.test(item.input_title || ''));
+
+const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
+    'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+const twoDigitWords = (n) => (n < 20 ? ONES[n] : `${TENS[Math.floor(n / 10)]}${n % 10 ? `-${ONES[n % 10]}` : ''}`);
+const belowThousandWords = (n) => {
+    const h = Math.floor(n / 100);
+    const rest = n % 100;
+    return [h ? `${ONES[h]} hundred` : '', rest ? twoDigitWords(rest) : ''].filter(Boolean).join(' ');
+};
+// Indian grouping: thousand, lakh, crore (the last unit repeats for larger values).
+const integerToIndianWords = (n) => {
+    if (n === 0) return 'zero';
+    const parts = [];
+    const crore = Math.floor(n / 10000000);
+    const lakh = Math.floor((n % 10000000) / 100000);
+    const thousand = Math.floor((n % 100000) / 1000);
+    const rest = n % 1000;
+    if (crore) parts.push(`${crore >= 100 ? integerToIndianWords(crore) : twoDigitWords(crore)} crore`);
+    if (lakh) parts.push(`${twoDigitWords(lakh)} lakh`);
+    if (thousand) parts.push(`${twoDigitWords(thousand)} thousand`);
+    if (rest) parts.push(belowThousandWords(rest));
+    return parts.join(' ');
+};
+const amountInWords = (amount) => {
+    const value = Math.round((Number(amount) || 0) * 100);
+    if (value <= 0) return '';
+    const rupees = Math.floor(value / 100);
+    const paise = value % 100;
+    const rupeeWords = rupees ? `${integerToIndianWords(rupees)} ${rupees === 1 ? 'rupee' : 'rupees'}` : '';
+    const paiseWords = paise ? `${twoDigitWords(paise)} ${paise === 1 ? 'paisa' : 'paise'}` : '';
+    const words = `${[rupeeWords, paiseWords].filter(Boolean).join(' and ')} only`;
+    return words.charAt(0).toUpperCase() + words.slice(1);
+};
+const formatINR = (n) =>
+    `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// ── Dates and payment terms ─────────────────────────────────────────────
+// Whole-day maths on YYYY-MM-DD strings in UTC, so a timezone offset can never
+// move a due date by a day.
+const parseISO = (iso) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+    return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null;
+};
+const addDaysISO = (iso, days) => {
+    const base = parseISO(iso);
+    return base === null ? '' : new Date(base + days * 86400000).toISOString().slice(0, 10);
+};
+const daysBetweenISO = (from, to) => {
+    const a = parseISO(from);
+    const b = parseISO(to);
+    return a === null || b === null ? null : Math.round((b - a) / 86400000);
+};
+const todayISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const PAYMENT_TERMS = [[0, 'Due on receipt'], [7, 'Net 7'], [15, 'Net 15'], [30, 'Net 30'], [45, 'Net 45'], [60, 'Net 60']];
+
+const isGstStateCode = (code) => {
+    const n = Number(code);
+    return Number.isInteger(n) && ((n >= 1 && n <= 38) || n === 97 || n === 99);
+};
+
+// One labelled field in the header card. Styling lives in bill.css (.bill_field).
+const HeaderField = ({ label, htmlFor, basis = 140, hint, spacer, grow = true, children }) => (
+    <div className="bill_field" style={grow ? { flex: `1 1 ${basis}px`, minWidth: basis } : { flex: '0 0 auto' }}>
+        {spacer
+            ? <span className="bill_spacer" aria-hidden="true">&nbsp;</span>
+            : <label htmlFor={htmlFor}>{label}</label>}
+        {children}
+        {hint && <span className="bill_hint">{hint}</span>}
+    </div>
+);
+
+const formatGstPercent = (value) => {
+    if (value === '' || value === null || value === undefined) return value;
+    const n = Number(value);
+    return Number.isNaN(n) ? value : `${n}%`;
 };
 
 /* ── Toast Notification Component ──────────────────────────────── */
@@ -76,6 +167,7 @@ const ToastContainer = ({ toasts, onDismiss }) => (
                         fontSize: '16px', opacity: 0.6, padding: '0 2px',
                         color: 'inherit', lineHeight: 1,
                     }}
+                    aria-label="Dismiss"
                 >✕</button>
             </div>
         ))}
@@ -111,7 +203,7 @@ function NewBillBody({ id }) {
     const [InvoiceData, setInvoiceData] = useState({})
     const [url, setUrl] = useState(id ? `invoice/${id}/update/` : 'invoice/')
     const [refresh, setRefresh] = useState(false)
-    const { features: planFeatures, permissions: userPermissions, status: accessStatus, lineItemImagesEnabled } = useSelector((s) => s.access);
+    const { features: planFeatures, permissions: userPermissions, status: accessStatus, lineItemImagesEnabled, companyStateCode } = useSelector((s) => s.access);
     const canInventory = accessStatus !== 'succeeded' ||
         (planFeatures.includes('inventory') && userPermissions.includes('inventory.manage'));
     // Pro-plan feature AND the company's own opt-in toggle (off by default,
@@ -122,6 +214,12 @@ function NewBillBody({ id }) {
     const [inventoryProducts, setInventoryProducts] = useState([]);
     const [selectedInventoryProductId, setSelectedInventoryProductId] = useState(null);
     const [toasts, setToasts] = useState([]);
+    const [saveState, setSaveState] = useState('idle'); // idle | saving | saved | error
+    const [headerCfg, setHeaderCfg] = useState(null); // company's header-field settings; null until loaded
+    const [inlineDraft, setInlineDraft] = useState({}); // field id -> value for the inline add-item row
+    const [inlineInventoryId, setInlineInventoryId] = useState(null);
+    const [inlineBusy, setInlineBusy] = useState(false);
+    const inlineNameRef = useRef(null);
     const [customFields, setCustomFields] = useState([]);
     const [showCFPopup, setShowCFPopup] = useState(false);
     const [cfValues, setCFValues] = useState({});
@@ -146,6 +244,11 @@ function NewBillBody({ id }) {
         if (typeParam && !id && !InvoiceData?.invoice_type) {
             setInvoiceData(prev => ({ ...prev, invoice_type: typeParam }));
         }
+        // ?customer=<id> (from the Customers page) starts the bill for that customer
+        const customerParam = params.get('customer');
+        if (customerParam && !id && !InvoiceData?.receiver) {
+            setInvoiceData(prev => (prev.receiver ? prev : { ...prev, receiver: customerParam }));
+        }
     }, [location.search, id]);
 
     const showToast = useCallback((message, type = 'error') => {
@@ -160,6 +263,14 @@ function NewBillBody({ id }) {
     useEffect(() => {
         console.log("InvoiceData", InvoiceData);
     });
+
+    useEffect(() => {
+        // Which optional header fields this company shows, and their defaults.
+        // If it can't be read, every field stays visible (the old behaviour).
+        clientToken.get("invoice-header-config/", { suppressErrorToast: true })
+            .then((response) => setHeaderCfg(response.data?.fields || null))
+            .catch(() => setHeaderCfg(null));
+    }, []);
 
     useEffect(() => {
         clientToken.get("custom-fields/").then((response) => {
@@ -197,6 +308,9 @@ function NewBillBody({ id }) {
     // var checkbox={}
     let grandTotal = 0
     let grandGstTotal = 0
+    let grandSubtotal = 0   // taxable value, before GST
+    let grandAdjustments = 0 // post-GST additions/deductions (extraCal)
+    const gstByRate = {}    // GST rate -> GST amount collected at that rate
     useEffect(() => {
         let endpoint = 'companies/?page_size=999';
         if (InvoiceData?.invoice_type === 'purchase') {
@@ -265,7 +379,7 @@ function NewBillBody({ id }) {
         // Keys that must be sent even when empty, so they can be cleared.
         // Only on update: omitting invoice_number on create is what asks the
         // server to auto-generate one.
-        const alwaysSend = url === 'invoice/' ? [] : ['invoice_number']
+        const alwaysSend = url === 'invoice/' ? [] : ['invoice_number', 'due_date', 'place_of_supply', 'customer_notes', 'terms']
         Object.keys(InvoiceData).map((obj) => {
 
             if (('products' !== obj) && (InvoiceData[obj] || alwaysSend.includes(obj))) {
@@ -285,8 +399,10 @@ function NewBillBody({ id }) {
             form.set('gst_final_amount', parseFloat(grandGstTotal).toFixed(2))
         }
 
+        setSaveState('saving')
         clientToken.post(url, form).then((response) => {
             if (response.status === 200) {
+                setSaveState('saved')
                 setInvoiceData(response.data)
                 setInvoiceNumber(response.data.invoice_number ?? "")
                 if (url === 'invoice/') {
@@ -302,6 +418,7 @@ function NewBillBody({ id }) {
 
         }).catch((error) => {
             console.log(error)
+            setSaveState('error')
             showToast(`Error ${error?.request?.status ?? ''}: Failed to save invoice`)
             if (error?.response?.status === 404) {
                 navigate('/')
@@ -375,7 +492,10 @@ function NewBillBody({ id }) {
         };
     };
 
-    const handelSave = (obj, update_data = false) => {
+    // `override` ({ product, inventoryId }) lets the inline add-item row save a
+    // line without going through the modal's new_product / inventory state. The
+    // create path returns a promise resolving to true only when the line was added.
+    const handelSave = (obj, update_data = false, override = null) => {
         console.log(new_product)
         var temp_opj = { product_properties: [] }
         console.log(table_content)
@@ -420,23 +540,25 @@ function NewBillBody({ id }) {
         }
         else {
             let id = -1
+            const product = override?.product ?? new_product
+            const inventoryId = override ? override.inventoryId : selectedInventoryProductId
 
             // Extract quantity if the user selected an inventory product
             let parsedQuantity = 0;
-            if (selectedInventoryProductId) {
+            if (inventoryId) {
                 const qtyField = bill_body_items.find(item => item.input_title === 'Quantity');
                 if (qtyField) {
-                    let qValue = new_product.product_properties.find(s => +s.new_product_in_frontend?.id === +qtyField.id)?.value;
+                    let qValue = product.product_properties.find(s => +s.new_product_in_frontend?.id === +qtyField.id)?.value;
                     if (qValue && !isNaN(qValue)) parsedQuantity = parseFloat(qValue);
                 }
             }
 
-            const totals = calculateProductTotals(new_product.product_properties);
+            const totals = calculateProductTotals(product.product_properties);
             const form = new FormData()
             form.append('product_properties', '')
             form.append('gst_amount', totals.gst_amount)
             form.append('total_amount', totals.total_amount)
-            form.append('image_id', new_product.image?.id ?? '')
+            form.append('image_id', product.image?.id ?? '')
 
             // Helper: ensure we have an invoice ID before adding products.
             // On a brand-new invoice the auto-save may not have fired yet,
@@ -466,17 +588,17 @@ function NewBillBody({ id }) {
                 throw new Error('Failed to create invoice');
             };
 
-            clientToken.post('product/', form).then(async (response) => {
+            return clientToken.post('product/', form).then(async (response) => {
                 if (response.status === 200) {
                     id = response.data.id
-                    if (new_product.product_properties.length > 0) {
+                    if (product.product_properties.length > 0) {
                         const invoiceId = await ensureInvoiceId();
-                        clientToken.post(`invoice/${invoiceId}/product/add/`, { product_id: response.data.id }).then((response) => {
+                        return clientToken.post(`invoice/${invoiceId}/product/add/`, { product_id: response.data.id }).then((response) => {
                             if (response.status === 200) {
                                 // NEW STOCK DEDUCTION LOGIC (Runs exactly once per product added)
-                                if (selectedInventoryProductId && parsedQuantity > 0) {
+                                if (inventoryId && parsedQuantity > 0) {
                                     const stockForm = new FormData();
-                                    stockForm.append('product', selectedInventoryProductId);
+                                    stockForm.append('product', inventoryId);
                                     stockForm.append('quantity', parsedQuantity);
                                     stockForm.append('movement_type', 'OUT');
                                     stockForm.append('notes', `Auto-deducted for Invoice #${invoiceId || 'Unknown'}`);
@@ -487,7 +609,7 @@ function NewBillBody({ id }) {
                                 }
 
                                 console.log(new_product)
-                                new_product.product_properties.map((obj) => {
+                                product.product_properties.map((obj) => {
                                     const productPropertiesForm = new FormData()
                                     productPropertiesForm.append('new_product_in_frontend', obj.new_product_in_frontend.id)
                                     productPropertiesForm.append('value', obj.value)
@@ -518,18 +640,24 @@ function NewBillBody({ id }) {
                                 setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
                                 setPop_up_properties('none')
                                 setSelectedInventoryProductId(null);
+                                return true
                             }
+                            return false
                         }).catch((error) => {
                             console.log(error)
                             showToast(`Error ${error?.request?.status ?? ''}: Failed to add product to invoice`)
+                            return false
                         })
                     } else {
                         showToast('Please fill in the product details before saving', 'warning')
+                        return false
                     }
                 }
+                return false
             }).catch((error) => {
                 console.log(error)
                 showToast(`Error ${error?.request?.status ?? ''}: Failed to create product`)
+                return false
             })
             console.log(new_product.product_properties)
 
@@ -684,6 +812,9 @@ function NewBillBody({ id }) {
         })
     }
     const handelDelete = (e) => {
+        const selected = Object.keys(checkbox).filter((k) => checkbox[k]).length
+        if (!selected) return
+        if (!window.confirm(`Delete ${selected} selected item${selected > 1 ? 's' : ''}? This can't be undone.`)) return
         console.log(checkbox)
         Object.keys(checkbox).map((obj) => {
             console.log(checkbox[obj])
@@ -704,6 +835,11 @@ function NewBillBody({ id }) {
         ? table_content.filter((row) => checkedRowIds.includes(+row.id))
         : table_content;
 
+    const closeProductModal = () => {
+        setPop_up_properties('none')
+        setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
+        setSelectedInventoryProductId(null)
+    }
     const handelOpen = (key) => {
         set_update(true)
         console.log(key.target.parentElement.id)
@@ -718,6 +854,131 @@ function NewBillBody({ id }) {
                 console.error('Error downloading the PDF:', error);
             });
     }
+    // ── Inline add-item row ───────────────────────────────────────────────
+    const visibleBillItems = bill_body_items.filter((o) => o.is_show);
+    const inlineNameItem = bill_body_items.find((o) => o.input_title === 'Name of Product')
+        || visibleBillItems.find((o) => !isNumericColumn(o));
+    const itemTitled = (title) => bill_body_items.find((o) => o.input_title === title);
+
+    const inlineProperties = () => (newDataFormat.product_properties || []).map((p) => {
+        const typed = inlineDraft[p.new_product_in_frontend.id];
+        return { ...p, new_product_in_frontend: { ...p.new_product_in_frontend }, value: typed !== undefined ? typed : p.value };
+    });
+
+    const handleInlineChange = (item, value) => {
+        if (item.is_calculable && value !== '' && isNaN(value)) return;
+        const next = { ...inlineDraft, [item.id]: value };
+        // Typing an inventory product's exact name fills its rate and GST.
+        if (inlineNameItem && item.id === inlineNameItem.id) {
+            const match = inventoryProducts.find((p) => p.name === value);
+            setInlineInventoryId(match ? match.id : null);
+            if (match) {
+                const rateItem = itemTitled('Rate');
+                const gstItem = itemTitled('GST');
+                if (rateItem && match.price !== undefined) next[rateItem.id] = String(match.price);
+                if (gstItem && match.gst_percentage !== undefined) next[gstItem.id] = String(match.gst_percentage);
+            }
+        }
+        setInlineDraft(next);
+    };
+
+    const commitInlineRow = () => {
+        if (inlineBusy) return;
+        if (!bill_body_items.length || !newDataFormat.product_properties) {
+            showToast('Product fields are still loading', 'warning');
+            return;
+        }
+        const typedName = inlineNameItem ? String(inlineDraft[inlineNameItem.id] ?? '').trim() : 'ok';
+        if (!typedName) {
+            showToast('Enter an item name', 'warning');
+            inlineNameRef.current?.focus();
+            return;
+        }
+        setInlineBusy(true);
+        Promise.resolve(handelSave(null, false, {
+            product: { product_properties: inlineProperties() },
+            inventoryId: inlineInventoryId,
+        })).then((added) => {
+            if (added === true) {
+                setInlineDraft({});
+                setInlineInventoryId(null);
+                inlineNameRef.current?.focus();
+            }
+        }).finally(() => setInlineBusy(false));
+    };
+
+    const onInlineKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            commitInlineRow();
+        }
+    };
+
+    const inlineHasNumbers = Object.keys(inlineDraft).some((k) => {
+        const item = bill_body_items.find((o) => String(o.id) === String(k));
+        return item && isNumericColumn(item) && inlineDraft[k] !== '' && inlineDraft[k] !== undefined;
+    });
+    const inlineTotals = inlineHasNumbers && newDataFormat.product_properties
+        ? calculateProductTotals(inlineProperties())
+        : null;
+
+    // Company header settings. A default is only *shown* on a brand-new invoice;
+    // the server fills it in for real when the invoice is created.
+    const isNewInvoice = !id && !InvoiceData?.id;
+    const cfgOf = (key) => headerCfg?.[key] || { visible: true, use_default: false, default: null };
+    const showField = (key) => cfgOf(key).visible;
+    const newDefault = (key) => {
+        const c = cfgOf(key);
+        return isNewInvoice && c.use_default && c.default !== null && c.default !== '' ? c.default : undefined;
+    };
+    const posValue = InvoiceData?.place_of_supply ?? newDefault('place_of_supply') ?? '';
+    const statusValue = InvoiceData?.payment_status || newDefault('payment_status') || 'unpaid';
+    const methodValue = InvoiceData?.payment_method || newDefault('payment_method') || '';
+    const notesInitial = InvoiceData?.customer_notes || newDefault('customer_notes') || '';
+    const termsInitial = InvoiceData?.terms || newDefault('terms') || '';
+    const dueValue = InvoiceData?.due_date
+        ?? (newDefault('payment_terms') !== undefined
+            ? addDaysISO(InvoiceData?.date || todayISO(), Number(newDefault('payment_terms')))
+            : '');
+
+    // CGST+SGST vs IGST: compare your state with the place of supply (the
+    // invoice's own, else the customer's). Sales only; with either unknown the
+    // card shows plain GST rather than guessing a split.
+    const isSale = InvoiceData?.invoice_type !== 'purchase';
+    const showPlaceOfSupply = isSale && showField('place_of_supply');
+    // The second row only exists when it has something to show; "Header options"
+    // (custom fields) joins it if so, otherwise it sits at the end of the first row.
+    const showSecondRow = showPlaceOfSupply || showField('payment_status') || showField('payment_method');
+    const headerOptionsButton = customFields && customFields.length > 0 ? (
+        <HeaderField spacer grow={false}>
+            <button type="button" className="bill-btn" onClick={() => setShowCFPopup(true)}>
+                Header options
+            </button>
+        </HeaderField>
+    ) : null;
+    const supplyCode = posValue !== '' ? posValue : (InvoiceData?.receiver_state_code ?? null);
+    const canSplitGst = isSale && isGstStateCode(companyStateCode) && isGstStateCode(supplyCode);
+    const intraState = canSplitGst && Number(companyStateCode) === Number(supplyCode);
+
+    // Payment terms are derived from the two dates rather than stored: the
+    // select shows "Net 15" whenever due date is invoice date + 15 days.
+    const termDays = dueValue
+        ? daysBetweenISO(InvoiceData?.date || todayISO(), dueValue)
+        : null;
+    const termValue = termDays === null
+        ? ''
+        : (PAYMENT_TERMS.some(([d]) => d === termDays) ? String(termDays) : 'custom');
+
+    // Hide the Image column until at least one line item actually has an image.
+    const showImageCol = canLineItemImages && table_content.some((r) => r.image?.image);
+    const visibleItems = bill_body_items.filter((o) => o.is_show);
+    const statusLabels = { paid: 'Paid', unpaid: 'Unpaid', partially_paid: 'Partially paid', overdue: 'Overdue' };
+    const paymentStatus = InvoiceData?.payment_status || 'unpaid';
+    const displayNumber = InvoiceData?.invoice_number || invoiceNumber;
+    const pageTitle = InvoiceData?.invoice_type === 'purchase'
+        ? (displayNumber ? `Purchase ${displayNumber}` : (id ? `Purchase #${id}` : 'New purchase'))
+        : (displayNumber ? `Invoice ${displayNumber}` : (id ? `Invoice #${id}` : 'New invoice'));
+
     const Rows = (obj) => {
         const key = obj.id;
         let total = 1;
@@ -785,11 +1046,17 @@ function NewBillBody({ id }) {
             const gstProp = obj.product_properties.find(p => p.new_product_in_frontend.id === gstItem.id);
             const gst = gstProp ? gstProp.value : 0;
             gstAmount = gst ? total * (parseFloat(gst) / 100) : 0;
+            if (gstAmount) {
+                const rate = parseFloat(gst) || 0;
+                gstByRate[rate] = (gstByRate[rate] || 0) + gstAmount;
+            }
         }
 
         // update totals (assuming grandTotal & grandGstTotal are state/outer scope)
         grandTotal += total + gstAmount + extraCal;
         grandGstTotal = grandGstTotal + gstAmount;
+        grandSubtotal += total;
+        grandAdjustments += extraCal;
 
         // ensure checkbox entry exists
         if (checkbox[key] === undefined) {
@@ -799,7 +1066,7 @@ function NewBillBody({ id }) {
         // render table row
         return (
             <tr key={key} id={key} className="table-row">
-                <td>
+                <td className="check-col">
                     <input
                         type="checkbox"
                         className="check-box"
@@ -808,7 +1075,7 @@ function NewBillBody({ id }) {
                         onChange={handelCheckBox}
                     />
                 </td>
-                {canLineItemImages && (
+                {showImageCol && (
                     <td onClick={handelOpen}>
                         {obj.image?.image
                             ? <img src={obj.image.image} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6 }} />
@@ -823,20 +1090,24 @@ function NewBillBody({ id }) {
                     )
                     .map((headObj, idx) =>
                         headObj.new_product_in_frontend.is_show ? (
-                            <td key={idx} onClick={handelOpen}>
+                            <td key={idx} onClick={handelOpen}
+                                className={isNumericColumn(headObj.new_product_in_frontend) ? 'num-col' : undefined}>
                                 {headObj.new_product_in_frontend.show_calculated_value 
                                     ? (parseFloat(calculatedValues[headObj.new_product_in_frontend.id]) || 0).toFixed(2)
-                                    : headObj.value}
+                                    : headObj.new_product_in_frontend.input_title?.toLowerCase() === 'gst'
+                                        ? formatGstPercent(headObj.value)
+                                        : headObj.value}
                             </td>
                         ) : (
                             ''
                         )
                     )}
 
-                <td onClick={handelOpen}>{parseFloat(gstAmount).toFixed(2)}</td>
-                <td onClick={handelOpen}>
+                <td className="num-col" onClick={handelOpen}>{parseFloat(gstAmount).toFixed(2)}</td>
+                <td className="num-col" onClick={handelOpen}>
                     {parseFloat(total + gstAmount + extraCal).toFixed(2)}
                 </td>
+                <td className="action-col"></td>
             </tr>
         );
     };
@@ -914,7 +1185,7 @@ function NewBillBody({ id }) {
                                 disabled={uploadingImg || !croppedAreaPixels}
                                 style={{
                                     padding: '8px 18px', borderRadius: 8, border: 'none',
-                                    background: (uploadingImg || !croppedAreaPixels) ? '#a5b4fc' : '#4f46e5',
+                                    background: (uploadingImg || !croppedAreaPixels) ? '#c7d2fe' : '#4f46e5',
                                     color: 'white', fontWeight: 700, fontSize: 13,
                                     cursor: (uploadingImg || !croppedAreaPixels) ? 'not-allowed' : 'pointer',
                                 }}
@@ -944,6 +1215,7 @@ function NewBillBody({ id }) {
                             <button
                                 onClick={() => setShowImagePicker(false)}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b' }}
+                                aria-label="Close"
                             >✕</button>
                         </div>
                         {productImages.length === 0 ? (
@@ -1123,7 +1395,43 @@ function NewBillBody({ id }) {
             )}
 
             <div className={'top_head'}>
-                <p>Bill</p>
+                <div>
+                    <p className="crumb">
+                        <a onClick={() => navigate('/bill_list')}>Invoices</a>
+                        {' / '}{id ? `#${id}` : 'New'}
+                    </p>
+                    <div className="title_row">
+                        <h1>{pageTitle}</h1>
+                        {id && (
+                            <span className={`status_badge ${paymentStatus}`}>
+                                {statusLabels[paymentStatus] || paymentStatus}
+                            </span>
+                        )}
+                        {saveState === 'saving' && <span className="save_state">Saving…</span>}
+                        {saveState === 'saved' && <span className="save_state">All changes saved</span>}
+                        {saveState === 'error' && <span className="save_state error">Couldn't save. Your last change may be missing.</span>}
+                    </div>
+                    <div className="type_toggle" role="group" aria-label="Invoice type">
+                        {[['sales', 'Sales'], ['purchase', 'Purchase']].map(([value, label]) => {
+                            const active = (InvoiceData?.invoice_type || 'sales') === value;
+                            return (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    className={active ? 'on' : ''}
+                                    aria-pressed={active}
+                                    onClick={() => {
+                                        if (active) return;
+                                        setInvoiceData({ ...InvoiceData, invoice_type: value });
+                                        setRefresh(r => !r);
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
                 {/*<div className={'button'} onClick={()=>InvoiceData["receiver"]?handelExport(InvoiceData?.id):alert("Receiver is not set")}>Export</div>*/}
                 <ExportDropdown
                     InvoiceData={InvoiceData}
@@ -1133,9 +1441,9 @@ function NewBillBody({ id }) {
 
                 </ExportDropdown>
             </div>
-            <div className={'bill_head'} style={{ alignItems: 'flex-end' }}>
                 <div
                     id={'new_company_box'}
+                    onMouseDown={(e) => { if (e.target === e.currentTarget) closeProductModal(); }}
                     style={{
                         display: Pop_up_properties,      /* 'flex' or 'none' */
                         position: 'fixed',
@@ -1150,89 +1458,58 @@ function NewBillBody({ id }) {
                     {/* ── centred white card ── */}
                     <div style={{
                         background: 'white', borderRadius: '20px',
-                        padding: '28px', width: 'min(580px, 92vw)',
+                        padding: '28px', width: 'min(640px, 92vw)',
                         boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
                         position: 'relative',
                         maxHeight: '90vh',
                         overflowY: 'auto',
                     }}>
-                        {/* Close button */}
-                        <a className={'close'} onClick={() => {
-                            setPop_up_properties('none')
-                            setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
-                            setSelectedInventoryProductId(null);
-                        }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 44 44" fill="none">
-                                <path d="M24.585 22L32.4683 14.135C32.8136 13.7898 33.0075 13.3216 33.0075 12.8333C33.0075 12.3451 32.8136 11.8769 32.4683 11.5317C32.1231 11.1864 31.6549 10.9925 31.1667 10.9925C30.6785 10.9925 30.2102 11.1864 29.865 11.5317L22 19.415L14.135 11.5317C13.7898 11.1864 13.3216 10.9925 12.8333 10.9925C12.3451 10.9925 11.8769 11.1864 11.5317 11.5317C11.1865 11.8769 10.9925 12.3451 10.9925 12.8333C10.9925 13.3216 11.1865 13.7898 11.5317 14.135L19.415 22L11.5317 29.865C11.3598 30.0354 11.2235 30.2382 11.1304 30.4616C11.0373 30.685 10.9894 30.9246 10.9894 31.1667C10.9894 31.4087 11.0373 31.6483 11.1304 31.8717C11.2235 32.0951 11.3598 32.2979 11.5317 32.4683C11.7021 32.6402 11.9049 32.7766 12.1283 32.8696C12.3517 32.9627 12.5913 33.0106 12.8333 33.0106C13.0754 33.0106 13.315 32.9627 13.5384 32.8696C13.7618 32.7766 13.9646 32.6402 14.135 32.4683L22 24.585L29.865 32.4683C30.0354 32.6402 30.2382 32.7766 30.4616 32.8696C30.685 32.9627 30.9247 33.0106 31.1667 33.0106C31.4087 33.0106 31.6483 32.9627 31.8717 32.8696C32.0951 32.7766 32.2979 32.6402 32.4683 32.4683C32.6402 32.2979 32.7766 32.0951 32.8696 31.8717C32.9627 31.6483 33.0106 31.4087 33.0106 31.1667C33.0106 30.9246 32.9627 30.685 32.8696 30.4616C32.7766 30.2382 32.6402 30.0354 32.4683 29.865L24.585 22Z" fill="#4f46e5" />
-                            </svg>
-                        </a>
-
-                        <p>New Product</p>
+                        <div className="bill_modal_head">
+                            <h2>{update ? 'Edit item' : 'Add item'}</h2>
+                            <button type="button" className="bill_modal_close" aria-label="Close" onClick={closeProductModal}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
 
                         {canLineItemImages && (
-                        <div className="mb-4 mt-2">
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">
-                                Line Item Image
-                            </label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                {new_product?.image?.image ? (
-                                    <div style={{ position: 'relative' }}>
-                                        <img
-                                            src={new_product.image.image}
-                                            alt=""
-                                            style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 10, border: '1.5px solid #e2e8f0' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={removeProductImage}
-                                            title="Remove image"
-                                            style={{
-                                                position: 'absolute', top: -8, right: -8, width: 22, height: 22,
-                                                borderRadius: '50%', background: '#ef4444', color: 'white', border: 'none',
-                                                cursor: 'pointer', fontSize: 12, lineHeight: '22px', padding: 0,
-                                            }}
-                                        >✕</button>
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        width: 64, height: 64, borderRadius: 10, border: '1.5px dashed #cbd5e1',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        color: '#94a3b8', fontSize: 11, textAlign: 'center',
-                                    }}>
-                                        No image
-                                    </div>
-                                )}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div className="bill_modal_image">
+                            {new_product?.image?.image ? (
+                                <div className="thumb">
+                                    <img src={new_product.image.image} alt="" />
+                                    <button type="button" onClick={removeProductImage} title="Remove image" aria-label="Remove image">✕</button>
+                                </div>
+                            ) : (
+                                <div className="thumb empty">No image</div>
+                            )}
+                            <div className="meta">
+                                <span className="meta_label">Line item image</span>
+                                <div className="actions">
                                     <button
                                         type="button"
+                                        className="bill-btn bill-btn-sm"
                                         onClick={() => imageFileInputRef.current?.click()}
                                         disabled={uploadingImg}
-                                        style={{
-                                            padding: '6px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8,
-                                            border: '1.5px solid #e2e8f0', background: 'white',
-                                            cursor: uploadingImg ? 'not-allowed' : 'pointer',
-                                        }}
                                     >
-                                        {uploadingImg ? 'Uploading…' : 'Upload New'}
+                                        {uploadingImg ? 'Uploading…' : 'Upload new'}
                                     </button>
                                     <button
                                         type="button"
+                                        className="bill-btn bill-btn-sm"
                                         onClick={() => { setShowImagePicker(true); loadProductImages(); }}
-                                        style={{
-                                            padding: '6px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8,
-                                            border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer',
-                                        }}
                                     >
-                                        Choose Existing
+                                        Choose existing
                                     </button>
-                                    <input
-                                        ref={imageFileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageUpload}
-                                        style={{ display: 'none' }}
-                                    />
                                 </div>
+                                <input
+                                    ref={imageFileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    style={{ display: 'none' }}
+                                />
                             </div>
                         </div>
                         )}
@@ -1257,20 +1534,20 @@ function NewBillBody({ id }) {
                             </div>
                         )}
 
-                        <div className={'pop-up-box_inputs'}>
+                        <div className="bill_modal_grid">
                             {bill_body_items.map((obj) => {
                                 let value = new_product?.product_properties.find((obj_2) => +obj_2.new_product_in_frontend.id === +obj.id)
                                 value = value ? value.value : ''
                                 return (
                                     <div className={'form_box'} id={obj.input_title} key={obj.id}
-                                        style={{ flexBasis: `${+obj.size * 10}%` }}>
-                                        {formatHeaderTitle(obj.input_title)}
+                                        style={{ gridColumn: `span ${Math.min(3, Math.max(1, Math.round(+obj.size / 10 * 3) || 1))}` }}>
+                                        <label htmlFor={obj.id}>{formatHeaderTitle(obj.input_title)}</label>
                                         {obj.presets ? (
                                             <select 
                                                 id={obj.id} 
                                                 onChange={handelInput} 
                                                 value={value}
-                                                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                                className="bill_modal_select"
                                             >
                                                 <option value="">-- Select {formatHeaderTitle(obj.input_title)} --</option>
                                                 {obj.presets.split(',').map(preset => (
@@ -1292,155 +1569,194 @@ function NewBillBody({ id }) {
                             })}
                         </div>
 
-                        <div className={'pop-up-box_buttons'}>
-                            {update ? <div className={'button delete'} onClick={() => delete_product(new_product?.id)}>Delete</div> : ''}
-                            {update ? <div className={'button'} onClick={handelUpdate}>Update</div> : <div className={'button'} onClick={handelSave}>Save</div>}
+                        <div className="bill_modal_footer">
+                            {update && (
+                                <button
+                                    type="button"
+                                    className="bill-btn bill-btn-danger"
+                                    onClick={() => {
+                                        if (!window.confirm("Delete this item from the invoice? This can't be undone.")) return;
+                                        delete_product(new_product?.id);
+                                        closeProductModal();
+                                    }}
+                                >
+                                    Delete item
+                                </button>
+                            )}
+                            <span className="spacer" />
+                            <button type="button" className="bill-btn" onClick={closeProductModal}>Cancel</button>
+                            <button type="button" className="bill-btn bill-btn-primary" onClick={update ? handelUpdate : handelSave}>
+                                {update ? 'Save changes' : 'Add item'}
+                            </button>
                         </div>
                     </div>
                 </div>
-                {/* Header */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 140px', minWidth: '140px' }}>
-                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Invoice No.
-                    </label>
-                    <input
-                        placeholder="Auto"
-                        id="invoice_number"
-                        type="text"
-                        value={invoiceNumber}
-                        onChange={(e) => setInvoiceNumber(e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box' }}
-                    />
-                </div>
-                
-                <CustomerDropdown companyName={company_name} InvoiceData={InvoiceData} setRefresh={setRefresh} setInvoiceData={setInvoiceData} />
+            <div className={'bill_head'}>
+                {/* Header: who and when, then tax and payment */}
+                <div className="bill_row">
+                    <HeaderField label="Invoice No." htmlFor="invoice_number" basis={140}>
+                        <input
+                            placeholder="Auto"
+                            id="invoice_number"
+                            type="text"
+                            value={invoiceNumber}
+                            onChange={(e) => setInvoiceNumber(e.target.value)}
+                        />
+                    </HeaderField>
 
-                {/* Invoice Date */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 160px', minWidth: '160px' }}>
-                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Invoice Date
-                    </label>
-                    <input
-                        id="date"
-                        type="date"
-                        value={InvoiceData?.date || ''}
-                        onChange={(e) => {
-                            setInvoiceData({ ...InvoiceData, date: e.target.value });
-                            setRefresh(r => !r);
-                        }}
-                        style={{ width: '100%', boxSizing: 'border-box' }}
-                    />
-                </div>
+                    <CustomerDropdown companyName={company_name} InvoiceData={InvoiceData} setRefresh={setRefresh} setInvoiceData={setInvoiceData} />
 
-                {/* Invoice Type */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 140px', minWidth: '140px' }}>
-                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Invoice Type
-                    </label>
-                    <select
-                        id="invoice_type"
-                        value={InvoiceData?.invoice_type || 'sales'}
-                        onChange={(e) => {
-                            setInvoiceData({ ...InvoiceData, invoice_type: e.target.value });
-                            setRefresh(r => !r);
-                        }}
-                        style={{
-                            padding: '10px 14px', borderRadius: '12px',
-                            border: '1.5px solid #e2e8f0', outline: 'none',
-                            fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s', width: '100%', background: 'white',
-                            boxSizing: 'border-box'
-                        }}
-                    >
-                        <option value="sales">Sales</option>
-                        <option value="purchase">Purchase</option>
-                    </select>
-                </div>
-
-                {/* Payment Status */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 140px', minWidth: '140px' }}>
-                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Payment Status
-                    </label>
-                    <select
-                        id="payment_status"
-                        value={InvoiceData?.payment_status || 'unpaid'}
-                        onChange={(e) => {
-                            setInvoiceData({ ...InvoiceData, payment_status: e.target.value });
-                            setRefresh(r => !r);
-                        }}
-                        style={{
-                            padding: '10px 14px', borderRadius: '12px',
-                            border: '1.5px solid #e2e8f0', outline: 'none',
-                            fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s', width: '100%', background: 'white',
-                            boxSizing: 'border-box'
-                        }}
-                    >
-                        <option value="unpaid">Unpaid</option>
-                        <option value="partially_paid">Partially Paid</option>
-                        <option value="paid">Paid</option>
-                        <option value="overdue">Overdue</option>
-                    </select>
-                </div>
-
-                {/* Payment Method */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 140px', minWidth: '140px' }}>
-                    <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Payment Method
-                    </label>
-                    <select
-                        id="payment_method"
-                        value={InvoiceData?.payment_method || ''}
-                        onChange={(e) => {
-                            setInvoiceData({ ...InvoiceData, payment_method: e.target.value });
-                            setRefresh(r => !r);
-                        }}
-                        style={{
-                            padding: '10px 14px', borderRadius: '12px',
-                            border: '1.5px solid #e2e8f0', outline: 'none',
-                            fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s', width: '100%', background: 'white',
-                            boxSizing: 'border-box'
-                        }}
-                    >
-                        <option value="">Not set</option>
-                        <option value="cash">Cash</option>
-                        <option value="upi">UPI</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                        <option value="cheque">Cheque</option>
-                        <option value="card">Card</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-
-                {customFields && customFields.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto', minWidth: '160px' }}>
-                        <button
-                            onClick={() => setShowCFPopup(true)}
-                            style={{
-                                padding: '10px 14px', borderRadius: '12px',
-                                background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: 'white',
-                                border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 700,
-                                boxShadow: '0 4px 14px rgba(79,70,229,0.25)', width: '100%',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                                transition: 'transform 0.15s, box-shadow 0.15s',
-                                boxSizing: 'border-box',
-                                height: '40px',
+                    <HeaderField label="Invoice Date" htmlFor="date" basis={160}>
+                        <input
+                            id="date"
+                            type="date"
+                            value={InvoiceData?.date || ''}
+                            onChange={(e) => {
+                                const newDate = e.target.value;
+                                const next = { ...InvoiceData, date: newDate };
+                                // Moving the invoice date carries the due date with it, so a
+                                // "Net 15" invoice stays Net 15 and never ends up due before it is issued.
+                                if (newDate && InvoiceData?.due_date) {
+                                    const term = daysBetweenISO(InvoiceData.date, InvoiceData.due_date);
+                                    next.due_date = addDaysISO(newDate, term === null ? 0 : Math.max(term, 0));
+                                }
+                                setInvoiceData(next);
+                                setRefresh(r => !r);
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(79,70,229,0.35)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(79,70,229,0.25)'; }}
+                        />
+                    </HeaderField>
+
+                    {showField('payment_terms') && (<>
+                    <HeaderField label="Payment Terms" htmlFor="payment_terms" basis={140}>
+                        <select
+                            id="payment_terms"
+                            value={termValue}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                if (v === 'custom') return;
+                                const due = v === '' ? '' : addDaysISO(InvoiceData?.date || todayISO(), Number(v));
+                                setInvoiceData({ ...InvoiceData, due_date: due });
+                                setRefresh(r => !r);
+                            }}
                         >
-                            ⚙️ Header Options
-                        </button>
+                            <option value="">No due date</option>
+                            {PAYMENT_TERMS.map(([days, label]) => (
+                                <option key={days} value={String(days)}>{label}</option>
+                            ))}
+                            {termValue === 'custom' && <option value="custom">Custom</option>}
+                        </select>
+                    </HeaderField>
+
+                    <HeaderField label="Due Date" htmlFor="due_date" basis={160}>
+                        <input
+                            id="due_date"
+                            type="date"
+                            min={InvoiceData?.date || undefined}
+                            value={dueValue || ''}
+                            onChange={(e) => {
+                                setInvoiceData({ ...InvoiceData, due_date: e.target.value });
+                                setRefresh(r => !r);
+                            }}
+                        />
+                    </HeaderField>
+                    </>)}
+                    {!showSecondRow && headerOptionsButton}
+                </div>
+
+                {showSecondRow && (
+                <div className="bill_row bill_row_secondary">
+                    {/* Sales only: it decides CGST+SGST vs IGST on what you charge */}
+                    {showPlaceOfSupply && (
+                        <HeaderField
+                            label="Place of Supply"
+                            htmlFor="place_of_supply"
+                            basis={240}
+                            hint={posValue !== ''
+                                ? "Overrides the customer's state for GST."
+                                : InvoiceData?.receiver_state_code
+                                    ? `Using the customer's state: ${InvoiceData.receiver_state || ''} (${InvoiceData.receiver_state_code})`
+                                    : InvoiceData?.receiver
+                                        ? 'This customer has no state. Choose one so GST splits correctly.'
+                                        : "Defaults to the customer's state."}
+                        >
+                            <select
+                                id="place_of_supply"
+                                value={posValue}
+                                onChange={(e) => {
+                                    setInvoiceData({ ...InvoiceData, place_of_supply: e.target.value === '' ? null : Number(e.target.value) });
+                                    setRefresh(r => !r);
+                                }}
+                            >
+                                <option value="">Same as customer's state</option>
+                                {GST_STATES.map((st) => (
+                                    <option key={st.code} value={st.code}>{`${st.name} (${st.code})`}</option>
+                                ))}
+                            </select>
+                        </HeaderField>
+                    )}
+
+                    {showField('payment_status') && (
+                    <HeaderField label="Payment Status" htmlFor="payment_status" basis={140}>
+                        <select
+                            id="payment_status"
+                            value={statusValue}
+                            onChange={(e) => {
+                                setInvoiceData({ ...InvoiceData, payment_status: e.target.value });
+                                setRefresh(r => !r);
+                            }}
+                        >
+                            <option value="unpaid">Unpaid</option>
+                            <option value="partially_paid">Partially Paid</option>
+                            <option value="paid">Paid</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </HeaderField>
+                    )}
+
+                    {showField('payment_method') && (
+                    <HeaderField label="Payment Method" htmlFor="payment_method" basis={140}>
+                        <select
+                            id="payment_method"
+                            value={methodValue}
+                            onChange={(e) => {
+                                setInvoiceData({ ...InvoiceData, payment_method: e.target.value });
+                                setRefresh(r => !r);
+                            }}
+                        >
+                            <option value="">Not set</option>
+                            <option value="cash">Cash</option>
+                            <option value="upi">UPI</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="card">Card</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </HeaderField>
+                    )}
+
+                    {headerOptionsButton}
+                </div>
+                )}
+            </div>
+            <div className={'bill-actions'}>
+                {checkedRowIds.length > 0 && (
+                    <span className="selected_count">{checkedRowIds.length} selected</span>
+                )}
+                {checkedRowIds.length > 0 && (
+                    <div className={'bill-btn bill-btn-danger'} onClick={handelDelete}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4h8v2" />
+                            <path d="M19 6l-1 14H6L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                        </svg>
+                        Delete ({checkedRowIds.length})
                     </div>
                 )}
-
-            </div>
-            <div className={'header-button '}>
-                <div className={'button delete'} onClick={handelDelete}><svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
-                    <path d="M11.25 20.25C11.5484 20.25 11.8345 20.1315 12.0455 19.9205C12.2565 19.7095 12.375 19.4234 12.375 19.125V12.375C12.375 12.0766 12.2565 11.7905 12.0455 11.5795C11.8345 11.3685 11.5484 11.25 11.25 11.25C10.9516 11.25 10.6655 11.3685 10.4545 11.5795C10.2435 11.7905 10.125 12.0766 10.125 12.375V19.125C10.125 19.4234 10.2435 19.7095 10.4545 19.9205C10.6655 20.1315 10.9516 20.25 11.25 20.25ZM22.5 6.75H18V5.625C18 4.72989 17.6444 3.87145 17.0115 3.23851C16.3786 2.60558 15.5201 2.25 14.625 2.25H12.375C11.4799 2.25 10.6214 2.60558 9.98851 3.23851C9.35558 3.87145 9 4.72989 9 5.625V6.75H4.5C4.20163 6.75 3.91548 6.86853 3.7045 7.0795C3.49353 7.29048 3.375 7.57663 3.375 7.875C3.375 8.17337 3.49353 8.45952 3.7045 8.6705C3.91548 8.88147 4.20163 9 4.5 9H5.625V21.375C5.625 22.2701 5.98058 23.1286 6.61351 23.7615C7.24645 24.3944 8.10489 24.75 9 24.75H18C18.8951 24.75 19.7536 24.3944 20.3865 23.7615C21.0194 23.1286 21.375 22.2701 21.375 21.375V9H22.5C22.7984 9 23.0845 8.88147 23.2955 8.6705C23.5065 8.45952 23.625 8.17337 23.625 7.875C23.625 7.57663 23.5065 7.29048 23.2955 7.0795C23.0845 6.86853 22.7984 6.75 22.5 6.75ZM11.25 5.625C11.25 5.32663 11.3685 5.04048 11.5795 4.8295C11.7905 4.61853 12.0766 4.5 12.375 4.5H14.625C14.9234 4.5 15.2095 4.61853 15.4205 4.8295C15.6315 5.04048 15.75 5.32663 15.75 5.625V6.75H11.25V5.625ZM19.125 21.375C19.125 21.6734 19.0065 21.9595 18.7955 22.1705C18.5845 22.3815 18.2984 22.5 18 22.5H9C8.70163 22.5 8.41548 22.3815 8.2045 22.1705C7.99353 21.9595 7.875 21.6734 7.875 21.375V9H19.125V21.375ZM15.75 20.25C16.0484 20.25 16.3345 20.1315 16.5455 19.9205C16.7565 19.7095 16.875 19.4234 16.875 19.125V12.375C16.875 12.0766 16.7565 11.7905 16.5455 11.5795C16.3345 11.3685 16.0484 11.25 15.75 11.25C15.4516 11.25 15.1655 11.3685 14.9545 11.5795C14.7435 11.7905 14.625 12.0766 14.625 12.375V19.125C14.625 19.4234 14.7435 19.7095 14.9545 19.9205C15.1655 20.1315 15.4516 20.25 15.75 20.25Z" fill="white" />
-                </svg>Delete</div>
                 {(table_content.length > 0 || InvoiceData?.id) && (
                     <div
-                        className={'button'}
+                        className={'bill-btn'}
                         onClick={() => {
                             if (bill_body_items.length === 0) {
                                 showToast('Product fields are still loading', 'warning');
@@ -1452,31 +1768,34 @@ function NewBillBody({ id }) {
                             ? `Edit ${checkedRowIds.length} selected line item(s)`
                             : 'Edit all line items'}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                         </svg>
-                        Bulk Edit{checkedRowIds.length ? ` (${checkedRowIds.length})` : ''}
+                        Bulk edit{checkedRowIds.length ? ` (${checkedRowIds.length})` : ''}
                     </div>
                 )}
-                <div className={'button'} onClick={() => {
+                <div className={'bill-btn bill-btn-add'} onClick={() => {
                     setPop_up_properties('flex')
                     set_update(false)
-
-                }}><svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 36 35" fill="none">
-                        <path d="M22.4655 16.0523L22.4759 7.19432C22.4759 6.80597 22.3196 6.43352 22.0413 6.15891C21.763 5.8843 21.3856 5.73002 20.9921 5.73002C20.5985 5.73002 20.2211 5.8843 19.9429 6.15891C19.6646 6.43352 19.5083 6.80596 19.5083 7.19432L19.5187 16.0523L10.5426 16.042C10.1491 16.042 9.77166 16.1963 9.49339 16.4709C9.21512 16.7455 9.05879 17.1179 9.05879 17.5063C9.05879 17.8947 9.21512 18.2671 9.49339 18.5417C9.77166 18.8163 10.1491 18.9706 10.5426 18.9706L19.5187 18.9603L19.5083 27.8183C19.5075 28.0108 19.5453 28.2016 19.6196 28.3796C19.6939 28.5576 19.8031 28.7193 19.9411 28.8554C20.079 28.9916 20.2429 29.0994 20.4233 29.1727C20.6037 29.246 20.797 29.2834 20.9921 29.2826C21.1872 29.2834 21.3805 29.246 21.5609 29.1727C21.7412 29.0994 21.9051 28.9916 22.0431 28.8554C22.181 28.7193 22.2903 28.5576 22.3646 28.3796C22.4389 28.2016 22.4767 28.0108 22.4759 27.8183L22.4655 18.9603L31.4415 18.9706C31.6366 18.9714 31.8299 18.934 32.0103 18.8607C32.1907 18.7874 32.3546 18.6796 32.4926 18.5435C32.6305 18.4073 32.7398 18.2456 32.814 18.0676C32.8883 17.8896 32.9262 17.6988 32.9254 17.5063C32.9262 17.3138 32.8883 17.123 32.814 16.945C32.7398 16.767 32.6305 16.6053 32.4926 16.4691C32.3546 16.333 32.1907 16.2252 32.0103 16.1519C31.8299 16.0785 31.6366 16.0412 31.4415 16.042L22.4655 16.0523Z" fill="white" />
+                }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14M5 12h14" />
                     </svg>
-                    Product</div>
+                    <span className="lbl-desktop">Add with details</span>
+                    <span className="lbl-mobile">Add item</span>
+                </div>
             </div>
             <div className={'companys_table_raper'}>
                 <div className="pb-20 md:pb-0">
                     {/* Desktop Table */}
                     <div className="hidden md:block overflow-x-auto">
-                        <table className="table w-full border-collapse">
+                        <table className="table bill-items w-full border-collapse">
                             <thead>
                                 <tr>
-                                    <td>
+                                    <td className="check-col">
                                         <input
                                             type="checkbox"
                                             className="check-box"
@@ -1489,23 +1808,98 @@ function NewBillBody({ id }) {
                                             }}
                                         />
                                     </td>
-                                    {canLineItemImages && <td>Image</td>}
+                                    {showImageCol && <td>Image</td>}
                                     {bill_body_items.map((obj) =>
-                                        obj.is_show ? <td key={obj.input_title}>{formatHeaderTitle(obj.input_title)}</td> : null
+                                        obj.is_show ? (
+                                            <td key={obj.input_title} className={isNumericColumn(obj) ? 'num-col' : undefined}>
+                                                {obj.input_title?.toLowerCase() === 'gst' ? 'GST %' : formatHeaderTitle(obj.input_title)}
+                                            </td>
+                                        ) : null
                                     )}
-                                    <td>GST Amount</td>
-                                    <td>Total Amount</td>
+                                    <td className="num-col">GST Amount</td>
+                                    <td className="num-col">Total Amount</td>
+                                    <td className="action-col"></td>
                                 </tr>
                             </thead>
                             <tbody>
-                                {table_content.length === 0
-                                    ? bill_body_items.map((head_obj, i) =>
-                                        head_obj.is_show ? <td key={i}>None</td> : null
-                                    )
-                                    : ""}
+                                {table_content.length === 0 && (
+                                    <tr className="empty-row">
+                                        <td colSpan={1 + (showImageCol ? 1 : 0) + visibleItems.length + 3}>
+                                            No items yet. Add the first one in the row below.
+                                        </td>
+                                    </tr>
+                                )}
                                 {table_content.map(Rows)}
+                                <tr className="add-row">
+                                    <td className="check-col"></td>
+                                    {showImageCol && <td></td>}
+                                    {visibleBillItems.map((item) => {
+                                        const numeric = isNumericColumn(item);
+                                        const isName = inlineNameItem && item.id === inlineNameItem.id;
+                                        const value = inlineDraft[item.id] ?? '';
+                                        const label = formatHeaderTitle(item.input_title);
+                                        return (
+                                            <td key={item.id} className={numeric ? 'num-col' : undefined}>
+                                                {item.presets ? (
+                                                    <select
+                                                        className={'inline-input'}
+                                                        aria-label={label}
+                                                        value={value}
+                                                        onChange={(e) => handleInlineChange(item, e.target.value)}
+                                                        onKeyDown={onInlineKeyDown}
+                                                    >
+                                                        <option value="">{label}</option>
+                                                        {item.presets.split(',').map((preset) => (
+                                                            <option key={preset.trim()} value={preset.trim()}>{preset.trim()}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <input
+                                                        className={`inline-input${numeric ? ' num' : ''}`}
+                                                        ref={isName ? inlineNameRef : undefined}
+                                                        aria-label={label}
+                                                        list={isName && inventoryProducts.length ? 'inline-inventory-products' : undefined}
+                                                        placeholder={isName ? 'Item name' : (item.input_title?.toLowerCase() === 'gst' ? 'GST %' : label)}
+                                                        value={value}
+                                                        onChange={(e) => handleInlineChange(item, e.target.value)}
+                                                        onKeyDown={onInlineKeyDown}
+                                                    />
+                                                )}
+                                            </td>
+                                        );
+                                    })}
+                                    <td className="num-col">
+                                        {inlineTotals ? formatINR(inlineTotals.gst_amount) : ''}
+                                    </td>
+                                    <td className="num-col">
+                                        {inlineTotals ? formatINR(inlineTotals.total_amount) : ''}
+                                    </td>
+                                    <td className="action-col">
+                                        <button
+                                            type="button"
+                                            className="inline-add-btn"
+                                            aria-label="Add item to invoice"
+                                            title="Add item (Enter)"
+                                            disabled={inlineBusy}
+                                            onClick={commitInlineRow}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <path d="M12 5v14M5 12h14" />
+                                            </svg>
+                                            {inlineBusy ? 'Adding…' : 'Add'}
+                                        </button>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
+                        <datalist id="inline-inventory-products">
+                            {inventoryProducts.map((p) => (
+                                <option key={p.id} value={p.name}>
+                                    {`₹${p.price} · ${p.current_stock} in stock`}
+                                </option>
+                            ))}
+                        </datalist>
                     </div>
 
                     {/* Mobile Card View */}
@@ -1534,22 +1928,102 @@ function NewBillBody({ id }) {
 
                 </div>
 
+                <div className="bill_bottom">
+                {(showField('customer_notes') || showField('terms')) && (
+                <div className="notes-panel">
+                    {showField('customer_notes') && (<>
+                    <label htmlFor="customer_notes">Notes</label>
+                    <textarea
+                        id="customer_notes"
+                        key={`notes-${InvoiceData?.id ?? 'new'}`}
+                        rows={3}
+                        placeholder="Thanks for your business"
+                        defaultValue={notesInitial}
+                        onBlur={(e) => {
+                            if (e.target.value === notesInitial) return;
+                            setInvoiceData({ ...InvoiceData, customer_notes: e.target.value });
+                            setRefresh(r => !r);
+                        }}
+                    />
+                    </>)}
+                    {showField('terms') && (<>
+                    <label htmlFor="invoice_terms">Terms and conditions</label>
+                    <textarea
+                        id="invoice_terms"
+                        key={`terms-${InvoiceData?.id ?? 'new'}`}
+                        rows={3}
+                        placeholder="Payment due within the terms above. Goods once sold are not returnable."
+                        defaultValue={termsInitial}
+                        onBlur={(e) => {
+                            if (e.target.value === termsInitial) return;
+                            setInvoiceData({ ...InvoiceData, terms: e.target.value });
+                            setRefresh(r => !r);
+                        }}
+                    />
+                    </>)}
+                </div>
+                )}
                 {/* Desktop view */}
-                <div className="hidden md:flex justify-end w-full mt-4">
-                    <table className="w-2/5 text-indigo-700 text-center border border-indigo-100 rounded-xl overflow-hidden">
-                        <thead className="">
-                            <tr>
-                                <td className="p-2 font-bold">Total GST Amount</td>
-                                <td className="p-2 font-bold">Total Amount</td>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr className="font-semibold">
-                                <td className="p-2">₹{Number(grandGstTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td className="p-2">₹{Number(grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div className="hidden md:flex justify-end" style={{ marginLeft: 'auto' }}>
+                    <div className="summary-card">
+                        <div className="summary-row">
+                            <span>Subtotal</span>
+                            <span>{formatINR(grandSubtotal)}</span>
+                        </div>
+                        {Object.keys(gstByRate)
+                            .sort((x, y) => Number(x) - Number(y))
+                            .map((rate) => {
+                                const amount = gstByRate[rate];
+                                if (canSplitGst && intraState) {
+                                    const half = Math.round(amount * 100 / 2) / 100;
+                                    return (
+                                        <React.Fragment key={rate}>
+                                            <div className="summary-row">
+                                                <span>CGST @ {Number(rate) / 2}%</span>
+                                                <span>{formatINR(half)}</span>
+                                            </div>
+                                            <div className="summary-row">
+                                                <span>SGST @ {Number(rate) / 2}%</span>
+                                                <span>{formatINR(amount - half)}</span>
+                                            </div>
+                                        </React.Fragment>
+                                    );
+                                }
+                                return (
+                                    <div className="summary-row" key={rate}>
+                                        <span>{canSplitGst ? 'IGST' : 'GST'} @ {Number(rate)}%</span>
+                                        <span>{formatINR(amount)}</span>
+                                    </div>
+                                );
+                            })}
+                        {isSale && !canSplitGst && Object.keys(gstByRate).length > 0 && (
+                            <div className="summary-note">
+                                {isGstStateCode(companyStateCode)
+                                    ? 'Choose a place of supply to split this into CGST + SGST or IGST.'
+                                    : 'Add your state in My Company to split GST into CGST + SGST or IGST.'}
+                            </div>
+                        )}
+                        {Math.abs(grandAdjustments) > 0.004 && (
+                            <div className="summary-row">
+                                <span>Other adjustments</span>
+                                <span>{grandAdjustments < 0 ? '−' : ''}{formatINR(Math.abs(grandAdjustments))}</span>
+                            </div>
+                        )}
+                        <div className="summary-total">
+                            <span>Total</span>
+                            <span>{formatINR(grandTotal)}</span>
+                        </div>
+                        {amountInWords(grandTotal) && (
+                            <div className="summary-words">{amountInWords(grandTotal)}</div>
+                        )}
+                        {typeof InvoiceData?.balance_due === 'number' && InvoiceData.balance_due > 0 && (
+                            <div className="summary-row summary-balance">
+                                <span>Balance due</span>
+                                <span>{formatINR(InvoiceData.balance_due)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
                 </div>
 
                 {/* Mobile view */}

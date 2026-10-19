@@ -72,7 +72,7 @@ function RoleEditor({ role, permissions, users, onSaved, onCancel }) {
         <div style={{ ...card, border: "1px solid #c7d2fe" }}>
             <h3 style={{ margin: "0 0 12px", fontSize: "15px" }}>
                 {role?.id ? `Edit role: ${role.name}` : "New role"}
-                {isSystem && <span style={{ marginLeft: 8, fontSize: 11, color: "#f59e0b" }}>system role — only members editable</span>}
+                {isSystem && <span style={{ marginLeft: 8, fontSize: 11, color: "#b45309" }}>system role — only members editable</span>}
             </h3>
             {!isSystem && (
                 <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { ShoppingCart } from 'lucide-react';
+import PageIcon from '../comonant/PageIcon';
 import Navbar from "../comonant/navbar.jsx";
 import { clientToken } from "@/axios";
 import { useNavigate } from "react-router-dom";
@@ -100,12 +102,17 @@ const PurchaseInvoices = () => {
                     zIndex: 100,
                 }}>
                     <div>
-                        <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px', marginBottom: '6px' }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <PageIcon icon={ShoppingCart} />
+                            <div>
+                        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', marginBottom: '6px' }}>
                             Purchase Dashboard
                         </h1>
                         <p style={{ fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
                             Overview of your purchase invoices and vendor expenses.
                         </p>
+                        </div>
+                        </div>
                     </div>
 
                     <div className="header-actions">
@@ -314,7 +321,7 @@ const PurchaseInvoices = () => {
                                 label="Total Purchase Amount"
                                 value={`₹${(summary?.total_purchases_amount || 0).toLocaleString('en-IN')}`}
                                 sub={`Across ${summary?.total_count || 0} invoices`}
-                                color="linear-gradient(135deg, #f43f5e 0%, #be123c 100%)"
+                                color="linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)"
                                 delay={0.05}
                             />
                             <KpiCard
@@ -322,14 +329,14 @@ const PurchaseInvoices = () => {
                                 label="This Month Purchases"
                                 value={`₹${(summary?.this_month_purchases_amount || 0).toLocaleString('en-IN')}`}
                                 sub={`${summary?.this_month_count || 0} invoices this month`}
-                                color="linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                                color="linear-gradient(135deg, #b45309 0%, #b45309 100%)"
                                 delay={0.1}
                             />
                             <KpiCard
                                 icon="🧾"
                                 label="Total Purchase GST"
                                 value={`₹${(summary?.total_purchases_gst || 0).toLocaleString('en-IN')}`}
-                                color="linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%)"
+                                color="linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)"
                                 delay={0.15}
                             />
                         </div>

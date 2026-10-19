@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
+import PageIcon from '../comonant/PageIcon';
+import { Settings2 } from 'lucide-react';
 import { clientToken } from "@/axios";
 import { useSelector } from "react-redux";
 import UIConfigNumbering from "@/pages/UIConfigNumbering";
+import UIConfigHeaderFields from "@/pages/UIConfigHeaderFields";
 
 const temp_ui_config = {
     formula: "",
@@ -44,7 +47,9 @@ const rowDelBtn = {
 };
 
 const UIConfig = () => {
-    const [activeTab, setActiveTab] = useState("productFields"); // "productFields" | "customFields" | "numbering"
+    const [activeTab, setActiveTab] = useState("productFields"); // "productFields" | "customFields" | "numbering" | "invoiceFields"
+    // tabs that are a single settings form, not a list-and-editor pair
+    const standaloneTab = activeTab === "numbering" || activeTab === "invoiceFields";
 
     // Product UI Config States
     const [selected, setSelected] = useState(null);
@@ -259,8 +264,8 @@ const UIConfig = () => {
             {toast && (
                 <div style={{
                     position: 'fixed', top: '80px', right: '20px', zIndex: 9999,
-                    background: toast.type === 'success' ? '#f0fdf4' : '#fef2f2',
-                    border: `1px solid ${toast.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+                    background: toast.type === 'success' ? '#dcfce7' : '#fef2f2',
+                    border: `1px solid ${toast.type === 'success' ? '#dcfce7' : '#fecaca'}`,
                     color: toast.type === 'success' ? '#166534' : '#dc2626',
                     padding: '12px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '14px',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '8px',
@@ -274,18 +279,18 @@ const UIConfig = () => {
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
                     <div>
-                        <h1 style={{
-                            fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.5px',
-                            background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
-                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text', margin: 0,
-                        }}>UI Configuration</h1>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <PageIcon icon={Settings2} />
+                            <div>
+                        <h1 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.01em', color: '#0f172a', margin: 0 }}>UI Configuration</h1>
                         <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px', fontWeight: 500 }}>
                             Manage interface settings, product parameters, and custom fields
                         </p>
+                        </div>
+                        </div>
                     </div>
 
-                    {activeTab === "numbering" ? null : activeTab === "productFields" ? (
+                    {standaloneTab ? null : activeTab === "productFields" ? (
                         <button
                             onClick={() => {
                                 setFormData(temp_ui_config);
@@ -362,12 +367,24 @@ const UIConfig = () => {
                     >
                         🔢 Invoice Numbering
                     </button>
+                    <button
+                        onClick={() => { setActiveTab("invoiceFields"); }}
+                        style={{
+                            padding: '8px 16px', fontSize: '15px', fontWeight: activeTab === "invoiceFields" ? 700 : 500,
+                            color: activeTab === "invoiceFields" ? '#4f46e5' : '#64748b',
+                            border: 'none', background: 'none', cursor: 'pointer',
+                            borderBottom: activeTab === "invoiceFields" ? '3px solid #4f46e5' : '3px solid transparent',
+                            marginBottom: '-11px', transition: 'all 0.15s'
+                        }}
+                    >
+                        🧾 Invoice Fields
+                    </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
 
                     {/* ── Left side: Config List (not used by the numbering tab) ── */}
-                    {activeTab !== "numbering" && <div style={{ flex: '1 1 300px', background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', alignSelf: 'flex-start' }}>
+                    {!standaloneTab && <div style={{ flex: '1 1 300px', background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', alignSelf: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                             <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: '4px' }} />
                             <span style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -390,7 +407,7 @@ const UIConfig = () => {
                                                 padding: '12px 16px', borderRadius: '10px',
                                                 background: selected === p.id ? '#eef2ff' : '#f8fafc',
                                                 border: `1.5px solid ${selected === p.id ? '#c7d2fe' : '#e2e8f0'}`,
-                                                color: selected === p.id ? '#4f46e5' : '#374151',
+                                                color: selected === p.id ? '#4f46e5' : '#334155',
                                                 fontWeight: selected === p.id ? 700 : 600,
                                                 fontSize: '14px', cursor: 'pointer',
                                                 transition: 'all 0.15s',
@@ -434,7 +451,7 @@ const UIConfig = () => {
                                                 padding: '12px 16px', borderRadius: '10px',
                                                 background: selectedCF === cf.id ? '#eef2ff' : '#f8fafc',
                                                 border: `1.5px solid ${selectedCF === cf.id ? '#c7d2fe' : '#e2e8f0'}`,
-                                                color: selectedCF === cf.id ? '#4f46e5' : '#374151',
+                                                color: selectedCF === cf.id ? '#4f46e5' : '#334155',
                                                 fontWeight: selectedCF === cf.id ? 700 : 600,
                                                 fontSize: '14px', cursor: 'pointer',
                                                 transition: 'all 0.15s',
@@ -467,9 +484,11 @@ const UIConfig = () => {
                     </div>}
 
                     {/* ── Right side: Edit Form ── */}
-                    <div style={{ flex: activeTab === "numbering" ? '1 1 100%' : '2 1 500px', background: 'white', borderRadius: '20px', padding: '32px 28px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', alignSelf: 'flex-start' }}>
+                    <div style={{ flex: standaloneTab ? '1 1 100%' : '2 1 500px', background: 'white', borderRadius: '20px', padding: '32px 28px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', alignSelf: 'flex-start' }}>
                         {activeTab === "numbering" ? (
                             <UIConfigNumbering canManage={canManage} showToast={showToast} />
+                        ) : activeTab === "invoiceFields" ? (
+                            <UIConfigHeaderFields canManage={canManage} showToast={showToast} />
                         ) : activeTab === "productFields" ? (
                             selected ? (
                                 <>
@@ -522,10 +541,10 @@ const UIConfig = () => {
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
                                                     <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#4f46e5', display: 'inline-block', width: '16px' }}>+</strong> Addition</div>
                                                     <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#ef4444', display: 'inline-block', width: '16px' }}>-</strong> Subtraction</div>
-                                                    <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#0ea5e9', display: 'inline-block', width: '25px' }}>%+</strong> Percentage Add</div>
-                                                    <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#ec4899', display: 'inline-block', width: '25px' }}>%-</strong> Percentage Sub</div>
+                                                    <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#4f46e5', display: 'inline-block', width: '25px' }}>%+</strong> Percentage Add</div>
+                                                    <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#94a3b8', display: 'inline-block', width: '25px' }}>%-</strong> Percentage Sub</div>
                                                     <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#eab308', display: 'inline-block', width: '25px' }}>*</strong> Multiplication</div>
-                                                    <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#10b981', display: 'inline-block', width: '16px' }}>/</strong> Division</div>
+                                                    <div style={{ fontSize: '12px', color: '#475569' }}><strong style={{ color: '#16a34a', display: 'inline-block', width: '16px' }}>/</strong> Division</div>
                                                 </div>
                                                 <div style={{ marginTop: '10px', fontSize: '12px', color: '#475569', background: 'white', padding: '8px', border: '1px dashed #cbd5e1', borderRadius: '6px', fontFamily: 'monospace' }}>
                                                     Examples: <span style={{ color: '#0f172a' }}>qty * rate</span> <span style={{ color: '#94a3b8', margin: '0 4px' }}>|</span> <span style={{ color: '#0f172a' }}>total - discount</span>
@@ -595,7 +614,7 @@ const UIConfig = () => {
                                             style={{
                                                 padding: '10px 32px', fontSize: '14px', fontWeight: 700, color: 'white', border: 'none', borderRadius: '10px',
                                                 cursor: saving ? 'not-allowed' : 'pointer',
-                                                background: saving ? 'linear-gradient(135deg,#a5b4fc,#c4b5fd)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                                                background: saving ? 'linear-gradient(135deg,#c7d2fe,#c7d2fe)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
                                                 boxShadow: '0 4px 14px rgba(79,70,229,0.3)', transition: 'all 0.15s',
                                                 display: 'flex', alignItems: 'center', gap: '8px',
                                             }}
@@ -693,7 +712,7 @@ const UIConfig = () => {
                                             style={{
                                                 padding: '10px 32px', fontSize: '14px', fontWeight: 700, color: 'white', border: 'none', borderRadius: '10px',
                                                 cursor: saving ? 'not-allowed' : 'pointer',
-                                                background: saving ? 'linear-gradient(135deg,#a5b4fc,#c4b5fd)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                                                background: saving ? 'linear-gradient(135deg,#c7d2fe,#c7d2fe)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
                                                 boxShadow: '0 4px 14px rgba(79,70,229,0.3)', transition: 'all 0.15s',
                                                 display: 'flex', alignItems: 'center', gap: '8px',
                                             }}

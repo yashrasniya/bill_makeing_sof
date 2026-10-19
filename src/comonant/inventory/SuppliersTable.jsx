@@ -9,7 +9,7 @@ function SuppliersTable() {
     const [editingId, setEditingId] = useState(null);
 
     const fetchSuppliers = () => {
-        const url = `/inventory/suppliers/${searchQuery ? `?search=${searchQuery}` : ''}`;
+        const url = `/inventory/suppliers/${searchQuery ? `?s=${encodeURIComponent(searchQuery)}` : ''}`;
         clientToken.get(url).then(res => setSuppliers(res.data.results || res.data)).catch(console.error);
     };
 
@@ -50,9 +50,9 @@ function SuppliersTable() {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-gray-800">Vendors & Suppliers</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-slate-800">Vendors & Suppliers</h3>
                 <div className="flex gap-4">
                     <input
                         type="text"
@@ -61,7 +61,7 @@ function SuppliersTable() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <button onClick={openCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                    <button onClick={openCreate} className="px-4 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors">
                         + Add Supplier
                     </button>
                 </div>
@@ -69,7 +69,7 @@ function SuppliersTable() {
 
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50 text-gray-500 text-sm">
+                    <thead className="bg-slate-50 text-slate-500 text-sm">
                         <tr>
                             <th className="px-6 py-4 font-medium">Name</th>
                             <th className="px-6 py-4 font-medium">Contact Person</th>
@@ -77,14 +77,14 @@ function SuppliersTable() {
                             <th className="px-6 py-4 font-medium text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-slate-100">
                         {suppliers.map(sup => (
-                            <tr key={sup.id} className="hover:bg-gray-50/50 transition-colors">
-                                <td className="px-6 py-4 font-medium text-gray-800">{sup.name}</td>
-                                <td className="px-6 py-4 text-gray-600">{sup.contact_person || '-'}</td>
-                                <td className="px-6 py-4 text-gray-600">
+                            <tr key={sup.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-6 py-4 font-medium text-slate-800">{sup.name}</td>
+                                <td className="px-6 py-4 text-slate-600">{sup.contact_person || '-'}</td>
+                                <td className="px-6 py-4 text-slate-600">
                                     <div className="text-sm">{sup.email || '-'}</div>
-                                    <div className="text-xs text-gray-400">{sup.phone || '-'}</div>
+                                    <div className="text-xs text-slate-400">{sup.phone || '-'}</div>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <button onClick={() => handleEdit(sup)} className="text-indigo-600 hover:text-indigo-900 mr-4 font-medium">Edit</button>
@@ -99,33 +99,33 @@ function SuppliersTable() {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{editingId ? 'Edit Supplier' : 'New Supplier'}</h2>
+                        <h2 className="text-2xl font-bold mb-6 text-slate-800">{editingId ? 'Edit Supplier' : 'New Supplier'}</h2>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Company Name *</label>
                                 <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Contact Person</label>
                                 <input type="text" value={formData.contact_person} onChange={e => setFormData({ ...formData, contact_person: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                                     <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
                                     <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
                                 <textarea rows="2" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></textarea>
                             </div>
                             <div className="flex justify-end gap-3 mt-8">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-                                <button type="submit" className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">Save Supplier</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                <button type="submit" className="px-5 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors">Save Supplier</button>
                             </div>
                         </form>
                     </div>

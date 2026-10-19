@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import PageIcon from '../comonant/PageIcon';
+import { MessageCircle } from 'lucide-react';
 import { clientToken } from '../axios.js';
 import Navbar from '../comonant/navbar';
 
@@ -128,18 +130,18 @@ const WhatsAppTemplates = () => {
         return (
             <div className="max-w-6xl mx-auto p-6 mt-10">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold text-gray-800">WhatsApp Templates</h1>
+                    <div className="flex items-center gap-3.5"><PageIcon icon={MessageCircle} /><h1 className="text-[22px] font-bold tracking-tight text-slate-900">WhatsApp Templates</h1></div>
                     <div className="flex space-x-3">
                         <button
                             onClick={handleSyncClick}
                             disabled={syncing}
-                            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold disabled:opacity-50"
+                            className="px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold disabled:opacity-50"
                         >
                             {syncing ? 'Syncing...' : '↻ Sync Templates'}
                         </button>
                         <button
                             onClick={handleCreateClick}
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+                            className="px-4 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold"
                         >
                             + Create Template
                         </button>
@@ -147,12 +149,12 @@ const WhatsAppTemplates = () => {
                 </div>
 
                 {loading ? (
-                    <div className="text-center text-gray-500 py-10">Loading templates...</div>
+                    <div className="text-center text-slate-500 py-10">Loading templates...</div>
                 ) : (
                     <div className="overflow-x-auto bg-white rounded-lg shadow">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-gray-100 text-gray-700 uppercase text-sm leading-normal">
+                                <tr className="bg-slate-100 text-slate-700 uppercase text-sm leading-normal">
                                     <th className="py-3 px-6 border-b">Name</th>
                                     <th className="py-3 px-6 border-b">Category</th>
                                     <th className="py-3 px-6 border-b">Status</th>
@@ -160,21 +162,21 @@ const WhatsAppTemplates = () => {
                                     <th className="py-3 px-6 border-b text-center">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="text-gray-600 text-sm font-light">
+                            <tbody className="text-slate-600 text-sm font-light">
                                 {templates.length === 0 ? (
                                      <tr>
-                                         <td colSpan="5" className="py-6 px-6 text-center text-gray-500">No templates found.</td>
+                                         <td colSpan="5" className="py-6 px-6 text-center text-slate-500">No templates found.</td>
                                      </tr>
                                 ) : (
                                     templates.map((tpl) => (
-                                        <tr key={tpl.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                            <td className="py-3 px-6 font-medium text-gray-900">{tpl.template_name}</td>
+                                        <tr key={tpl.id} className="border-b border-slate-200 hover:bg-slate-50">
+                                            <td className="py-3 px-6 font-medium text-slate-900">{tpl.template_name}</td>
                                             <td className="py-3 px-6 tracking-wide text-xs">{tpl.category.toUpperCase()}</td>
                                             <td className="py-3 px-6">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                                     tpl.status === 'approved' ? 'bg-green-100 text-green-700' :
                                                     tpl.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                    'bg-yellow-100 text-yellow-700'
+                                                    'bg-amber-100 text-amber-700'
                                                 }`}>
                                                     {tpl.status.toUpperCase()}
                                                 </span>
@@ -183,7 +185,7 @@ const WhatsAppTemplates = () => {
                                             <td className="py-3 px-6 text-center">
                                                  <button 
                                                     onClick={() => handleEditClick(tpl)}
-                                                    className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 mr-2"
+                                                    className="px-3 py-1 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 mr-2"
                                                  >
                                                      Edit
                                                  </button>
@@ -203,12 +205,12 @@ const WhatsAppTemplates = () => {
         return (
             <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow-lg mt-10">
                 <div className="flex justify-between items-center mb-6 border-b pb-4">
-                    <h1 className="text-2xl font-bold text-gray-800">
+                    <h1 className="text-[22px] font-bold tracking-tight text-slate-900">
                         {viewData.mode === 'create' ? 'Create New Template' : 'Edit Template'}
                     </h1>
                     <button 
                          onClick={() => setViewData({ mode: 'list', template: null })}
-                         className="text-gray-500 hover:text-gray-700 bg-gray-100 px-3 py-1 rounded"
+                         className="text-slate-500 hover:text-slate-700 bg-slate-100 px-3 py-1 rounded"
                     >
                          ✕ Cancel
                     </button>
@@ -217,7 +219,7 @@ const WhatsAppTemplates = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Template Name</label>
                             <input
                                 type="text"
                                 name="template_name"
@@ -225,18 +227,18 @@ const WhatsAppTemplates = () => {
                                 onChange={handleInputChange}
                                 required
                                 disabled={viewData.mode === 'edit'} // Usually Meta prohibits renaming
-                                className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 bg-gray-50 disabled:opacity-60"
+                                className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 bg-slate-50 disabled:opacity-60"
                                 placeholder="hello_world_01"
                             />
-                            <p className="text-xs text-gray-500 mt-1">Lowercase, no spaces (use underscores).</p>
+                            <p className="text-xs text-slate-500 mt-1">Lowercase, no spaces (use underscores).</p>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
                             <select
                                 name="category"
                                 value={formData.category}
                                 onChange={handleInputChange}
-                                className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                                className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                             >
                                 <option value="UTILITY">Utility</option>
                                 <option value="MARKETING">Marketing</option>
@@ -246,24 +248,24 @@ const WhatsAppTemplates = () => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Message Body</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Message Body</label>
                         <textarea
                             name="body_text"
                             value={formData.body_text}
                             onChange={handleInputChange}
                             required
                             rows={5}
-                            className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                            className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                             placeholder={"Hello {{1}},\n\nYour invoice {{2}} is ready.\n\nThank you!"}
                         />
-                        <p className="text-xs text-gray-500 mt-1">Use double braces like `{"{{1}}"}` for variables.</p>
+                        <p className="text-xs text-slate-500 mt-1">Use double braces like `{"{{1}}"}` for variables.</p>
                     </div>
 
                     <div className="flex justify-end pt-4">
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="px-6 py-2.5 bg-blue-600 text-white rounded hover:bg-blue-700 transform transition-all active:scale-95 disabled:opacity-50 font-semibold"
+                            className="px-6 py-2.5 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl transform transition-all active:scale-95 disabled:opacity-50 font-bold"
                         >
                             {submitting ? 'Saving...' : (viewData.mode === 'create' ? 'Create & Submit' : 'Update Template')}
                         </button>
@@ -274,7 +276,7 @@ const WhatsAppTemplates = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-12">
+        <div className="min-h-screen bg-slate-50 pb-12">
             <Navbar />
             {viewData.mode === 'list' ? renderList() : renderForm()}
         </div>

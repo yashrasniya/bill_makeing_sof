@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { LayoutTemplate } from 'lucide-react';
+import PageIcon from '../comonant/PageIcon';
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { clientToken } from "@/axios";
@@ -262,7 +264,8 @@ export default function AvailableTemplates() {
 
                 {/* Header Section */}
                 <div className="mb-10 text-center px-4">
-                    <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-purple-600 to-indigo-600 tracking-tight sm:text-5xl lg:text-6xl pb-2">
+                    <PageIcon icon={LayoutTemplate} style={{ margin: '0 auto 12px', display: 'flex' }} />
+                    <h1 className="text-[22px] font-bold tracking-tight text-slate-900">
                         Invoice Templates
                     </h1>
 

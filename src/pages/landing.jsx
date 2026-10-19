@@ -83,14 +83,14 @@ const FEATURES = [
             'Search & filter catalog',
         ],
         img: '/feature_inventory.png',
-        accent: '#0891b2',
-        accentLight: '#ecfeff',
+        accent: '#4338ca',
+        accentLight: '#e0e7ff',
         icon: (
             <svg viewBox="0 0 40 40" fill="none" width="36" height="36">
-                <rect width="40" height="40" rx="10" fill="#0891b2" opacity=".12" />
-                <rect x="8" y="22" width="6" height="10" rx="1.5" fill="#0891b2" opacity=".5" />
-                <rect x="17" y="16" width="6" height="16" rx="1.5" fill="#0891b2" opacity=".7" />
-                <rect x="26" y="10" width="6" height="22" rx="1.5" fill="#0891b2" />
+                <rect width="40" height="40" rx="10" fill="#4338ca" opacity=".12" />
+                <rect x="8" y="22" width="6" height="10" rx="1.5" fill="#4338ca" opacity=".5" />
+                <rect x="17" y="16" width="6" height="16" rx="1.5" fill="#4338ca" opacity=".7" />
+                <rect x="26" y="10" width="6" height="22" rx="1.5" fill="#4338ca" />
             </svg>
         ),
         flip: false,
@@ -108,15 +108,15 @@ const FEATURES = [
             'Auto-populate client info',
         ],
         img: '/feature_customers.png',
-        accent: '#2563eb',
-        accentLight: '#eff6ff',
+        accent: '#7c3aed',
+        accentLight: '#f5f3ff',
         icon: (
             <svg viewBox="0 0 40 40" fill="none" width="36" height="36">
-                <rect width="40" height="40" rx="10" fill="#2563eb" opacity=".12" />
-                <circle cx="17" cy="16" r="5" stroke="#2563eb" strokeWidth="1.8" />
-                <path d="M8 31c0-5 4-8 9-8s9 3 9 8" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" />
-                <circle cx="28" cy="15" r="3.5" stroke="#2563eb" strokeWidth="1.5" />
-                <path d="M32 28c0-3-1.8-5-4-5" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" />
+                <rect width="40" height="40" rx="10" fill="#7c3aed" opacity=".12" />
+                <circle cx="17" cy="16" r="5" stroke="#7c3aed" strokeWidth="1.8" />
+                <path d="M8 31c0-5 4-8 9-8s9 3 9 8" stroke="#7c3aed" strokeWidth="1.8" strokeLinecap="round" />
+                <circle cx="28" cy="15" r="3.5" stroke="#7c3aed" strokeWidth="1.5" />
+                <path d="M32 28c0-3-1.8-5-4-5" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
         ),
         flip: true,
@@ -134,13 +134,13 @@ const FEATURES = [
             'Top-selling products insight',
         ],
         img: '/feature_sales_report.png',
-        accent: '#059669',
-        accentLight: '#ecfdf5',
+        accent: '#16a34a',
+        accentLight: '#dcfce7',
         icon: (
             <svg viewBox="0 0 40 40" fill="none" width="36" height="36">
-                <rect width="40" height="40" rx="10" fill="#059669" opacity=".12" />
-                <path d="M8 28l7-8 6 5 7-12" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="29" cy="13" r="2.5" fill="#059669" />
+                <rect width="40" height="40" rx="10" fill="#16a34a" opacity=".12" />
+                <path d="M8 28l7-8 6 5 7-12" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="29" cy="13" r="2.5" fill="#16a34a" />
             </svg>
         ),
         flip: false,
@@ -272,7 +272,7 @@ function LandingPage() {
     }, []);
 
     return (
-        <div style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif", background: '#f8fafc', minHeight: '100vh', overflowX: 'hidden' }}>
+        <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", background: '#f8fafc', minHeight: '100vh', overflowX: 'hidden' }}>
             {/* ── Google Font ── */}
             <link rel="preconnect" href="https://fonts.googleapis.com" />
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -380,7 +380,7 @@ function LandingPage() {
                     <span style={{ fontSize: '18px' }}>📄</span> Invoice Created!
                 </HeroBadge>
                 <HeroBadge style={{ top: '28%', right: '7%', animationName: 'floatB', animationDuration: '4.5s', animationIterationCount: 'infinite', animationTimingFunction: 'ease-in-out' }}>
-                    <span style={{ color: '#10b981', fontSize: '16px' }}>↑</span> Revenue +23%
+                    <span style={{ color: '#16a34a', fontSize: '16px' }}>↑</span> Revenue +23%
                 </HeroBadge>
                 <HeroBadge style={{ bottom: '22%', left: '6%', animationName: 'floatC', animationDuration: '5s', animationIterationCount: 'infinite', animationTimingFunction: 'ease-in-out' }}>
                     <span style={{ fontSize: '18px' }}>👥</span> 12 New Customers
@@ -436,7 +436,7 @@ function LandingPage() {
                     }}>
                         Smart Billing,{' '}
                         <span style={{
-                            background: 'linear-gradient(135deg, #4f46e5, #7c3aed, #2563eb)',
+                            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         }}>Zero Hassle</span>
                     </h1>
@@ -491,9 +491,9 @@ function LandingPage() {
                     }}>
                         {/* Browser chrome */}
                         <div style={{ background: '#f1f5f9', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f87171' }} />
-                            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fbbf24' }} />
-                            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#34d399' }} />
+                            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fca5a5' }} />
+                            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fcd34d' }} />
+                            <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#86efac' }} />
                             <div style={{ flex: 1, margin: '0 16px', background: '#e2e8f0', borderRadius: '6px', height: '24px', display: 'flex', alignItems: 'center', paddingLeft: '10px' }}>
                                 <span>  <span style={{ fontSize: '12px', color: '#94a3b8' }}>invoice.orvine</span>.com/dashboard</span>
                             </div>
@@ -523,7 +523,7 @@ function LandingPage() {
                                     {[
                                         { label: 'Revenue', value: '₹84,200', color: '#4f46e5', bg: '#eef2ff' },
                                         { label: 'Invoices', value: '142', color: '#7c3aed', bg: '#f5f3ff' },
-                                        { label: 'Customers', value: '38', color: '#059669', bg: '#ecfdf5' },
+                                        { label: 'Customers', value: '38', color: '#16a34a', bg: '#dcfce7' },
                                     ].map((s, i) => (
                                         <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '14px', border: '1px solid #f1f5f9' }}>
                                             <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>{s.label}</div>
@@ -547,8 +547,8 @@ function LandingPage() {
                                             <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b' }}>{row.amount}</span>
                                             <span style={{
                                                 fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '99px',
-                                                background: row.status === 'Paid' ? '#ecfdf5' : '#fffbeb',
-                                                color: row.status === 'Paid' ? '#059669' : '#d97706',
+                                                background: row.status === 'Paid' ? '#dcfce7' : '#fef3c7',
+                                                color: row.status === 'Paid' ? '#16a34a' : '#b45309',
                                             }}>{row.status}</span>
                                         </div>
                                     ))}
@@ -610,7 +610,7 @@ function LandingPage() {
             <section style={{
                 margin: '0 24px 100px',
                 borderRadius: '28px',
-                background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #2563eb 100%)',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
                 padding: '80px 40px', textAlign: 'center', position: 'relative', overflow: 'hidden',
             }}>
                 <div style={{

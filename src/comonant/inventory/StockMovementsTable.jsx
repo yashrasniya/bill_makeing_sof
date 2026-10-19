@@ -14,7 +14,7 @@ function StockMovementsTable() {
     };
 
     const fetchMovements = () => {
-        const url = `/inventory/stock-movements/${searchQuery ? `?search=${searchQuery}` : ''}`;
+        const url = `/inventory/stock-movements/${searchQuery ? `?s=${encodeURIComponent(searchQuery)}` : ''}`;
         clientToken.get(url).then(res => setMovements(res.data.results || res.data)).catch(console.error);
     };
 
@@ -41,11 +41,11 @@ function StockMovementsTable() {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                 <div>
-                    <h3 className="text-xl font-bold text-gray-800">Stock Movements Ledger</h3>
-                    <p className="text-sm text-gray-500 mt-1">Record items coming in and going out.</p>
+                    <h3 className="text-xl font-bold text-slate-800">Stock Movements Ledger</h3>
+                    <p className="text-sm text-slate-500 mt-1">Record items coming in and going out.</p>
                 </div>
                 <div className="flex gap-4">
                     <input
@@ -55,7 +55,7 @@ function StockMovementsTable() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm"
                     />
-                    <button onClick={() => setIsModalOpen(true)} className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-sm flex items-center gap-2">
+                    <button onClick={() => setIsModalOpen(true)} className="px-5 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors shadow-sm flex items-center gap-2">
                         <span>Record Movement</span>
                     </button>
                 </div>
@@ -63,7 +63,7 @@ function StockMovementsTable() {
 
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50 text-gray-500 text-sm">
+                    <thead className="bg-slate-50 text-slate-500 text-sm">
                         <tr>
                             <th className="px-6 py-4 font-medium">Date</th>
                             <th className="px-6 py-4 font-medium">Product</th>
@@ -73,7 +73,7 @@ function StockMovementsTable() {
                             <th className="px-6 py-4 font-medium text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-slate-100">
                         {movements.length === 0 && (
                             <tr>
                                 <td colSpan="6" className="px-6 py-12 text-center">
@@ -81,9 +81,9 @@ function StockMovementsTable() {
                                         <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
                                             <span className="text-2xl">📋</span>
                                         </div>
-                                        <h3 className="text-lg font-medium text-gray-900 mb-1">No stock movements found</h3>
-                                        <p className="text-gray-500 mb-4">Record your first stock movement to track inventory.</p>
-                                        <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-sm">
+                                        <h3 className="text-lg font-medium text-slate-900 mb-1">No stock movements found</h3>
+                                        <p className="text-slate-500 mb-4">Record your first stock movement to track inventory.</p>
+                                        <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors shadow-sm">
                                             Record Movement
                                         </button>
                                     </div>
@@ -93,16 +93,16 @@ function StockMovementsTable() {
                         {movements.map(mov => {
                             const date = new Date(mov.date).toLocaleDateString() + ' ' + new Date(mov.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                             return (
-                                <tr key={mov.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{date}</td>
-                                    <td className="px-6 py-4 font-medium text-gray-800">{mov.product_name}</td>
-                                    <td className="px-6 py-4 text-gray-600">
+                                <tr key={mov.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">{date}</td>
+                                    <td className="px-6 py-4 font-medium text-slate-800">{mov.product_name}</td>
+                                    <td className="px-6 py-4 text-slate-600">
                                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${mov.movement_type === 'IN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                             {mov.movement_type === 'IN' ? 'Stock In ↑' : 'Stock Out ↓'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 font-mono font-medium text-gray-800">{mov.quantity}</td>
-                                    <td className="px-6 py-4 text-gray-500 text-sm truncate max-w-[200px]">{mov.notes || '-'}</td>
+                                    <td className="px-6 py-4 font-mono font-medium text-slate-800">{mov.quantity}</td>
+                                    <td className="px-6 py-4 text-slate-500 text-sm truncate max-w-[200px]">{mov.notes || '-'}</td>
                                     <td className="px-6 py-4 text-right">
                                         <button onClick={() => handleDelete(mov.id)} className="text-red-500 hover:text-red-700 font-medium text-sm">Delete</button>
                                     </td>
@@ -116,13 +116,13 @@ function StockMovementsTable() {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl w-full max-w-md shadow-2xl flex flex-col">
-                        <div className="p-6 border-b border-gray-100">
-                            <h2 className="text-2xl font-bold text-gray-800">Record Movement</h2>
+                        <div className="p-6 border-b border-slate-100">
+                            <h2 className="text-2xl font-bold text-slate-800">Record Movement</h2>
                         </div>
 
                         <form id="movementForm" onSubmit={handleSave} className="p-6 space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Product *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Product *</label>
                                 <select required value={formData.product} onChange={e => setFormData({ ...formData, product: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white outline-none">
                                     <option value="">Select Product...</option>
                                     {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.current_stock} in stock)</option>)}
@@ -131,27 +131,27 @@ function StockMovementsTable() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Type *</label>
                                     <select required value={formData.movement_type} onChange={e => setFormData({ ...formData, movement_type: e.target.value })} className={`w-full px-4 py-2 border rounded-lg font-bold outline-none ${formData.movement_type === 'IN' ? 'text-green-700 focus:ring-green-500' : 'text-red-700 focus:ring-red-500'}`}>
                                         <option value="IN">Stock IN</option>
                                         <option value="OUT">Stock OUT</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Quantity *</label>
                                     <input required type="number" min="1" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. 50" />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Notes / Reason</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Notes / Reason</label>
                                 <input type="text" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Purchase order #, breakage..." />
                             </div>
                         </form>
 
-                        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium">Cancel</button>
-                            <button type="submit" form="movementForm" className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors shadow-sm">Confirm Movement</button>
+                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-xl">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors font-medium">Cancel</button>
+                            <button type="submit" form="movementForm" className="px-6 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors shadow-sm">Confirm Movement</button>
                         </div>
                     </div>
                 </div>

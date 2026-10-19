@@ -9,7 +9,7 @@ function CategoriesTable() {
     const [editingId, setEditingId] = useState(null);
 
     const fetchCategories = () => {
-        const url = `/inventory/categories/${searchQuery ? `?search=${searchQuery}` : ''}`;
+        const url = `/inventory/categories/${searchQuery ? `?s=${encodeURIComponent(searchQuery)}` : ''}`;
         clientToken.get(url).then(res => setCategories(res.data.results || res.data)).catch(console.error);
     };
 
@@ -50,9 +50,9 @@ function CategoriesTable() {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-gray-800">Product Categories</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-slate-800">Product Categories</h3>
                 <div className="flex gap-4">
                     <input
                         type="text"
@@ -61,7 +61,7 @@ function CategoriesTable() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <button onClick={openCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                    <button onClick={openCreate} className="px-4 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors">
                         + Add Category
                     </button>
                 </div>
@@ -69,14 +69,14 @@ function CategoriesTable() {
 
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50 text-gray-500 text-sm">
+                    <thead className="bg-slate-50 text-slate-500 text-sm">
                         <tr>
                             <th className="px-6 py-4 font-medium">Name</th>
                             <th className="px-6 py-4 font-medium">Description</th>
                             <th className="px-6 py-4 font-medium text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-slate-100">
                         {categories.length === 0 && (
                             <tr>
                                 <td colSpan="3" className="px-6 py-12 text-center">
@@ -84,9 +84,9 @@ function CategoriesTable() {
                                         <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
                                             <span className="text-2xl">🏷️</span>
                                         </div>
-                                        <h3 className="text-lg font-medium text-gray-900 mb-1">No categories found</h3>
-                                        <p className="text-gray-500 mb-4">Get started by creating your first category.</p>
-                                        <button onClick={openCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
+                                        <h3 className="text-lg font-medium text-slate-900 mb-1">No categories found</h3>
+                                        <p className="text-slate-500 mb-4">Get started by creating your first category.</p>
+                                        <button onClick={openCreate} className="px-4 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors">
                                             + Add Category
                                         </button>
                                     </div>
@@ -94,9 +94,9 @@ function CategoriesTable() {
                             </tr>
                         )}
                         {categories.map(cat => (
-                            <tr key={cat.id} className="hover:bg-gray-50/50 transition-colors">
-                                <td className="px-6 py-4 font-medium text-gray-800">{cat.name}</td>
-                                <td className="px-6 py-4 text-gray-600">{cat.description || '-'}</td>
+                            <tr key={cat.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-6 py-4 font-medium text-slate-800">{cat.name}</td>
+                                <td className="px-6 py-4 text-slate-600">{cat.description || '-'}</td>
                                 <td className="px-6 py-4 text-right">
                                     <button onClick={() => handleEdit(cat)} className="text-indigo-600 hover:text-indigo-900 mr-4 font-medium">Edit</button>
                                     <button onClick={() => handleDelete(cat.id)} className="text-red-500 hover:text-red-700 font-medium">Delete</button>
@@ -110,19 +110,19 @@ function CategoriesTable() {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{editingId ? 'Edit Category' : 'New Category'}</h2>
+                        <h2 className="text-2xl font-bold mb-6 text-slate-800">{editingId ? 'Edit Category' : 'New Category'}</h2>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
                                 <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                                 <textarea rows="3" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"></textarea>
                             </div>
                             <div className="flex justify-end gap-3 mt-8">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-                                <button type="submit" className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">Save Category</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                <button type="submit" className="px-5 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors">Save Category</button>
                             </div>
                         </form>
                     </div>

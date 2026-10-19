@@ -1,365 +1,232 @@
 import "../style/history.css";
+import "../style/invoices.css";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
+import { ChevronLeft, ChevronRight, Download, FileText, MoreVertical, Plus, Trash2 } from "lucide-react";
 import { clientToken } from "../axios";
 import PdfOpener from "@/utility/pdf_opener";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { day, money } from "@/utility/money";
 
-// Simple loader component
-const Loader = () => (
-    <div className="flex justify-center items-center py-10">
-        <div style={{ width: '32px', height: '32px', border: '3px solid #e0e7ff', borderTop: '3px solid #4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-        <p style={{ marginLeft: '12px', color: '#4f46e5', fontWeight: 600 }}>Loading...</p>
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </div>
-);
-
-// Payment status badge (shared by table + card)
-const STATUS_STYLES = {
-    unpaid: { label: "Unpaid", bg: "#fee2e2", fg: "#991b1b" },
+// Payment status pills. Colors follow DESIGN_SYSTEM.md: unpaid is the neutral
+// indigo tint so that red stays reserved for "overdue".
+const STATUS = {
+    unpaid: { label: "Unpaid", bg: "#eef2ff", fg: "#4338ca" },
     partially_paid: { label: "Partial", bg: "#fef3c7", fg: "#b45309" },
     paid: { label: "Paid", bg: "#dcfce7", fg: "#166534" },
     overdue: { label: "Overdue", bg: "#fecdd3", fg: "#9f1239" },
 };
-const PaymentBadge = ({ status }) => {
-    const s = STATUS_STYLES[status] || STATUS_STYLES.unpaid;
-    return (
-        <span style={{
-            background: s.bg, color: s.fg, borderRadius: '999px',
-            padding: '3px 10px', fontSize: '11px', fontWeight: 700,
-            whiteSpace: 'nowrap', display: 'inline-block',
-        }}>
-            {s.label}
-        </span>
-    );
+
+// Overdue is derived on the server (an open bill past the cut-off), so it can
+// be true while the stored status still says "unpaid".
+const statusOf = (obj) => (obj.is_overdue ? STATUS.overdue : STATUS[obj.payment_status] || STATUS.unpaid);
+
+const isOpen = (obj) => obj.payment_status !== "paid" && Number(obj.balance_due) > 0;
+
+const partyOf = (obj) => (obj.invoice_type === "purchase" ? obj.vendor_name : obj.receiver_name) || "—";
+
+const initials = (name) => (String(name || "").match(/[\p{L}\p{N}]+/gu) || ["?"])
+    .slice(0, 2).map((w) => w.charAt(0)).join("").toUpperCase();
+
+const Pill = ({ obj }) => {
+    const s = statusOf(obj);
+    return <span className="inv_pill" style={{ background: s.bg, color: s.fg }}>{s.label}</span>;
 };
 
-// Row for desktop table
-const TableRow = ({ obj, index, refresh, setRefresh }) => {
+// "12 days old" under the pill for anything still owing, so people can see
+// what is getting stale without opening it
+const Hint = ({ obj }) => (isOpen(obj) && obj.age_days != null
+    ? <div className="inv_hint">{obj.age_days === 0 ? "today" : `${obj.age_days} day${obj.age_days === 1 ? "" : "s"} old`}</div>
+    : null);
+
+function RowMenu({ obj, canDelete, onDelete }) {
     const [open, setOpen] = useState(false);
-    const navigate = useNavigate();
-
-    return (
-        <tr key={index} className="hidden md:table-row" style={{ borderBottom: '1px solid #f1f5f9' }}>
-            <td
-                className="td-with-icon cursor-pointer font-bold"
-                onClick={() => navigate(`/invoice/${obj.id}/view`)}
-            >
-                {obj?.invoice_number ?? "No-number"}
-            </td>
-            <td onClick={() => navigate(`/invoice/${obj.id}/view`)} >{obj.date}</td>
-            <td
-                className="px-2 py-4 cursor-pointer hover:bg-gray-50"
-                onClick={() => navigate(`/invoice/${obj.id}/view`)}
-            >
-                {obj.invoice_type === 'purchase' ? obj.vendor_name || "-" : obj.receiver_name || "-"}
-            </td>
-            <td onClick={() => navigate(`/invoice/${obj.id}/view`)} className={'font-bold '}>₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}</td>
-            <td onClick={() => navigate(`/invoice/${obj.id}/view`)} className="cursor-pointer">
-                <PaymentBadge status={obj.payment_status} />
-            </td>
-
-            <td className="relative">
-                <button
-                    className="p-1 rounded hover:bg-gray-100"
-                    onClick={() => setOpen((prev) => !prev)}
-                >
-                    ⋮
-                </button>
-
-                {open && (
-                    <div style={{ position: 'absolute', right: 0, marginTop: '8px', width: '140px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 24px rgba(79,70,229,0.15)', border: '1px solid #e0e7ff', overflow: 'hidden', zIndex: 50 }}>
-                        <button
-                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                            onClick={() => {
-                                clientToken
-                                    .get(`pdf/?id=${obj.id}`, { responseType: "blob" })
-                                    .then((r) => PdfOpener(r, obj, []));
-                            }}
-                        >
-                            Export
-                        </button>
-                        <button
-                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                            onClick={() => {
-                                clientToken
-                                    .delete(`invoice/?id=${obj.id}`)
-                                    .then((r) =>
-                                        r.status === 204
-                                            ? setRefresh(!refresh)
-                                            : console.log(r.data.response)
-                                    )
-                                    .catch((error) => console.log(error));
-                                setOpen(false);
-                            }}
-                        >
-                            Delete
-                        </button>
-                    </div>
-                )}
-            </td>
-        </tr>
-    );
-};
-
-// Card for mobile view
-const CardRow = ({ obj, index, refresh, setRefresh }) => {
-    const [open, setOpen] = useState(false);
-    const navigate = useNavigate();
-
-    return (
-        <div
-            key={index}
-            className="md:hidden  shadow-md rounded-lg p-4 mb-3  relative"
-        >
-            <div className="cursor-pointer" onClick={() => navigate(`/invoice/${obj.id}/view`)}>
-                <p className="font-semibold flex items-center gap-2">
-                    Invoice: {obj?.invoice_number ?? "No-number"}
-                    <PaymentBadge status={obj.payment_status} />
-                </p>
-                <p className="text-sm text-gray-600">Date: {obj.date}</p>
-                <p className="text-sm text-gray-600">
-                    {obj.invoice_type === 'purchase' ? 'Vendor: ' + (obj.vendor_name || "-") : 'Receiver: ' + (obj.receiver_name || "-")}
-                </p>
-                <p className="text-sm text-gray-600">
-                    Amount: ₹{Number(obj.total_final_amount || 0).toLocaleString('en-IN')}
-                </p>
-            </div>
-
-            <div className="absolute top-2 right-2">
-                <button
-                    className="p-1 rounded hover:bg-gray-100"
-                    onClick={() => setOpen((prev) => !prev)}
-                >
-                    ⋮
-                </button>
-
-                {open && (
-                    <div style={{ position: 'absolute', right: 0, marginTop: '8px', width: '140px', background: 'white', borderRadius: '12px', boxShadow: '0 8px 24px rgba(79,70,229,0.15)', border: '1px solid #e0e7ff', overflow: 'hidden', zIndex: 50 }}>
-                        <button
-                            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                            onClick={() => {
-                                clientToken
-                                    .get(`pdf/?id=${obj.id}`, { responseType: "blob" })
-                                    .then((r) => PdfOpener(r, obj, []));
-                            }}
-                        >
-                            Export
-                        </button>
-                        <button
-                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                            onClick={() => {
-                                clientToken
-                                    .delete(`invoice/?id=${obj.id}`)
-                                    .then((r) =>
-                                        r.status === 204
-                                            ? setRefresh(!refresh)
-                                            : console.log(r.data.response)
-                                    )
-                                    .catch((error) => console.log(error));
-                                setOpen(false);
-                            }}
-                        >
-                            Delete
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-function History({ show_header = true, filters = {} }) {
-    const [loading, setLoading] = useState(false);
-    const [invoice_data, setInvoiceData] = useState([]);
-    const [page, setPage] = useState(1);
-    const [refresh, setRefresh] = useState(false);
-    const [current_page, setCurrentPage] = useState(1);
-    const navigate = useNavigate();
-    const [isApiCall, setIsApiCall] = useState(false);
-    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
 
     useEffect(() => {
-        if (!isApiCall) {
-            setLoading(true);
-            setIsApiCall(true);
-
-            const url = "invoice/";
-            const params = { ...filters, page };
-            if (filters?.customer) {
-                params.customer = filters.customer.join();
-            }
-
-            clientToken
-                .get(url, { params })
-                .then((response) => {
-                    if (response.status === 200) {
-                        setInvoiceData(response.data.results || []);
-                        if (response.data.next) {
-                            const urlObj = new URL(response.data.next);
-                            setCurrentPage(parseInt(urlObj.searchParams.get("page"), 10));
-                        } else {
-                            setCurrentPage(page);
-                        }
-                    }
-                })
-                .catch((error) => console.error(error))
-                .finally(() => {
-                    setLoading(false);
-                    setIsApiCall(false);
-                });
-        }
-    }, [page, filters, refresh]);
+        if (!open) return undefined;
+        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", close);
+        return () => document.removeEventListener("mousedown", close);
+    }, [open]);
 
     return (
-        <div className="history_container">
-            {show_header && (
-                <div className="header relative">
-                    <div className="header-text">
-                        <p className="l1">Billing History</p>
-                    </div>
-                    <div className="header-button flex gap-2">
-                        <div className="button" onClick={() => navigate("/newBill")}>
-                            Create Bill
-                        </div>
+        <div className="inv_row_menu" ref={ref} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="inv_kebab" aria-label="Invoice actions" onClick={() => setOpen((v) => !v)}>
+                <MoreVertical size={18} />
+            </button>
+            {open && (
+                <div className="inv_menu">
+                    <button type="button" onClick={() => {
+                        setOpen(false);
+                        clientToken.get(`pdf/?id=${obj.id}`, { responseType: "blob" }).then((r) => PdfOpener(r, obj, []));
+                    }}>
+                        <Download size={15} /> Download PDF
+                    </button>
+                    {canDelete && (
+                        <button type="button" className="danger" onClick={() => { setOpen(false); onDelete(obj); }}>
+                            <Trash2 size={15} /> Delete
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
-                        {/* Dropdown */}
-                        {open && (
-                            <div className="absolute right-0 mt-12 w-48 bg-white text-black border border-gray-300 rounded-lg shadow-lg z-10">
-                                <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                    onClick={() => {
-                                        setOpen(false);
-                                        navigate("/newBillWithTemplate");
-                                    }}
-                                >
-                                    Create from Template
-                                </div>
-                                <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                    onClick={() => {
-                                        setOpen(false);
-                                        navigate("/importBill");
-                                    }}
-                                >
-                                    Import Bill
-                                </div>
-                            </div>
-                        )}
-                        <div className="button" onClick={() => navigate("/bill_list")}>
-                            All Bills
-                        </div>
-                    </div>
+function History({ filters = {}, hasFilters = false, onClearFilters, onChanged }) {
+    const navigate = useNavigate();
+    const { permissions, status: accessStatus } = useSelector((state) => state.access);
+    const canDelete = accessStatus !== "succeeded" || permissions.includes("invoice.delete");
+
+    const [rows, setRows] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [hasNext, setHasNext] = useState(false);
+    const [hasPrev, setHasPrev] = useState(false);
+    const [page, setPage] = useState(1);
+    const [loaded, setLoaded] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [refresh, setRefresh] = useState(0);
+    const [error, setError] = useState("");
+
+    // a different filter set starts again from page one
+    useEffect(() => { setPage(1); }, [filters]);
+
+    useEffect(() => {
+        let stale = false; // a slower earlier response must not overwrite a newer one
+        setLoading(true);
+        const params = { ...filters, page };
+        if (Array.isArray(filters.customer)) params.customer = filters.customer.join();
+        clientToken.get("invoice/", { params })
+            .then((response) => {
+                if (stale || response.status !== 200) return;
+                setRows(response.data.results || []);
+                setTotal(response.data.count ?? (response.data.results || []).length);
+                setHasNext(!!response.data.next);
+                setHasPrev(!!response.data.previous);
+                setError("");
+            })
+            .catch((e) => { if (!stale) setError(`Could not load invoices. ${e.message || ""}`); })
+            .finally(() => { if (!stale) { setLoading(false); setLoaded(true); } });
+        return () => { stale = true; };
+    }, [page, filters, refresh]);
+
+    const handleDelete = (obj) => {
+        if (!window.confirm(`Delete invoice ${obj.invoice_number || `#${obj.id}`}? This cannot be undone.`)) return;
+        clientToken.delete(`invoice/?id=${obj.id}`)
+            .then(() => { setRefresh((n) => n + 1); if (onChanged) onChanged(); })
+            .catch(() => setError("Could not delete that invoice."));
+    };
+
+    const open = (obj) => navigate(`/invoice/${obj.id}/view`);
+    const size = Number(filters.page_size) || 15;
+    const from = rows.length ? (page - 1) * size + 1 : 0;
+
+    if (!loaded) return <div className="inv_loading">Loading invoices…</div>;
+
+    return (
+        <div>
+            {error && (
+                <div className="inv_error">
+                    {error}
+                    <button type="button" aria-label="Dismiss" onClick={() => setError("")}>✕</button>
                 </div>
             )}
 
-            {loading ? (
-                <Loader />
-            ) : (
-                <div className="w-full overflow-x-auto">
-                    {invoice_data.length === 0 ? (
-                        <div style={{ padding: '60px 20px', textAlign: 'center', background: '#fff', borderRadius: '16px' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', background: '#eef2ff', color: '#4f46e5', marginBottom: '16px' }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                            </div>
-                            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>No Bills Found</h3>
-                            <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px', maxWidth: '300px', margin: '0 auto 24px' }}>It looks like you don't have any bills yet. Get started by creating your first bill!</p>
-                            <button
-                                onClick={() => navigate("/newBill")}
-                                style={{ background: '#4f46e5', color: 'white', fontWeight: 700, fontSize: '14px', padding: '10px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                            >
-                                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                                    <path d="M9 3v12M3 9h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                                </svg>
-                                Create Your First Bill
-                            </button>
-                        </div>
+            {rows.length === 0 ? (
+                <div className="inv_state">
+                    <div className="ico"><FileText size={30} /></div>
+                    {hasFilters ? (
+                        <>
+                            <h3>No invoices match</h3>
+                            <p>Try a different search, or clear the filters to see everything.</p>
+                            {onClearFilters && <button type="button" className="inv_btn" onClick={onClearFilters}>Clear search and filters</button>}
+                        </>
                     ) : (
                         <>
-                            {/* Desktop Table */}
-                            <table
-                                className="
-                                    hidden md:table
-                                    w-full
-                                    text-[#0B666A]
-                                    font-inter
-                                    not-italic
-                                    leading-normal
-                                    border-collapse
-                                    text-center
-                                "
-                            >
-                                <thead>
-                                    <tr>
-                                        <td className="w-1/4 px-2 py-2">INVOICE NO.</td>
-                                        <td className="px-2 py-2">DATE</td>
-                                        <td className="px-2 py-2">CUSTOMER / VENDOR</td>
-                                        <td className="px-2 py-2">AMOUNT</td>
-                                        <td className="px-2 py-2">STATUS</td>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {invoice_data.map((obj, index) => (
-                                        <TableRow
-                                            key={index}
-                                            index={index}
-                                            obj={obj}
-                                            refresh={refresh}
-                                            setRefresh={setRefresh}
-                                        />
-                                    ))}
-                                </tbody>
-                            </table>
-
-                            {/* Mobile Card List */}
-                            <div className="md:hidden">
-                                {invoice_data.map((obj, index) => (
-                                    <CardRow
-                                        key={index}
-                                        index={index}
-                                        obj={obj}
-                                        refresh={refresh}
-                                        setRefresh={setRefresh}
-                                    />
-                                ))}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '20px', paddingBottom: '10px' }}>
-                                <button
-                                    onClick={() => page > 1 && setPage(page - 1)}
-                                    disabled={page === 1}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        width: '36px', height: '36px', borderRadius: '10px',
-                                        border: '1.5px solid #e2e8f0', background: page > 1 ? 'white' : '#f8fafc',
-                                        cursor: page > 1 ? 'pointer' : 'not-allowed', color: page > 1 ? '#4f46e5' : '#cbd5e1',
-                                        transition: 'all 0.2s', boxShadow: page > 1 ? '0 2px 4px rgba(0,0,0,0.02)' : 'none'
-                                    }}
-                                    onMouseEnter={e => { if (page > 1) { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#eef2ff'; } }}
-                                    onMouseLeave={e => { if (page > 1) { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; } }}
-                                >
-                                    <ChevronLeft size={18} />
-                                </button>
-                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                                    PAGE {current_page}
-                                </span>
-                                <button
-                                    onClick={() => setPage(page + 1)}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        width: '36px', height: '36px', borderRadius: '10px',
-                                        border: '1.5px solid #e2e8f0', background: 'white',
-                                        cursor: 'pointer', color: '#4f46e5',
-                                        transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#c7d2fe'; e.currentTarget.style.background = '#eef2ff'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; }}
-                                >
-                                    <ChevronRight size={18} />
-                                </button>
-                            </div>
+                            <h3>Create your first invoice</h3>
+                            <p>Invoices you create show up here with their payment status.</p>
+                            <button type="button" className="inv_btn primary"
+                                onClick={() => navigate(filters.invoice_type === "purchase" ? "/newBill?type=purchase" : "/newBill")}>
+                                <Plus size={16} /> Create invoice
+                            </button>
                         </>
                     )}
                 </div>
+            ) : (
+                <>
+                    {/* desktop / tablet */}
+                    <div className={`inv_table_wrap ${loading ? "dim" : ""}`}>
+                        <table className="inv_table">
+                            <thead>
+                                <tr>
+                                    <th>Invoice</th>
+                                    <th>{filters.invoice_type === "purchase" ? "Vendor" : "Customer"}</th>
+                                    <th>Date</th>
+                                    <th className="num">Amount</th>
+                                    <th className="num">Balance due</th>
+                                    <th>Status</th>
+                                    <th style={{ width: 48 }} />
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rows.map((obj) => (
+                                    <tr key={obj.id} onClick={() => open(obj)}>
+                                        <td className="no">{obj.invoice_number || "No number"}</td>
+                                        <td>
+                                            <div className="inv_party">
+                                                <span className="inv_av">{initials(partyOf(obj))}</span>
+                                                <span className="name" title={partyOf(obj)}>{partyOf(obj)}</span>
+                                            </div>
+                                        </td>
+                                        <td style={{ whiteSpace: "nowrap" }}>{day(obj.date)}</td>
+                                        <td className="num strong">{money(obj.total_final_amount)}</td>
+                                        <td className={`num ${isOpen(obj) ? "owed" : "muted"}`}>
+                                            {isOpen(obj) ? money(obj.balance_due) : "—"}
+                                        </td>
+                                        <td><Pill obj={obj} /><Hint obj={obj} /></td>
+                                        <td className="num"><RowMenu obj={obj} canDelete={canDelete} onDelete={handleDelete} /></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* phones */}
+                    <div className="inv_cards" style={loading ? { opacity: 0.55 } : undefined}>
+                        {rows.map((obj) => (
+                            <div className="inv_inv_card" key={obj.id} onClick={() => open(obj)}>
+                                <div className="top">
+                                    <span className="inv_av">{initials(partyOf(obj))}</span>
+                                    <div className="party">{partyOf(obj)}</div>
+                                    <RowMenu obj={obj} canDelete={canDelete} onDelete={handleDelete} />
+                                </div>
+                                <div className="meta">
+                                    <div>
+                                        <div style={{ fontWeight: 600, color: "#4338ca", marginBottom: 4 }}>{obj.invoice_number || "No number"} · {day(obj.date)}</div>
+                                        <Pill obj={obj} />
+                                    </div>
+                                    <div className="amt">
+                                        {money(obj.total_final_amount)}
+                                        {isOpen(obj) && <small>{money(obj.balance_due)} due</small>}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="inv_foot">
+                        <span className="summary">{`${from}–${from + rows.length - 1} of ${total}`}</span>
+                        <button type="button" className="inv_page_btn" aria-label="Previous page"
+                            disabled={!hasPrev} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                            <ChevronLeft size={18} />
+                        </button>
+                        <button type="button" className="inv_page_btn" aria-label="Next page"
+                            disabled={!hasNext} onClick={() => setPage((p) => p + 1)}>
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+                </>
             )}
         </div>
     );

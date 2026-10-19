@@ -55,7 +55,7 @@ function KpiCard({ icon, label, value, sub, pct, color, delay = 0 }) {
   );
 }
 
-const COLORS = ['#10b981', '#f59e0b', '#f43f5e', '#3b82f6', '#8b5cf6', '#06b6d4'];
+const COLORS = ['#16a34a', '#b45309', '#dc2626', '#4f46e5', '#7c3aed', '#94a3b8'];
 
 export default function SalesRegister() {
   const navigate = useNavigate();
@@ -201,7 +201,7 @@ export default function SalesRegister() {
   }, { gross: 0, gst: 0 });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
       <style>{`
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(18px); }
@@ -217,35 +217,37 @@ export default function SalesRegister() {
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <FileBarChart2 size={32} className="text-indigo-600" />
-              <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+              <div className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center text-white bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.25)]">
+                <FileBarChart2 size={20} />
+              </div>
+              <h1 className="text-[22px] font-bold tracking-tight text-slate-900">
                 Sales Report Dashboard
               </h1>
             </div>
-            <p className="mt-2 text-gray-500 font-medium">
+            <p className="mt-1 text-[13px] text-slate-500">
               Comprehensive analytics, trends, and details of all sales invoices.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3 items-center">
-            <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-3">
+            <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-3">
               <div className="flex flex-col px-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Start Date</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Start Date</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="bg-transparent text-sm font-semibold text-gray-800 focus:outline-none"
+                  className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none"
                 />
               </div>
-              <div className="w-px bg-gray-200 mx-1 hidden sm:block"></div>
+              <div className="w-px bg-slate-200 mx-1 hidden sm:block"></div>
               <div className="flex flex-col px-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">End Date</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">End Date</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="bg-transparent text-sm font-semibold text-gray-800 focus:outline-none"
+                  className="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none"
                 />
               </div>
             </div>
@@ -253,7 +255,7 @@ export default function SalesRegister() {
             <button 
               onClick={() => setShowFilters(!showFilters)}
               className={`p-3 rounded-2xl transition-colors border shadow-sm flex items-center justify-center
-                ${showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
+                ${showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50'}`}
             >
               <Search size={20} />
             </button>
@@ -262,20 +264,20 @@ export default function SalesRegister() {
 
         {/* Advanced Filters Panel */}
         {showFilters && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-8 animate-[fadeUp_0.3s_ease_both]">
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-8 animate-[fadeUp_0.3s_ease_both]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Advanced Filters</h3>
-              <button onClick={clearFilters} className="text-xs font-semibold text-rose-500 hover:text-rose-600 flex items-center gap-1">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Advanced Filters</h3>
+              <button onClick={clearFilters} className="text-xs font-semibold text-red-500 hover:text-red-600 flex items-center gap-1">
                 <X size={14} /> Clear All
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Customer</label>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Customer</label>
                 <select 
                   value={selectedCustomer} 
                   onChange={(e) => setSelectedCustomer(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
                 >
                   <option value="">All Customers</option>
                   {customersList.map(c => (
@@ -284,11 +286,11 @@ export default function SalesRegister() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Payment Status</label>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Payment Status</label>
                 <select 
                   value={selectedStatus} 
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
                 >
                   <option value="">All Statuses</option>
                   <option value="paid">Paid</option>
@@ -298,11 +300,11 @@ export default function SalesRegister() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Payment Method</label>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Payment Method</label>
                 <select 
                   value={selectedPayment} 
                   onChange={(e) => setSelectedPayment(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
                 >
                   <option value="">All Methods</option>
                   <option value="cash">Cash</option>
@@ -324,19 +326,19 @@ export default function SalesRegister() {
         ) : reportData && (
           <div className="flex overflow-x-auto gap-5 pb-6 mb-4 hide-scrollbar snap-x">
             <div className="snap-start min-w-[240px]">
-              <KpiCard icon={<TrendingUp size={28}/>} label="Total Sales" value={formatCurrency(reportData.summary.total_sales)} pct={reportData.summary.sales_growth_pct} sub={`${reportData.summary.total_invoices} invoices`} color="linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%)" delay={0.05} />
+              <KpiCard icon={<TrendingUp size={28}/>} label="Total Sales" value={formatCurrency(reportData.summary.total_sales)} pct={reportData.summary.sales_growth_pct} sub={`${reportData.summary.total_invoices} invoices`} color="linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)" delay={0.05} />
             </div>
             <div className="snap-start min-w-[240px]">
-              <KpiCard icon={<FileCheck size={28}/>} label="Amount Paid" value={formatCurrency(reportData.summary.paid_amount)} color="linear-gradient(135deg, #10b981 0%, #059669 100%)" delay={0.1} />
+              <KpiCard icon={<FileCheck size={28}/>} label="Amount Paid" value={formatCurrency(reportData.summary.paid_amount)} color="linear-gradient(135deg, #16a34a 0%, #16a34a 100%)" delay={0.1} />
             </div>
             <div className="snap-start min-w-[240px]">
-              <KpiCard icon={<FileClock size={28}/>} label="Outstanding Balance" value={formatCurrency(reportData.summary.unpaid_amount)} color="linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" delay={0.15} />
+              <KpiCard icon={<FileClock size={28}/>} label="Outstanding Balance" value={formatCurrency(reportData.summary.unpaid_amount)} color="linear-gradient(135deg, #b45309 0%, #b45309 100%)" delay={0.15} />
             </div>
             <div className="snap-start min-w-[240px]">
-              <KpiCard icon={<FileText size={28}/>} label="Total GST Collected" value={formatCurrency(reportData.summary.gst_collected)} color="linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)" delay={0.2} />
+              <KpiCard icon={<FileText size={28}/>} label="Total GST Collected" value={formatCurrency(reportData.summary.gst_collected)} color="linear-gradient(135deg, #4f46e5 0%, #4f46e5 100%)" delay={0.2} />
             </div>
             <div className="snap-start min-w-[240px]">
-              <KpiCard icon={<Users size={28}/>} label="Repeat Customers" value={`${Math.round(reportData.kpis.repeat_customer_pct)}%`} sub={`${reportData.kpis.new_customers} new customers`} color="linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)" delay={0.25} />
+              <KpiCard icon={<Users size={28}/>} label="Repeat Customers" value={`${Math.round(reportData.kpis.repeat_customer_pct)}%`} sub={`${reportData.kpis.new_customers} new customers`} color="linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%)" delay={0.25} />
             </div>
           </div>
         )}
@@ -346,8 +348,8 @@ export default function SalesRegister() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             
             {/* Sales Trend */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 animate-[fadeUp_0.5s_ease_0.3s_both]">
-              <h3 className="text-lg font-bold text-gray-800 mb-6">Sales Trend</h3>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 animate-[fadeUp_0.5s_ease_0.3s_both]">
+              <h3 className="text-lg font-bold text-slate-800 mb-6">Sales Trend</h3>
               <div className="h-[300px] w-full">
                 {reportData.charts.sales_trend?.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -366,14 +368,14 @@ export default function SalesRegister() {
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 font-medium">No trend data available</div>
+                  <div className="h-full flex items-center justify-center text-slate-400 font-medium">No trend data available</div>
                 )}
               </div>
             </div>
 
             {/* Payment Status Distribution */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 animate-[fadeUp_0.5s_ease_0.35s_both]">
-              <h3 className="text-lg font-bold text-gray-800 mb-6">Payment Status</h3>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 animate-[fadeUp_0.5s_ease_0.35s_both]">
+              <h3 className="text-lg font-bold text-slate-800 mb-6">Payment Status</h3>
               <div className="h-[300px] w-full flex items-center justify-center">
                 {reportData.charts.payment_status_distribution?.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -392,14 +394,14 @@ export default function SalesRegister() {
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="text-gray-400 font-medium">No payment data available</div>
+                  <div className="text-slate-400 font-medium">No payment data available</div>
                 )}
               </div>
             </div>
 
             {/* Top Customers */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 lg:col-span-2 animate-[fadeUp_0.5s_ease_0.4s_both]">
-              <h3 className="text-lg font-bold text-gray-800 mb-6">Top 10 Customers</h3>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2 animate-[fadeUp_0.5s_ease_0.4s_both]">
+              <h3 className="text-lg font-bold text-slate-800 mb-6">Top 10 Customers</h3>
               <div className="h-[350px] w-full">
                 {reportData.charts.top_customers?.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -408,11 +410,11 @@ export default function SalesRegister() {
                       <XAxis type="number" tickFormatter={(val) => `₹${val/1000}k`} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
                       <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }} width={120} />
                       <RechartsTooltip formatter={(value) => [formatCurrency(value), "Revenue"]} cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                      <Bar dataKey="sales" fill="#0ea5e9" radius={[0, 4, 4, 0]} barSize={24} />
+                      <Bar dataKey="sales" fill="#4f46e5" radius={[0, 4, 4, 0]} barSize={24} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 font-medium">No customer data available</div>
+                  <div className="h-full flex items-center justify-center text-slate-400 font-medium">No customer data available</div>
                 )}
               </div>
             </div>
@@ -422,17 +424,17 @@ export default function SalesRegister() {
 
         {/* Action Bar */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">Invoice Details</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Invoice Details</h2>
           <div className="flex gap-2">
             <button 
               onClick={() => handleExport('CSV')}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl font-semibold hover:bg-emerald-100 transition-colors border border-emerald-200"
+              className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-xl font-semibold hover:bg-green-100 transition-colors border border-green-200"
             >
               <Download size={16} /> Export Excel
             </button>
             <button 
               onClick={() => handleExport('PDF')}
-              className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl font-semibold hover:bg-rose-100 transition-colors border border-rose-200"
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl font-semibold hover:bg-red-100 transition-colors border border-red-200"
             >
               <Download size={16} /> Export PDF
             </button>
@@ -440,11 +442,11 @@ export default function SalesRegister() {
         </div>
 
         {/* Enhanced Table Area */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-10">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-10">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
-                <tr className="bg-gray-50/80 text-xs uppercase tracking-wider text-gray-500 border-b border-gray-200">
+                <tr className="bg-slate-50/80 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
                   <th className="px-6 py-4 font-bold">Date & No.</th>
                   <th className="px-6 py-4 font-bold">Customer Details</th>
                   <th className="px-6 py-4 font-bold text-right">Taxable</th>
@@ -457,7 +459,7 @@ export default function SalesRegister() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
                       <div className="flex justify-center items-center gap-3">
                         <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                         <span className="font-semibold text-indigo-600">Loading details...</span>
@@ -466,7 +468,7 @@ export default function SalesRegister() {
                   </tr>
                 ) : invoices.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500 font-medium">
+                    <td colSpan="7" className="px-6 py-12 text-center text-slate-500 font-medium">
                       No invoices found for the selected criteria.
                     </td>
                   </tr>
@@ -478,39 +480,39 @@ export default function SalesRegister() {
                     const halfGst = gstAmount / 2;
                     
                     return (
-                      <tr key={invoice.id || idx} className="border-b border-gray-50 hover:bg-indigo-50/30 transition-colors group">
+                      <tr key={invoice.id || idx} className="border-b border-slate-50 hover:bg-indigo-50/30 transition-colors group">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="font-bold text-indigo-600">{invoice.invoice_number || '-'}</div>
-                          <div className="text-xs text-gray-500 font-medium">{invoice.date || '-'}</div>
+                          <div className="text-xs text-slate-500 font-medium">{invoice.date || '-'}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="font-bold text-gray-900">{invoice.receiver_name || 'Unknown'}</div>
-                          <div className="text-xs text-gray-500 flex gap-2">
-                            <span>GSTIN: <span className="font-medium text-gray-700">{invoice.receiver_gst_number || '-'}</span></span>
+                          <div className="font-bold text-slate-900">{invoice.receiver_name || 'Unknown'}</div>
+                          <div className="text-xs text-slate-500 flex gap-2">
+                            <span>GSTIN: <span className="font-medium text-slate-700">{invoice.receiver_gst_number || '-'}</span></span>
                             {invoice.receiver_state && (
                               <>
-                                <span className="text-gray-300">|</span>
+                                <span className="text-slate-300">|</span>
                                 <span>{invoice.receiver_state}</span>
                               </>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right text-gray-600 font-medium">{formatCurrency(taxableAmount)}</td>
-                        <td className="px-6 py-4 text-right text-gray-500 text-sm">{formatCurrency(halfGst)}</td>
-                        <td className="px-6 py-4 text-right text-gray-500 text-sm">{formatCurrency(halfGst)}</td>
-                        <td className="px-6 py-4 text-right font-extrabold text-gray-900 text-lg">{formatCurrency(totalAmount)}</td>
+                        <td className="px-6 py-4 text-right text-slate-600 font-medium">{formatCurrency(taxableAmount)}</td>
+                        <td className="px-6 py-4 text-right text-slate-500 text-sm">{formatCurrency(halfGst)}</td>
+                        <td className="px-6 py-4 text-right text-slate-500 text-sm">{formatCurrency(halfGst)}</td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-900 text-lg">{formatCurrency(totalAmount)}</td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col items-start gap-1">
                             <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider
-                              ${invoice.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 
-                                invoice.payment_status === 'overdue' ? 'bg-rose-100 text-rose-700' : 
+                              ${invoice.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 
+                                invoice.payment_status === 'overdue' ? 'bg-red-100 text-red-700' : 
                                 invoice.payment_status === 'partially_paid' ? 'bg-amber-100 text-amber-700' : 
-                                'bg-gray-100 text-gray-700'}`}
+                                'bg-slate-100 text-slate-700'}`}
                             >
                               {invoice.payment_status || 'unpaid'}
                             </span>
                             {invoice.payment_method && invoice.payment_method !== 'other' && (
-                              <span className="text-xs font-medium text-gray-500 capitalize bg-white border px-1.5 rounded">
+                              <span className="text-xs font-medium text-slate-500 capitalize bg-white border px-1.5 rounded">
                                 {invoice.payment_method.replace('_', ' ')}
                               </span>
                             )}
@@ -524,15 +526,15 @@ export default function SalesRegister() {
               
               {/* Report Footer Summary */}
               {!isLoading && invoices.length > 0 && (
-                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                <tfoot className="bg-slate-50 border-t-2 border-slate-200">
                   <tr>
-                    <td colSpan="2" className="px-6 py-4 font-bold text-gray-700 uppercase text-xs tracking-wider">
+                    <td colSpan="2" className="px-6 py-4 font-bold text-slate-700 uppercase text-xs tracking-wider">
                       Page Totals ({invoices.length} Invoices)
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-gray-800">{formatCurrency(tableTotals.gross - tableTotals.gst)}</td>
-                    <td className="px-6 py-4 text-right font-bold text-gray-600 text-sm">{formatCurrency(tableTotals.gst / 2)}</td>
-                    <td className="px-6 py-4 text-right font-bold text-gray-600 text-sm">{formatCurrency(tableTotals.gst / 2)}</td>
-                    <td className="px-6 py-4 text-right font-black text-indigo-700 text-xl">{formatCurrency(tableTotals.gross)}</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-800">{formatCurrency(tableTotals.gross - tableTotals.gst)}</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-600 text-sm">{formatCurrency(tableTotals.gst / 2)}</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-600 text-sm">{formatCurrency(tableTotals.gst / 2)}</td>
+                    <td className="px-6 py-4 text-right font-bold text-indigo-700 text-xl">{formatCurrency(tableTotals.gross)}</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -542,8 +544,8 @@ export default function SalesRegister() {
           
           {/* Pagination */}
           {!isLoading && invoices.length > 0 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-white">
-              <span className="text-sm font-medium text-gray-500">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-white">
+              <span className="text-sm font-medium text-slate-500">
                 Page {currentPage}
               </span>
               <div className="flex gap-2">
@@ -551,13 +553,13 @@ export default function SalesRegister() {
                   onClick={() => page > 1 && setPage(page - 1)}
                   disabled={page === 1}
                   className={`p-2 rounded-lg border flex items-center justify-center transition-colors
-                    ${page > 1 ? 'bg-white border-gray-200 text-indigo-600 hover:bg-indigo-50 cursor-pointer' : 'bg-gray-50 border-transparent text-gray-300 cursor-not-allowed'}`}
+                    ${page > 1 ? 'bg-white border-slate-200 text-indigo-600 hover:bg-indigo-50 cursor-pointer' : 'bg-slate-50 border-transparent text-slate-300 cursor-not-allowed'}`}
                 >
                   <ChevronLeft size={18} />
                 </button>
                 <button
                   onClick={() => setPage(page + 1)}
-                  className="p-2 rounded-lg border bg-white border-gray-200 text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+                  className="p-2 rounded-lg border bg-white border-slate-200 text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-colors cursor-pointer shadow-sm"
                 >
                   <ChevronRight size={18} />
                 </button>

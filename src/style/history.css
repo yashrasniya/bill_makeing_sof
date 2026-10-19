@@ -79,7 +79,7 @@
 /* ── Desktop table ── */
 .table {
     width: 100%;
-    color: #374151;
+    color: #334155;
     font-family: 'Inter', serif;
     font-style: normal;
     line-height: normal;
@@ -114,7 +114,7 @@
 .table td {
     padding: 12px 8px;
     font-weight: 600;
-    color: #374151;
+    color: #334155;
 }
 
 /* Invoice number — indigo accent */
@@ -125,7 +125,7 @@
 
 /* Amount column */
 .table tbody td:nth-child(4) {
-    color: #059669;
+    color: #16a34a;
     font-weight: 800;
 }
 

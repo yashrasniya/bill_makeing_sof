@@ -15,7 +15,16 @@
     box-sizing: border-box;
 }
 
-/* ── Top header (Bill title + Export button) ── */
+/* Native form controls don't inherit the page font by default, which is
+   why labels, selects and buttons were rendering in the browser's serif. */
+.space button,
+.space input,
+.space select,
+.space textarea {
+    font-family: inherit;
+}
+
+/* ── Top header (title block + Export button) ── */
 .top_head {
     display: flex;
     width: 100%;
@@ -24,35 +33,145 @@
     margin-bottom: 4px;
 }
 
-.top_head p {
-    font-family: 'Inter', sans-serif;
-    font-size: 2.2rem;
-    font-weight: 900;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    line-height: normal;
+.top_head .crumb {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    margin: 0 0 4px;
+}
+
+.top_head .crumb a {
+    color: #64748b;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.top_head .crumb a:hover {
+    color: #4f46e5;
+}
+
+.top_head .title_row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.top_head h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.top_head .type_toggle {
+    display: inline-flex;
+    margin-top: 10px;
+    padding: 3px;
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.top_head .type_toggle button {
+    border: none;
+    background: transparent;
+    padding: 5px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.top_head .type_toggle button.on {
+    background: white;
+    color: #4338ca;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.top_head .status_badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+}
+
+.top_head .status_badge.paid { background: #dcfce7; color: #166534; }
+.top_head .status_badge.unpaid { background: #fee2e2; color: #991b1b; }
+.top_head .status_badge.partially_paid { background: #fef3c7; color: #92400e; }
+.top_head .status_badge.overdue { background: #fecdd3; color: #9f1239; }
+
+.top_head .save_state {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.top_head .save_state.error {
+    color: #b91c1c;
 }
 
 /* ── Bill meta row (Invoice No. / Customer / Date) ── */
 .bill_head {
     display: flex;
-    justify-content: flex-start;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 16px;
     width: 100%;
-    color: #374151;
+    color: #334155;
     margin: 16px 0;
-    font-family: 'Inter', serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 1.1rem;
     font-weight: 600;
-    flex-wrap: wrap;
     background: white;
     padding: 16px 20px;
     border-radius: 16px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Row 1: who and when. Row 2: tax and payment. */
+.bill_row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px;
+    width: 100%;
+}
+
+.bill_row_secondary {
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.bill_field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bill_field label,
+.bill_spacer {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.bill_field input,
+.bill_field select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.bill_hint {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: #64748b;
 }
 
 .bill_head p {
@@ -71,7 +190,7 @@
     border: 1.5px solid #e2e8f0;
     background: #f8fafc;
     color: #0f172a;
-    font-family: 'Inter', serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 14px;
     font-weight: 700;
     outline: none;
@@ -92,7 +211,7 @@
     border: 1.5px solid #e2e8f0;
     background: #f8fafc;
     color: #0f172a;
-    font-family: 'Inter', serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 14px;
     font-weight: 700;
     outline: none;
@@ -104,46 +223,65 @@
     border-color: #4f46e5;
 }
 
-/* ── Action buttons row (Delete / + Product) ── */
-.header-button {
+/* ── Action buttons row (Bulk edit / Delete / Add with details) ──
+   Uses its own class names on purpose: root.css, history.css and Companys.css
+   each define a global button class with the same specificity, and whichever
+   stylesheet loaded last won, property by property. */
+.bill-actions {
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
+    align-items: center;
     gap: 10px;
     margin-bottom: 16px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.header-button svg {
-    margin-right: 4px;
-}
-
-.header-button .button {
+.bill-btn {
     display: inline-flex;
     align-items: center;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    color: white;
-    font-weight: 700;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1.5px solid #c7d2fe;
+    border-radius: 12px;
     font-size: 14px;
-    padding: 9px 18px;
-    border-radius: 10px;
+    font-weight: 700;
+    white-space: nowrap;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
-    transition: transform 0.15s, box-shadow 0.15s;
     user-select: none;
+    transition: background 0.15s, border-color 0.15s;
 }
 
-.header-button .button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+.bill-btn:hover {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
 }
 
-.header-button .button.delete {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+.bill-btn-danger {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
 }
 
-.header-button .button.delete:hover {
-    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+.bill-btn-danger:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.bill-btn .lbl-mobile {
+    display: none;
+}
+
+.bill-actions .selected_count {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-right: auto;
 }
 
 /* ── Products table ── */
@@ -167,20 +305,47 @@
 }
 
 .container .table thead td {
-    padding: 13px 10px;
+    padding: 13px 12px;
     font-weight: 700;
     font-size: 13px;
     color: rgba(255, 255, 255, 0.9);
-    text-align: center;
+    text-align: left;
 }
 
 .container .table tbody td {
-    padding: 11px 10px;
+    padding: 11px 12px;
     font-size: 14px;
     font-weight: 600;
-    color: #374151;
-    text-align: center;
+    color: #334155;
+    text-align: left;
     border-bottom: 1px solid #f1f5f9;
+}
+
+/* Numbers line up on the right edge */
+.container .table thead td.num-col,
+.container .table tbody td.num-col {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.container .table .check-col {
+    width: 44px;
+    text-align: center;
+}
+
+.container .table .empty-row td {
+    text-align: center;
+    color: #64748b;
+    font-weight: 500;
+    padding: 28px 12px;
+}
+
+/* history.css and Companys.css colour tbody td:first/2nd/4th-child globally
+   (invoice number, name, amount); keep this table's cells neutral. */
+.container .table.bill-items tbody td:nth-child(n),
+.container .table.bill-items tbody td:first-child {
+    color: #334155;
+    font-weight: 600;
 }
 
 /* Row hover — indigo tint (replaces old teal) */
@@ -215,6 +380,198 @@
 
 .total .table {
     width: 40%;
+}
+
+/* ── Inline add-item row ── */
+.container .table .add-row td {
+    background: #f8fafc;
+    padding: 8px 12px;
+    border-top: 1.5px dashed #c7d2fe;
+    border-bottom: none;
+}
+
+.inline-input {
+    width: 100%;
+    height: 40px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.inline-input.num {
+    text-align: right;
+}
+
+.inline-input::placeholder {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.inline-input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.container .table .action-col {
+    width: 96px;
+    padding-left: 4px;
+    padding-right: 12px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Same 40px height as .inline-input beside it. */
+.inline-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.inline-add-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+}
+
+.inline-add-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+/* ── Totals summary card ── */
+.summary-card {
+    width: 340px;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.summary-row,
+.summary-total {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-variant-numeric: tabular-nums;
+}
+
+.summary-row {
+    padding: 5px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.summary-row span:last-child {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.summary-total {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1.5px solid #e2e8f0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.summary-note {
+    margin: 2px 0 4px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #64748b;
+}
+
+.summary-row.summary-balance {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1.5px dashed #e2e8f0;
+    font-weight: 700;
+}
+
+.summary-row.summary-balance span,
+.summary-row.summary-balance span:last-child {
+    color: #b91c1c;
+    font-weight: 800;
+}
+
+.bill_bottom {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 16px;
+}
+
+.notes-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.notes-panel label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.notes-panel textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    background: white;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f172a;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.notes-panel textarea:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.summary-words {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #64748b;
 }
 
 /* ── Pop-up modal (New Product) ── */
@@ -275,7 +632,7 @@
     gap: 5px;
     font-size: 12px;
     font-weight: 700;
-    color: #374151;
+    color: #334155;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -342,8 +699,8 @@
         padding: 16px 14px 80px;
     }
 
-    .top_head p {
-        font-size: 1.6rem;
+    .top_head h1 {
+        font-size: 1.3rem;
     }
 
     .bill_head {
@@ -353,7 +710,13 @@
         padding: 16px;
     }
 
-    .bill_head > div {
+    .bill_row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .bill_row > div {
         width: 100% !important;
         min-width: 0 !important;
         flex: 1 1 auto !important;
@@ -365,13 +728,23 @@
         min-width: 0 !important;
     }
 
-    .header-button {
+    .bill_bottom {
+        flex-direction: column;
+        gap: 12px;
+        padding-bottom: 96px; /* clear the fixed totals bar */
+    }
+
+    .notes-panel {
+        width: 100%;
+    }
+
+    .bill-actions {
         justify-content: space-between;
         gap: 12px;
         width: 100%;
     }
 
-    .header-button .button {
+    .bill-actions .bill-btn {
         flex: 1;
         justify-content: center;
         text-align: center;
@@ -379,5 +752,230 @@
 
     .pop-up-box_buttons {
         margin-top: 1rem;
+    }
+}
+
+/* Below Tailwind's md breakpoint the table (and its inline row) is hidden,
+   so the header button is the only way to add an item. */
+@media (max-width: 767px) {
+    .bill-btn .lbl-desktop {
+        display: none;
+    }
+
+    .bill-btn .lbl-mobile {
+        display: inline;
+    }
+
+    .bill-btn.bill-btn-add {
+        background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+    }
+
+    .bill-btn.bill-btn-add:hover {
+        background: linear-gradient(135deg, #4338ca, #6d28d9);
+    }
+}
+
+/* The fixed totals bar shows below Tailwind's md breakpoint (768px). */
+@media (min-width: 701px) and (max-width: 767px) {
+    .bill_bottom {
+        padding-bottom: 96px;
+    }
+}
+
+/* ── Item modal (add / edit a line item) ── */
+.bill_modal_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.bill_modal_head h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    color: #0f172a;
+}
+
+.bill_modal_close {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.bill_modal_close:hover {
+    background: #e2e8f0;
+}
+
+.bill_modal_image {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 12px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+}
+
+.bill_modal_image .thumb {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex: none;
+}
+
+.bill_modal_image .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    display: block;
+}
+
+.bill_modal_image .thumb.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 10px;
+    background: white;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.bill_modal_image .thumb button {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    line-height: 22px;
+    cursor: pointer;
+}
+
+.bill_modal_image .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.bill_modal_image .meta_label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.bill_modal_image .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.bill-btn-sm {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+    border-radius: 10px;
+}
+
+/* Three even columns; a field's configured size decides how many it spans. */
+.bill_modal_grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.bill_modal_grid .form_box {
+    min-width: 0;
+}
+
+.bill_modal_grid .form_box label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.bill_modal_select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+}
+
+.bill_modal_select:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.bill_modal_footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.bill_modal_footer .spacer {
+    flex: 1;
+}
+
+.bill-btn-primary {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+}
+
+.bill-btn-primary:hover {
+    background: linear-gradient(135deg, #4338ca, #6d28d9);
+    border-color: transparent;
+}
+
+@media (max-width: 600px) {
+    .bill_modal_grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bill_modal_grid .form_box {
+        grid-column: auto !important;
+    }
+
+    .bill_modal_footer .bill-btn {
+        flex: 1;
     }
 }

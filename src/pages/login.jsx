@@ -29,7 +29,7 @@ function Login() {
             }
         }).catch((error) => {
             if (error.response?.status === 400) {
-                setError('Incorrect username or password.');
+                setError('Incorrect email/username or password.');
             } else {
                 setError("Something went wrong, please try again.");
             }
@@ -188,11 +188,11 @@ function Login() {
                     <div style={{ marginBottom: '18px' }}>
                         <label style={{
                             display: 'block', fontSize: '13px', fontWeight: 600,
-                            color: '#374151', marginBottom: '7px', letterSpacing: '0.02em',
-                        }}>Username</label>
+                            color: '#334155', marginBottom: '7px', letterSpacing: '0.02em',
+                        }}>Email or username</label>
                         <input
                             type="text"
-                            placeholder="Enter your username"
+                            placeholder="Enter your email or username"
                             value={username}
                             onChange={(e) => set_username(e.target.value)}
                             onFocus={focusInput}
@@ -211,7 +211,7 @@ function Login() {
                     <div style={{ marginBottom: '8px' }}>
                         <label style={{
                             display: 'block', fontSize: '13px', fontWeight: 600,
-                            color: '#374151', marginBottom: '7px', letterSpacing: '0.02em',
+                            color: '#334155', marginBottom: '7px', letterSpacing: '0.02em',
                         }}>Password</label>
                         <div style={{ position: 'relative' }}>
                             <input
@@ -277,7 +277,7 @@ function Login() {
                             width: '100%', padding: '13px', marginTop: '22px',
                             fontSize: '15px', fontWeight: 700, color: 'white',
                             background: loading
-                                ? 'linear-gradient(135deg, #818cf8, #a78bfa)'
+                                ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
                                 : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                             border: 'none', borderRadius: '12px', cursor: loading ? 'not-allowed' : 'pointer',
                             boxShadow: '0 6px 20px rgba(79,70,229,0.35)',
@@ -344,7 +344,7 @@ function Login() {
                                 textDecoration: 'none',
                                 transition: 'color 0.2s',
                             }}
-                            onMouseEnter={e => e.currentTarget.style.color = '#6366f1'}
+                            onMouseEnter={e => e.currentTarget.style.color = '#4f46e5'}
                             onMouseLeave={e => e.currentTarget.style.color = '#4f46e5'}
                         >
                             Create account →

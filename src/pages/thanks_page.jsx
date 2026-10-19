@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 
 const ThanksPage = ({ message }) => {
     // A default message in case the prop is not provided.
-    const displayMessage = message || "Your Account is Register Successfully, " +
-        "We will Go throw your Account and after varification we will inform you by email.";
+    const displayMessage = message || "Your account has been registered successfully. " +
+        "We will review it and email you once it is verified.";
 
     return (
         <div style={{
@@ -12,22 +13,34 @@ const ThanksPage = ({ message }) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: '100vh',
+            minHeight: '100vh',
+            padding: '16px',
             textAlign: 'center',
-            fontFamily: 'Arial, sans-serif',
-            backgroundColor: '#f4f4f9'
+            background: 'var(--page-bg)',
         }}>
-            <h1>Thank You!</h1>
-            <p style={{ fontSize: '1.2rem', margin: '20px 0', color: '#333' }}>{displayMessage}</p>
-            <Link to="/" style={{
-                padding: '10px 20px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                textDecoration: 'none',
-                borderRadius: '5px'
+            <div style={{
+                background: 'var(--surface)',
+                borderRadius: 'var(--radius-card)',
+                boxShadow: 'var(--shadow-card)',
+                padding: '40px 32px',
+                maxWidth: '440px',
+                width: '100%',
             }}>
-                Go to Homepage
-            </Link>
+                <div style={{
+                    width: 64, height: 64, borderRadius: '50%', margin: '0 auto 16px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--tint-100)', color: 'var(--brand-indigo)',
+                }}>
+                    <CheckCircle2 size={32} />
+                </div>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>Thank you!</h1>
+                <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '8px 0 24px', lineHeight: 1.6 }}>
+                    {displayMessage}
+                </p>
+                <Link to="/" className="btn-primary" style={{ textDecoration: 'none' }}>
+                    Go to homepage
+                </Link>
+            </div>
         </div>
     );
 };

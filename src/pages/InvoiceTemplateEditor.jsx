@@ -979,7 +979,7 @@ const InvoiceTemplateEditor = () => {
                                             disabled={exporting || !exportInvoiceId}
                                             style={{
                                                 width: '100%', padding: '10px', fontSize: '13px', fontWeight: 700, color: 'white',
-                                                background: (exporting || !exportInvoiceId) ? '#cbd5e1' : '#0ea5e9', borderRadius: '10px', border: 'none',
+                                                background: (exporting || !exportInvoiceId) ? '#cbd5e1' : '#4f46e5', borderRadius: '10px', border: 'none',
                                                 cursor: (exporting || !exportInvoiceId) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                                             }}
                                         >
@@ -989,8 +989,8 @@ const InvoiceTemplateEditor = () => {
                                 </div>
 
                                 {/* React-side PDF Generator */}
-                                <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '14px', border: '1px solid #bbf7d0', marginBottom: '16px' }}>
-                                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.05em' }}>
+                                <div style={{ background: '#dcfce7', padding: '16px', borderRadius: '14px', border: '1px solid #dcfce7', marginBottom: '16px' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#166534', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.05em' }}>
                                         ⚡ React PDF (client-side)
                                     </label>
                                     <p style={{ fontSize: '11px', marginBottom: '10px', marginTop: 0, color: '#166534' }}>
@@ -1001,7 +1001,7 @@ const InvoiceTemplateEditor = () => {
                                         disabled={reactPdfBusy}
                                         style={{
                                             width: '100%', padding: '10px', fontSize: '13px', fontWeight: 700, color: 'white',
-                                            background: reactPdfBusy ? '#cbd5e1' : 'linear-gradient(135deg, #16a34a, #15803d)',
+                                            background: reactPdfBusy ? '#cbd5e1' : 'linear-gradient(135deg, #16a34a, #166534)',
                                             borderRadius: '10px', border: 'none',
                                             cursor: reactPdfBusy ? 'not-allowed' : 'pointer',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -1466,7 +1466,7 @@ const InvoiceTemplateEditor = () => {
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '8px',
                                     padding: '8px 20px', borderRadius: '10px', border: 'none',
-                                    background: saving ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                                    background: saving ? '#c7d2fe' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
                                     color: 'white', cursor: saving ? 'not-allowed' : 'pointer',
                                     fontSize: '13px', fontWeight: 700,
                                     boxShadow: '0 4px 12px rgba(79,70,229,0.25)',
@@ -1617,9 +1617,9 @@ const InvoiceTemplateEditor = () => {
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
                     }}>
                         <div style={{
-                            padding: '16px 24px', borderBottom: '1px solid #d1fae5',
+                            padding: '16px 24px', borderBottom: '1px solid #dcfce7',
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            backgroundColor: '#f0fdf4'
+                            backgroundColor: '#dcfce7'
                         }}>
                             <div>
                                 <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#14532d' }}>

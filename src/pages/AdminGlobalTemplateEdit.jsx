@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { Files } from 'lucide-react';
+import PageIcon from '../comonant/PageIcon';
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { clientToken } from "@/axios";
@@ -102,7 +104,7 @@ export default function AdminGlobalTemplateEdit() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
+            <div className="min-h-screen bg-slate-50 flex flex-col">
                 <Navbar />
                 <div className="flex-1 flex justify-center items-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -114,14 +116,14 @@ export default function AdminGlobalTemplateEdit() {
     if (!template) return null;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-slate-50 flex flex-col">
             <Navbar />
             <div className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 <div className="mb-8">
                     <button onClick={() => navigate("/admin/global-templates")} className="text-sm font-medium text-indigo-600 hover:text-indigo-500 mb-4 inline-block">
                         &larr; Back to Global Templates
                     </button>
-                    <h1 className="text-3xl font-bold text-gray-900">Edit Settings: {template.template_name}</h1>
+                    <div className="flex items-center gap-3.5"><PageIcon icon={Files} /><h1 className="text-[22px] font-bold tracking-tight text-slate-900">Edit Settings: {template.template_name}</h1></div>
                 </div>
 
                 <div className="bg-white shadow sm:rounded-lg">
@@ -129,7 +131,7 @@ export default function AdminGlobalTemplateEdit() {
                         {/* Name and Category */}
                         <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                             <div className="sm:col-span-3">
-                                <label htmlFor="template_name" className="block text-sm font-medium text-gray-700">Template Name</label>
+                                <label htmlFor="template_name" className="block text-sm font-medium text-slate-700">Template Name</label>
                                 <div className="mt-1">
                                     <input
                                         type="text"
@@ -137,14 +139,14 @@ export default function AdminGlobalTemplateEdit() {
                                         id="template_name"
                                         value={formData.template_name}
                                         onChange={handleInputChange}
-                                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+                                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-slate-300 rounded-md py-2 px-3 border"
                                         required
                                     />
                                 </div>
                             </div>
                             
                             <div className="sm:col-span-3">
-                                <label htmlFor="global_category" className="block text-sm font-medium text-gray-700">Gallery Category</label>
+                                <label htmlFor="global_category" className="block text-sm font-medium text-slate-700">Gallery Category</label>
                                 <div className="mt-1">
                                     <input
                                         type="text"
@@ -153,7 +155,7 @@ export default function AdminGlobalTemplateEdit() {
                                         list="category_options"
                                         value={formData.global_category}
                                         onChange={handleInputChange}
-                                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+                                        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-slate-300 rounded-md py-2 px-3 border"
                                         placeholder="Select or type a category..."
                                     />
                                     <datalist id="category_options">
@@ -172,29 +174,29 @@ export default function AdminGlobalTemplateEdit() {
 
                         {/* Current Thumbnail Preview */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Current Thumbnail</label>
-                            <div className="mt-2 h-48 w-36 bg-gray-100 rounded border overflow-hidden">
+                            <label className="block text-sm font-medium text-slate-700">Current Thumbnail</label>
+                            <div className="mt-2 h-48 w-36 bg-slate-100 rounded border overflow-hidden">
                                 {template.pdf_template ? (
                                     <img src={template.pdf_template} alt="Thumbnail" className="h-full w-full object-cover" />
                                 ) : (
-                                    <div className="h-full w-full flex items-center justify-center text-gray-400">No Image</div>
+                                    <div className="h-full w-full flex items-center justify-center text-slate-400">No Image</div>
                                 )}
                             </div>
                         </div>
 
                         {/* New Thumbnail Upload */}
                         <div>
-                            <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700">Upload New Thumbnail</label>
+                            <label htmlFor="thumbnail" className="block text-sm font-medium text-slate-700">Upload New Thumbnail</label>
                             <div className="mt-1">
                                 <input
                                     type="file"
                                     id="thumbnail"
                                     accept="image/*,.pdf"
                                     onChange={handleFileChange}
-                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                                 />
                             </div>
-                            <p className="mt-2 text-sm text-gray-500">Upload an image or PDF (first page will be extracted).</p>
+                            <p className="mt-1 text-[13px] text-slate-500">Upload an image or PDF (first page will be extracted).</p>
                         </div>
 
                         {/* Status Toggle */}
@@ -206,18 +208,18 @@ export default function AdminGlobalTemplateEdit() {
                                     type="checkbox"
                                     checked={formData.is_published}
                                     onChange={handleInputChange}
-                                    className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                                    className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-slate-300 rounded"
                                 />
                             </div>
                             <div className="ml-3 text-sm">
-                                <label htmlFor="is_published" className="font-medium text-gray-700">Published to Gallery</label>
-                                <p className="text-gray-500">If unchecked, this template will be a Draft and hidden from regular users.</p>
+                                <label htmlFor="is_published" className="font-medium text-slate-700">Published to Gallery</label>
+                                <p className="text-slate-500">If unchecked, this template will be a Draft and hidden from regular users.</p>
                             </div>
                         </div>
 
                         {/* Version */}
                         <div>
-                            <label htmlFor="version" className="block text-sm font-medium text-gray-700">Version Label</label>
+                            <label htmlFor="version" className="block text-sm font-medium text-slate-700">Version Label</label>
                             <div className="mt-1">
                                 <input
                                     type="text"
@@ -225,21 +227,21 @@ export default function AdminGlobalTemplateEdit() {
                                     id="version"
                                     value={formData.version}
                                     onChange={handleInputChange}
-                                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+                                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-slate-300 rounded-md py-2 px-3 border"
                                 />
                             </div>
                         </div>
 
                         {/* Page Size */}
                         <div>
-                            <label htmlFor="page_size" className="block text-sm font-medium text-gray-700">Page Size</label>
+                            <label htmlFor="page_size" className="block text-sm font-medium text-slate-700">Page Size</label>
                             <div className="mt-1">
                                 <select
                                     id="page_size"
                                     name="page_size"
                                     value={formData.page_size}
                                     onChange={handleInputChange}
-                                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border bg-white"
+                                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-slate-300 rounded-md py-2 px-3 border bg-white"
                                 >
                                     <option value="A4">A4</option>
                                     <option value="Letter">Letter</option>
@@ -252,7 +254,7 @@ export default function AdminGlobalTemplateEdit() {
 
                         {/* Description */}
                         <div>
-                            <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+                            <label htmlFor="description" className="block text-sm font-medium text-slate-700">Description</label>
                             <div className="mt-1">
                                 <textarea
                                     id="description"
@@ -260,25 +262,25 @@ export default function AdminGlobalTemplateEdit() {
                                     rows={4}
                                     value={formData.description}
                                     onChange={handleInputChange}
-                                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+                                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-slate-300 rounded-md py-2 px-3 border"
                                     placeholder="Enter a description for this template..."
                                 />
                             </div>
                         </div>
 
-                        <div className="pt-5 border-t border-gray-200">
+                        <div className="pt-5 border-t border-slate-200">
                             <div className="flex justify-end gap-3">
                                 <button
                                     type="button"
                                     onClick={() => navigate("/admin/global-templates")}
-                                    className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                    className="bg-white py-2 px-4 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSaving}
-                                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                                    className="inline-flex justify-center py-2 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                                 >
                                     {isSaving ? 'Saving...' : 'Save Changes'}
                                 </button>

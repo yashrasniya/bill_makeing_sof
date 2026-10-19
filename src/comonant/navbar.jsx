@@ -26,7 +26,8 @@ import {
     Plus,
     ShoppingCart,
     Shield,
-    CreditCard
+    CreditCard,
+    BarChart3
 } from "lucide-react";
 
 function Navbar() {
@@ -91,17 +92,8 @@ function Navbar() {
         { title: "Customers", link: "/Customers", icon: <Users size={20} />, permission: "customer.manage" },
         { title: "Inventory", link: "/inventory", icon: <Package size={20} />, feature: "inventory", permission: "inventory.manage" },
         {
-            title: "Templates",
-            icon: <LayoutTemplate size={20} />,
-            permission: "template.manage",
-            subItems: [
-                { title: "My Invoice Templates", link: "/available-templates", feature: "template_designer" },
-                { title: "UI Config", link: "/UIConfig", feature: "template_designer" }
-            ]
-        },
-        {
             title: "Reports",
-            icon: <FileText size={20} />,
+            icon: <BarChart3 size={20} />,
             feature: "advanced_reports",
             permission: "report.view",
             subItems: [
@@ -113,7 +105,7 @@ function Navbar() {
         },
         {
             title: "Purchases",
-            icon: <Package size={20} />,
+            icon: <ShoppingCart size={20} />,
             feature: "purchases_invoice",
             subItems: [
                 { title: "Purchase Dashboard", link: "/purchase_invoices", permission: "invoice.view" },
@@ -122,21 +114,17 @@ function Navbar() {
             ]
         },
     ];
-    navItems = navItems
+    // drop items (and sub-items) the plan or the user's permissions don't allow, and groups left empty
+    const visibleItems = (items) => items
         .filter(itemVisible)
         .map(item => item.subItems
             ? { ...item, subItems: item.subItems.filter(itemVisible) }
             : item)
         .filter(item => !item.subItems || item.subItems.length > 0);
+    navItems = visibleItems(navItems);
 
-    if (userInfo?.is_company_admin) {
-        navItems.push({ title: "My Company", link: "/CompanyForm", icon: <Building size={20} /> });
-    }
     if (userInfo?.is_staff) {
         navItems.push({ title: "All Templates", link: "/templates", icon: <Files size={20} /> });
-    }
-    if (isTenantAdmin || userInfo?.is_company_admin) {
-        navItems.push({ title: "Access Control", link: "/access-control", icon: <Shield size={20} /> });
     }
     if (isProductOwner) {
         navItems.push({ title: "Platform Admin", link: "/platform-admin", icon: <CreditCard size={20} /> });
@@ -145,14 +133,67 @@ function Navbar() {
         navItems.push({ title: "Global Templates", link: "/admin/global-templates", icon: <Files size={20} /> });
     }
 
-    let settingsItems = [
-        { title: "Profile", link: "/profile", icon: <User size={20} /> },
+    // Configuration lives here, not in the main menu. Profile and Logout are in the account footer.
+    const settingsItems = visibleItems([
+        { title: "My Company", link: "/CompanyForm", icon: <Building size={20} />, hidden: !userInfo?.is_company_admin },
+        {
+            title: "Templates",
+            icon: <LayoutTemplate size={20} />,
+            permission: "template.manage",
+            subItems: [
+                { title: "My Invoice Templates", link: "/available-templates", feature: "template_designer" },
+                { title: "UI Config", link: "/UIConfig", feature: "template_designer" }
+            ]
+        },
+        { title: "Access Control", link: "/access-control", icon: <Shield size={20} />, hidden: !(isTenantAdmin || userInfo?.is_company_admin) },
         { title: "Plan & Billing", link: "/billing", icon: <CreditCard size={20} />, permission: "subscription.view" },
-        { title: "WA Settings", link: "/whatsapp-settings", icon: <MessageCircle size={20} />, permission: "whatsapp.manage" },
+        { title: "WhatsApp", link: "/whatsapp-settings", icon: <MessageCircle size={20} />, permission: "whatsapp.manage" },
         // { title: "WA Templates", link: "/whatsapp-templates", icon: <MessageSquare size={20} />, feature: "whatsapp_integration" },
-        { title: "Logout", link: "/logout", icon: <LogOut size={20} color="#ef4444" />, danger: true },
-    ];
-    settingsItems = settingsItems.filter(itemVisible);
+    ].filter(item => !item.hidden));
+
+    const accountName = userInfo?.name || userInfo?.username || "Account";
+    const [avatarFailed, setAvatarFailed] = useState(false);
+
+    const renderNavItem = (item, i) => (
+                <div key={i}>
+                    <div
+                        className={`nav-item ${!item.subItems && location.pathname === item.link ? 'active' : ''}`}
+                        onClick={() => item.subItems ? toggleMenu(item.title) : handleNavigate(item.link)}
+                        title={!isExpanded ? item.title : ""}
+                    >
+                        <div className="nav-icon">{item.icon}</div>
+                        {isExpanded && <span className="nav-text">{item.title}</span>}
+                        {isExpanded && item.subItems && (
+                            <div style={{ marginLeft: 'auto', color: '#64748b' }}>
+                                {openMenus[item.title] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Render sub items if expanded and menu is open */}
+                    {isExpanded && item.subItems && openMenus[item.title] && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '38px', marginTop: '4px', marginBottom: '8px' }}>
+                            {item.subItems.map((sub, j) => (
+                                <div 
+                                    key={j}
+                                    onClick={() => handleNavigate(sub.link)}
+                                    style={{
+                                        padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
+                                        fontSize: '13px', color: location.pathname === sub.link ? '#4f46e5' : '#64748b',
+                                        background: location.pathname === sub.link ? '#eef2ff' : 'transparent',
+                                        fontWeight: location.pathname === sub.link ? '600' : '500',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={e => { if (location.pathname !== sub.link) { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.background = '#f8fafc'; } }}
+                                    onMouseLeave={e => { if (location.pathname !== sub.link) { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'transparent'; } }}
+                                >
+                                    {sub.title}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+    );
 
     return (
         <>
@@ -204,61 +245,34 @@ function Navbar() {
             <div className="sidebar-content">
                 <div className="nav-section">
                     {isExpanded && <p className="section-title">Main Menu</p>}
-                    {navItems.map((item, i) => (
-                        <div key={i}>
-                            <div
-                                className={`nav-item ${!item.subItems && location.pathname === item.link ? 'active' : ''}`}
-                                onClick={() => item.subItems ? toggleMenu(item.title) : handleNavigate(item.link)}
-                                title={!isExpanded ? item.title : ""}
-                            >
-                                <div className="nav-icon">{item.icon}</div>
-                                {isExpanded && <span className="nav-text">{item.title}</span>}
-                                {isExpanded && item.subItems && (
-                                    <div style={{ marginLeft: 'auto', color: '#64748b' }}>
-                                        {openMenus[item.title] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                    </div>
-                                )}
-                            </div>
-                            
-                            {/* Render sub items if expanded and menu is open */}
-                            {isExpanded && item.subItems && openMenus[item.title] && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '38px', marginTop: '4px', marginBottom: '8px' }}>
-                                    {item.subItems.map((sub, j) => (
-                                        <div 
-                                            key={j}
-                                            onClick={() => handleNavigate(sub.link)}
-                                            style={{
-                                                padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
-                                                fontSize: '13px', color: location.pathname === sub.link ? '#4f46e5' : '#64748b',
-                                                background: location.pathname === sub.link ? '#eef2ff' : 'transparent',
-                                                fontWeight: location.pathname === sub.link ? '600' : '500',
-                                                transition: 'all 0.2s'
-                                            }}
-                                            onMouseEnter={e => { if (location.pathname !== sub.link) { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.background = '#f8fafc'; } }}
-                                            onMouseLeave={e => { if (location.pathname !== sub.link) { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'transparent'; } }}
-                                        >
-                                            {sub.title}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                    {navItems.map(renderNavItem)}
                 </div>
 
                 <div className="nav-section mt-auto">
                     {isExpanded && <p className="section-title">Settings</p>}
-                    {settingsItems.map((item, i) => (
+                    {settingsItems.map(renderNavItem)}
+                    <div className={`account-footer ${isExpanded ? '' : 'collapsed'}`}>
                         <div
-                            key={i}
-                            className={`nav-item ${item.danger ? 'danger' : ''} ${location.pathname === item.link ? 'active' : ''}`}
-                            onClick={() => handleNavigate(item.link)}
-                            title={!isExpanded ? item.title : ""}
+                            className={`account-info ${location.pathname === '/profile' ? 'active' : ''}`}
+                            onClick={() => handleNavigate("/profile")}
+                            title={isExpanded ? "" : `${accountName} - Profile`}
                         >
-                            <div className="nav-icon">{item.icon}</div>
-                            {isExpanded && <span className="nav-text" style={{ color: item.danger ? '#ef4444' : 'inherit' }}>{item.title}</span>}
+                            {userInfo?.profile && !avatarFailed ? (
+                                <img className="account-avatar" src={userInfo.profile} alt="" onError={() => setAvatarFailed(true)} />
+                            ) : (
+                                <div className="account-avatar account-initial">{accountName.trim().charAt(0).toUpperCase()}</div>
+                            )}
+                            {isExpanded && (
+                                <div className="account-text">
+                                    <span className="account-name">{accountName}</span>
+                                    <span className="account-sub">View profile</span>
+                                </div>
+                            )}
                         </div>
-                    ))}
+                        <button className="account-logout" onClick={() => handleNavigate("/logout")} title="Logout" aria-label="Logout">
+                            <LogOut size={18} color="#ef4444" />
+                        </button>
+                    </div>
                     {isExpanded && typeof __APP_VERSION__ !== 'undefined' && (
                         <div style={{ marginTop: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '10px' }}>
                             Build: {__APP_VERSION__}

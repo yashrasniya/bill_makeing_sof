@@ -54,7 +54,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
         <>
             {/* ── Inline selector row ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 220px', minWidth: '220px' }}>
-            <label style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <label htmlFor={idKey} style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {formatHeaderTitle(label)}
             </label>
             <div style={{ display: 'flex', background: '#f8fafc', borderRadius: '12px', border: '1.5px solid #e2e8f0', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
@@ -148,7 +148,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                         {/* Fields */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
                                     {formatHeaderTitle(label)} Name *
                                 </label>
                                 <input
@@ -162,7 +162,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                                 />
                             </div>
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
                                     {formatHeaderTitle("Mobile Number")}
                                 </label>
                                 <input
@@ -176,7 +176,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                                 />
                             </div>
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '5px' }}>
                                     {formatHeaderTitle("Address")}
                                 </label>
                                 <input
@@ -199,7 +199,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                                 style={{
                                     padding: '10px 20px', borderRadius: '10px',
                                     border: '1.5px solid #e2e8f0', background: 'white',
-                                    color: '#374151', fontSize: '14px', fontWeight: 700,
+                                    color: '#334155', fontSize: '14px', fontWeight: 700,
                                     cursor: 'pointer',
                                 }}
                             >
@@ -213,7 +213,7 @@ export default function CustomerDropdown({ companyName, InvoiceData, setRefresh,
                                     padding: '10px 24px', borderRadius: '10px',
                                     border: 'none',
                                     background: saving || !newCustomer.name
-                                        ? 'linear-gradient(135deg, #a5b4fc, #c4b5fd)'
+                                        ? 'linear-gradient(135deg, #c7d2fe, #c7d2fe)'
                                         : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                                     color: 'white', fontSize: '14px', fontWeight: 700,
                                     cursor: saving || !newCustomer.name ? 'not-allowed' : 'pointer',

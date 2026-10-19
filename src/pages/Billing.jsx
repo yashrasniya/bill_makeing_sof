@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import PageIcon from '../comonant/PageIcon';
 import { useDispatch, useSelector } from "react-redux";
 import { clientToken } from "@/axios";
 import { fetchAccess } from "@/store/accessSlice";
@@ -65,11 +66,11 @@ function useRazorpayScript() {
 /* ------------------------------------------------------------------ badges */
 function StatusPill({ status }) {
     const map = {
-        active: ["#065f46", "#d1fae5", "Active"],
-        trialing: ["#1e40af", "#dbeafe", "Trial"],
+        active: ["#166534", "#dcfce7", "Active"],
+        trialing: ["#4338ca", "#eef2ff", "Trial"],
         past_due: ["#92400e", "#fef3c7", "Payment failed"],
-        canceled: ["#7f1d1d", "#fee2e2", "Cancelled"],
-        expired: ["#7f1d1d", "#fee2e2", "Expired"],
+        canceled: ["#991b1b", "#fee2e2", "Cancelled"],
+        expired: ["#991b1b", "#fee2e2", "Expired"],
     };
     const [color, background, label] = map[status] || ["#334155", "#f1f5f9", status || "—"];
     return (
@@ -327,8 +328,8 @@ export default function Billing() {
 
     return (
         <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <CreditCard size={22} color="#4f46e5" />
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 4 }}>
+                <PageIcon icon={CreditCard} />
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>
                     Plan &amp; Billing
                 </h1>
@@ -363,13 +364,13 @@ export default function Billing() {
                 </div>
             )}
             {notice && (
-                <div style={{ ...card, background: "#ecfdf5", borderColor: "#a7f3d0", color: "#065f46", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <div style={{ ...card, background: "#dcfce7", borderColor: "#dcfce7", color: "#166534", display: "flex", gap: 10, alignItems: "flex-start" }}>
                     <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 1 }} />
                     <div style={{ fontSize: 13 }}>{notice}</div>
                 </div>
             )}
             {scriptState === "error" && (
-                <div style={{ ...card, background: "#fffbeb", borderColor: "#fde68a", color: "#92400e", fontSize: 13 }}>
+                <div style={{ ...card, background: "#fef3c7", borderColor: "#fef3c7", color: "#92400e", fontSize: 13 }}>
                     Razorpay Checkout could not load — usually an ad-blocker or a corporate proxy.
                     Allow <code>checkout.razorpay.com</code> and reload before subscribing.
                 </div>
@@ -413,7 +414,7 @@ export default function Billing() {
                 </div>
 
                 {entitlement?.status === "past_due" && (
-                    <div style={{ marginTop: 14, background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", color: "#92400e", fontSize: 13, display: "flex", gap: 8 }}>
+                    <div style={{ marginTop: 14, background: "#fef3c7", border: "1px solid #fef3c7", borderRadius: 8, padding: "10px 14px", color: "#92400e", fontSize: 13, display: "flex", gap: 8 }}>
                         <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
                         <span>
                             Your last payment did not go through. Razorpay will retry automatically.
@@ -423,7 +424,7 @@ export default function Billing() {
                 )}
 
                 {scheduled && (
-                    <div style={{ marginTop: 14, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "10px 14px", color: "#1e40af", fontSize: 13, display: "flex", gap: 8 }}>
+                    <div style={{ marginTop: 14, background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 8, padding: "10px 14px", color: "#4338ca", fontSize: 13, display: "flex", gap: 8 }}>
                         <Clock size={16} style={{ flexShrink: 0, marginTop: 1 }} />
                         <span>
                             Scheduled change to <strong>{scheduled.to_plan_name}</strong> on{" "}
@@ -447,7 +448,7 @@ export default function Billing() {
                                 }}>
                             {p === "monthly" ? "Monthly" : "Yearly"}
                             {p === "yearly" && (
-                                <span style={{ marginLeft: 6, color: "#059669", fontSize: 11 }}>save ~17%</span>
+                                <span style={{ marginLeft: 6, color: "#16a34a", fontSize: 11 }}>save ~17%</span>
                             )}
                         </button>
                     ))}
@@ -502,7 +503,7 @@ export default function Billing() {
                                 {plan.features.map((f) => (
                                     <li key={f.code}
                                         style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, color: "#334155", padding: "3px 0" }}>
-                                        <Check size={15} color="#059669" style={{ flexShrink: 0, marginTop: 2 }} />
+                                        <Check size={15} color="#16a34a" style={{ flexShrink: 0, marginTop: 2 }} />
                                         <span>
                                             {f.name}
                                             {f.limits && Object.keys(f.limits).length > 0 && (
@@ -575,8 +576,8 @@ export default function Billing() {
                                     <td style={td}>{p.method || "—"}</td>
                                     <td style={td}>
                                         <span style={{
-                                            color: p.status === "captured" ? "#065f46" : "#991b1b",
-                                            background: p.status === "captured" ? "#d1fae5" : "#fee2e2",
+                                            color: p.status === "captured" ? "#166534" : "#991b1b",
+                                            background: p.status === "captured" ? "#dcfce7" : "#fee2e2",
                                             borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 600,
                                         }}>
                                             {p.status}

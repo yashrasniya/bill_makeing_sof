@@ -8,11 +8,11 @@ const styles = {
     maxWidth: '1200px',
     overflow: 'scroll',
     height: '1684px',
-    fontFamily: 'Arial, sans-serif'
+    fontFamily: ''Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif'
   },
   section: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e1e1e1',
+    border: '1px solid #e2e8f0',
     borderRadius: '8px',
     padding: '20px',
     marginBottom: '20px'
@@ -21,12 +21,12 @@ const styles = {
     fontSize: '18px',
     fontWeight: 'bold',
     marginBottom: '15px',
-    color: '#333'
+    color: '#0f172a'
   },
   fieldGroup: {
     marginBottom: '15px',
     padding: '10px',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f8fafc',
     borderRadius: '4px',
     position: 'relative'
   },
@@ -34,7 +34,7 @@ const styles = {
     fontSize: '14px',
     fontWeight: 'bold',
     marginBottom: '8px',
-    color: '#555'
+    color: '#475569'
   },
   inputGroup: {
     display: 'grid',
@@ -46,12 +46,12 @@ const styles = {
     display: 'block',
     fontSize: '12px',
     marginBottom: '4px',
-    color: '#666'
+    color: '#64748b'
   },
   input: {
     width: '100%',
     padding: '8px',
-    border: '1px solid #ddd',
+    border: '1px solid #e2e8f0',
     borderRadius: '4px',
     fontSize: '14px'
   },
@@ -65,11 +65,11 @@ const styles = {
     fontWeight: 'bold'
   },
   addButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#16a34a',
     color: 'white'
   },
   removeButton: {
-    backgroundColor: '#f44336',
+    backgroundColor: '#dc2626',
     color: 'white',
     position: 'absolute',
     top: '5px',
@@ -79,7 +79,7 @@ const styles = {
   },
   toolbar: {
     padding: '10px',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f1f5f9',
     borderRadius: '4px',
     marginBottom: '20px',
     display: 'flex',
@@ -93,7 +93,7 @@ const styles = {
   contextMenu: {
     position: 'absolute',
     backgroundColor: 'white',
-    border: '1px solid #ccc',
+    border: '1px solid #cbd5e1',
     borderRadius: '4px',
     padding: '5px',
     boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
@@ -137,10 +137,10 @@ const YAMLEditor = () => {
     const ctx = canvas.getContext('2d');
 
     // Create a simple grid background
-    ctx.fillStyle = '#f8f8f8';
+    ctx.fillStyle = '#f8fafc';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = '#e0e0e0';
+    ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
 
     // Draw grid
@@ -251,7 +251,7 @@ const YAMLEditor = () => {
 
       // Draw selection outline
       if (isSelected) {
-        ctx.strokeStyle = '#007bff';
+        ctx.strokeStyle = '#4f46e5';
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
 
@@ -275,7 +275,7 @@ const YAMLEditor = () => {
             { x: (x + width + 3) * n, y: (842 - y + 3) * n }, // Bottom-right
           ];
 
-          ctx.fillStyle = '#007bff';
+          ctx.fillStyle = '#4f46e5';
           handles.forEach(handle => {
             ctx.fillRect(handle.x - 3, handle.y - 3, 6, 6);
           });
@@ -791,7 +791,7 @@ const YAMLEditor = () => {
             <button
                 style={{
                   ...styles.button,
-                  backgroundColor: mode === 'select' ? '#007bff' : '#6c757d',
+                  backgroundColor: mode === 'select' ? '#4f46e5' : '#64748b',
                   color: 'white'
                 }}
                 onClick={() => setMode('select')}
@@ -801,14 +801,14 @@ const YAMLEditor = () => {
             <button
                 style={{
                   ...styles.button,
-                  backgroundColor: mode === 'add' ? '#007bff' : '#6c757d',
+                  backgroundColor: mode === 'add' ? '#4f46e5' : '#64748b',
                   color: 'white'
                 }}
                 onClick={() => setMode('add')}
             >
               Add Mode
             </button>
-            <span style={{ fontSize: '12px', color: '#666' }}>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
             {mode === 'add' ? 'Click on canvas to add element' : 'Click to select, drag to move, right-click for options'}
           </span>
           </div>
@@ -831,8 +831,8 @@ const YAMLEditor = () => {
               return (
                   <div key={key} style={{
                     ...styles.fieldGroup,
-                    backgroundColor: isSelected ? '#e3f2fd' : '#f9f9f9',
-                    border: isSelected ? '2px solid #007bff' : '1px solid #ddd'
+                    backgroundColor: isSelected ? '#eef2ff' : '#f8fafc',
+                    border: isSelected ? '2px solid #4f46e5' : '1px solid #e2e8f0'
                   }}>
                     <button
                         style={styles.removeButton}
@@ -885,8 +885,8 @@ const YAMLEditor = () => {
               return (
                   <div key={key} style={{
                     ...styles.fieldGroup,
-                    backgroundColor: isSelected ? '#e8f5e8' : '#f9f9f9',
-                    border: isSelected ? '2px solid #28a745' : '1px solid #ddd'
+                    backgroundColor: isSelected ? '#dcfce7' : '#f8fafc',
+                    border: isSelected ? '2px solid #16a34a' : '1px solid #e2e8f0'
                   }}>
                     <button
                         style={styles.removeButton}
@@ -930,8 +930,8 @@ const YAMLEditor = () => {
               return (
                   <div key={key} style={{
                     ...styles.fieldGroup,
-                    backgroundColor: isSelected ? '#ffeaea' : '#f9f9f9',
-                    border: isSelected ? '2px solid #dc3545' : '1px solid #ddd'
+                    backgroundColor: isSelected ? '#fef2f2' : '#f8fafc',
+                    border: isSelected ? '2px solid #dc2626' : '1px solid #e2e8f0'
                   }}>
                     <button
                         style={styles.removeButton}
@@ -974,7 +974,7 @@ const YAMLEditor = () => {
               ref={canvasRef}
               style={{
                 backgroundColor: "white",
-                border: '1px solid #ccc',
+                border: '1px solid #cbd5e1',
                 cursor: mode === 'add' ? 'crosshair' : 'default'
               }}
           />
@@ -993,7 +993,7 @@ const YAMLEditor = () => {
                     style={{
                       padding: '8px 12px',
                       cursor: 'pointer',
-                      borderBottom: '1px solid #eee'
+                      borderBottom: '1px solid #f1f5f9'
                     }}
                     onClick={() => {
                       duplicateElement(contextMenu.element.section, contextMenu.element.index);
@@ -1006,7 +1006,7 @@ const YAMLEditor = () => {
                     style={{
                       padding: '8px 12px',
                       cursor: 'pointer',
-                      color: '#dc3545'
+                      color: '#dc2626'
                     }}
                     onClick={() => {
                       removeElement(contextMenu.element.section, contextMenu.element.index);

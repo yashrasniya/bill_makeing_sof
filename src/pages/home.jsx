@@ -1,4 +1,5 @@
 import Navbar from "../comonant/navbar.jsx";
+import { VerifyEmailBanner, FirstRunChecklist, SkeletonKpis } from "../comonant/FirstRun.jsx";
 import { useState, useEffect, useMemo } from "react";
 import { clientToken } from "@/axios";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +26,7 @@ function money(n, { short = false } = {}) {
 }
 
 const STATUS_STYLE = {
-    paid: { bg: '#dcfce7', fg: '#15803d', label: 'Paid' },
+    paid: { bg: '#dcfce7', fg: '#166534', label: 'Paid' },
     partially_paid: { bg: '#fef3c7', fg: '#b45309', label: 'Partial' },
     unpaid: { bg: '#e0e7ff', fg: '#4338ca', label: 'Unpaid' },
     overdue: { bg: '#fee2e2', fg: '#b91c1c', label: 'Overdue' },
@@ -138,7 +139,7 @@ function QuickAction({ icon, label, onClick, accent }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '20px',
             }}>{icon}</div>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#374151', whiteSpace: 'nowrap' }}>{label}</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>{label}</span>
         </button>
     );
 }
@@ -198,7 +199,7 @@ function TrendChart({ data }) {
                         <div style={{
                             width: '100%', maxWidth: '46px', height: `${h}px`, borderRadius: '8px 8px 4px 4px',
                             background: isLast
-                                ? 'linear-gradient(180deg, #4f46e5 0%, #6d28d9 100%)'
+                                ? 'linear-gradient(180deg, #4f46e5 0%, #4338ca 100%)'
                                 : '#e0e7ff',
                             transition: 'height 0.6s ease',
                         }} />
@@ -238,6 +239,7 @@ function Home() {
     const [extras, setExtras] = useState(EMPTY_EXTRAS);
     const [range, setRange] = useState('this_month');
     const [loaded, setLoaded] = useState(false);
+    const [onboarding, setOnboarding] = useState(null);
 
     const navigate = useNavigate();
     const { userInfo } = useSelector(s => s.user);
@@ -268,6 +270,12 @@ function Home() {
         }).catch(() => { });
         return () => { alive = false; };
     }, [range]);
+
+    useEffect(() => {
+        let alive = true;
+        clientToken.get('onboarding/').then(r => { if (alive) setOnboarding(r.data); }).catch(() => { });
+        return () => { alive = false; };
+    }, []);
 
     const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -337,6 +345,8 @@ function Home() {
                     </button>}
                 </div>
 
+                <VerifyEmailBanner />
+
                 {/* ── Range selector ── */}
                 {showKpis && !isNewUser && (
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -360,31 +370,12 @@ function Home() {
                     </div>
                 )}
 
-                {/* ── First-run empty state (replaces the zero-filled cards) ── */}
+                {/* ── First-run: setup checklist + skeleton stats (mirrors the mobile Home) ── */}
                 {isNewUser && (
-                    <div style={{
-                        background: 'white', borderRadius: '20px', padding: '48px 24px',
-                        textAlign: 'center', marginBottom: '28px',
-                        boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
-                        animation: 'fadeUp 0.5s ease 0.05s both',
-                    }}>
-                        <div style={{ fontSize: '44px', marginBottom: '12px' }}>🧾</div>
-                        <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b', marginBottom: '8px' }}>
-                            No invoices yet
-                        </h2>
-                        <p style={{ fontSize: '14px', color: '#64748b', maxWidth: '420px', margin: '0 auto 20px' }}>
-                            Your sales, GST and outstanding payments will show up here as soon as
-                            you raise your first bill.
-                        </p>
-                        {can('invoice.create') && (
-                            <button onClick={() => navigate('/newBill')} style={{
-                                background: '#4f46e5', color: 'white', border: 'none',
-                                padding: '12px 28px', borderRadius: '14px', cursor: 'pointer',
-                                fontSize: '14px', fontWeight: 800,
-                                boxShadow: '0 4px 16px rgba(79,70,229,0.35)',
-                            }}>Create your first bill</button>
-                        )}
-                    </div>
+                    <>
+                        <FirstRunChecklist data={onboarding} can={can} onDismissed={setOnboarding} />
+                        <SkeletonKpis />
+                    </>
                 )}
 
                 {/* ── KPI Cards ── */}
@@ -395,7 +386,7 @@ function Home() {
                         value={money(info.month_total_final_amount)}
                         pct={info.percentage_change}
                         sub={`${info.invoices_this_month_count || 0} invoice${info.invoices_this_month_count === 1 ? '' : 's'} · prev ${info.invoices_prv_month_count || 0}`}
-                        color="linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%)"
+                        color="linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)"
                         delay={0.05}
                         onClick={() => goToInvoices()}
                     />
@@ -405,7 +396,7 @@ function Home() {
                         value={money(info.receivable_amount)}
                         title="Billed but not yet received, net of part-payments"
                         sub={`${info.receivable_count || 0} bill${info.receivable_count === 1 ? '' : 's'} awaiting payment`}
-                        color="linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)"
+                        color="linear-gradient(135deg, #4f46e5 0%, #4f46e5 100%)"
                         delay={0.1}
                         onClick={() => goToInvoices('status_group=open')}
                     />
@@ -420,8 +411,8 @@ function Home() {
                             ? `${info.overdue_count} bill${info.overdue_count === 1 ? '' : 's'} unpaid ${info.overdue_after_days}+ days — chase these`
                             : 'Nothing past due. Nice.'}
                         color={info.overdue_amount > 0
-                            ? 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)'
-                            : 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}
+                            ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+                            : 'linear-gradient(135deg, #16a34a 0%, #16a34a 100%)'}
                         delay={0.15}
                         onClick={() => goToInvoices('status_group=overdue')}
                     />
@@ -433,7 +424,7 @@ function Home() {
                         sub={nextGst
                             ? `${nextGst.form} due in ${nextGst.days_left} day${nextGst.days_left === 1 ? '' : 's'}`
                             : 'Output tax on sales'}
-                        color="linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                        color="linear-gradient(135deg, #b45309 0%, #b45309 100%)"
                         delay={0.2}
                         onClick={canReport ? () => navigate('/gst-summary') : undefined}
                     />
@@ -450,13 +441,24 @@ function Home() {
                         Quick Actions
                     </p>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {isNewUser ? (
+                            <>
+                                {can('customer.manage') && <QuickAction icon="👥" label="Add Customer" onClick={() => navigate('/Customers')} accent="#4f46e5" />}
+                                {canInventory && <QuickAction icon="📦" label="Add Item" onClick={() => navigate('/inventory')} accent="#16a34a" />}
+                                {hasFeat('template_designer') && can('template.manage') && <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />}
+                                {isAdmin && <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#b45309" />}
+                            </>
+                        ) : (
+                            <>
                         {can('invoice.create') && <QuickAction icon="➕" label="New Bill" onClick={() => navigate('/newBill')} accent="#4f46e5" />}
                         {hasFeat('template_designer') && can('template.manage') && <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />}
-                        {can('customer.manage') && <QuickAction icon="👥" label="Customers" onClick={() => navigate('/Customers')} accent="#0ea5e9" />}
-                        {can('invoice.view') && <QuickAction icon="📂" label="All Invoices" onClick={() => navigate('/bill_list')} accent="#f43f5e" />}
-                        {canReport && <QuickAction icon="📊" label="GST Summary" onClick={() => navigate('/gst-summary')} accent="#10b981" />}
-                        {isAdmin && <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#f59e0b" />}
-                        <QuickAction icon="👤" label="Profile" onClick={() => navigate('/profile')} accent="#ec4899" />
+                        {can('customer.manage') && <QuickAction icon="👥" label="Customers" onClick={() => navigate('/Customers')} accent="#4f46e5" />}
+                        {can('invoice.view') && <QuickAction icon="📂" label="All Invoices" onClick={() => navigate('/bill_list')} accent="#dc2626" />}
+                        {canReport && <QuickAction icon="📊" label="GST Summary" onClick={() => navigate('/gst-summary')} accent="#16a34a" />}
+                        {isAdmin && <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#b45309" />}
+                        <QuickAction icon="👤" label="Profile" onClick={() => navigate('/profile')} accent="#94a3b8" />
+                            </>
+                        )}
                     </div>
                 </div>
 

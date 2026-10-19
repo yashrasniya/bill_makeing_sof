@@ -18,7 +18,7 @@ const focOut = e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.box
 function FormField({ label, id, name, type = 'text', value, onChange }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label htmlFor={id} style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <label htmlFor={id} style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {label}
             </label>
             <input
@@ -117,8 +117,8 @@ const Profile = () => {
             {toast && (
                 <div style={{
                     position: 'fixed', top: '80px', right: '20px', zIndex: 9999,
-                    background: toast.type === 'success' ? '#f0fdf4' : '#fef2f2',
-                    border: `1px solid ${toast.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+                    background: toast.type === 'success' ? '#dcfce7' : '#fef2f2',
+                    border: `1px solid ${toast.type === 'success' ? '#dcfce7' : '#fecaca'}`,
                     color: toast.type === 'success' ? '#166534' : '#dc2626',
                     padding: '12px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '14px',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '8px',
@@ -235,7 +235,7 @@ const Profile = () => {
 
                             {/* Gender dropdown */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                <label htmlFor="gender" style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                <label htmlFor="gender" style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Gender
                                 </label>
                                 <select
@@ -260,7 +260,7 @@ const Profile = () => {
                             style={{
                                 padding: '12px 32px', fontSize: '15px', fontWeight: 700,
                                 color: 'white', border: 'none', borderRadius: '12px', cursor: saving ? 'not-allowed' : 'pointer',
-                                background: saving ? 'linear-gradient(135deg,#a5b4fc,#c4b5fd)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                                background: saving ? 'linear-gradient(135deg,#c7d2fe,#c7d2fe)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
                                 boxShadow: '0 6px 20px rgba(79,70,229,0.35)',
                                 transition: 'transform 0.2s, box-shadow 0.2s',
                                 display: 'flex', alignItems: 'center', gap: '8px',

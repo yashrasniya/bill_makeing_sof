@@ -1,22 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Urbanist&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Poppins&display=swap");
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap');
-
-:root{
-    background: linear-gradient(111deg, #75FFE8 0%, #35A29F 74.64%);
-    --primary-color-6:    linear-gradient(111deg, #a7fdf0 0%, #55c2bf);
-    --primary-color-1: #0B666A;
-    --primary-color-2: #35A29F;
-    --primary-color-3: #97FEED;
-    --primary-color-4: #071952;
-    --primary-color-5: #ffffff;
-
-}
+/* Colors, fonts and shape come from tokens.css (DESIGN_SYSTEM.md §12). */
 
 body {
     margin: 0px;
     padding: 0px;
-    background: radial-gradient(198.82% 131.95% at 0.94% 12.84%, #C5FCF3 0%, #91FEEC 100%);
+    background: var(--page-bg);
     position: relative;
 }
 
@@ -56,28 +43,47 @@ p ,h1, h2, h3, h4, h5, h6 {
 
 }
 .button{
-    background-color: #071952;
-    color: white;
-    border-radius: 0.8vw;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.3rem;
-    padding: 0.8rem 1rem;
-    display: flex;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: var(--radius-lg);
+    background: var(--brand-gradient);
+    color: #fff;
+    font: 700 14px var(--font);
+    white-space: nowrap;
     cursor: pointer;
-
+    box-shadow: var(--shadow-brand);
+    transition: transform .15s, box-shadow .15s;
+}
+.button:hover{
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-brand-hover);
+}
+.button.delete{
+    background: var(--danger-gradient);
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.28);
 }
 .button-line{
-    border: 2pt solid #071952;
-    background-color: rgb(0,0,0,0);
-    border-radius: 0.5vw;
-    font-size: 1.1vw;
-
-    padding: 1vh 1vw;
-
-    color: #071952;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--tint-300);
+    border-radius: var(--radius-lg);
+    background: var(--tint-100);
+    color: var(--brand-dark);
+    font: 700 14px var(--font);
+    white-space: nowrap;
     cursor: pointer;
-
+    transition: background .15s;
+}
+.button-line:hover{
+    background: var(--tint-200);
 }
 .check-box{
     width: 20px;
@@ -91,16 +97,6 @@ p ,h1, h2, h3, h4, h5, h6 {
     margin-top: 20px;
 }
 
-@media (max-width: 700px) {
-    .button {
-        font-size: 0.9rem;
-        border-radius: 1.2vw;
-        text-align: center;
-    }
-
-
-
-}
 input::placeholder{
-    color: #8d8d8d;
+    color: var(--text-faint);
 }

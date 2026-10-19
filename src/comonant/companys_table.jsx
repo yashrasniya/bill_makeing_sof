@@ -3,10 +3,13 @@ import { clientToken } from "/src/axios";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { Plus, FileText, BookOpen, Trash2, Users } from "lucide-react";
 
 // Shared input focus handlers
 const onFocusIn = e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 3px rgba(79,70,229,0.12)'; e.target.style.background = 'white'; };
 const onFocusOut = e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; e.target.style.background = '#f8fafc'; };
+
+const DEFAULT_FILTERS = { s: "", ordering: "-id", page_size: 10, state: "", has_gst: "" };
 
 const EMPTY = { name: '', address: '', gst_number: '', state: '', state_code: '', phone_number: '' };
 
@@ -20,6 +23,39 @@ const day = (iso) => (iso
     ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
     : '—');
 
+// Customer names and addresses are free text that gets written into a new
+// window for the PDF / print views, so they must be escaped first.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+
+// Raw value for CSV / JSON. `row[k] || ''` blanked a genuine 0 (a customer
+// with no bills exported an empty Bills cell); only null/undefined are blank.
+const raw = (row, key) => row[key] ?? '';
+
+// A cell starting with = + - @ is run as a formula by Excel / Sheets, so a
+// customer named "=HYPERLINK(...)" would execute when someone opens the export.
+const csvCell = (row, key) => {
+    let v = String(raw(row, key));
+    if (typeof row[key] === 'string' && /^[=+\-@\t\r]/.test(v)) v = `'${v}`;
+    return `"${v.replace(/"/g, '""')}"`;
+};
+
+// Compact rupees for the list ("₹5.28 L"); the detail panel shows the exact figure.
+const moneyShort = (v) => {
+    const n = Number(v) || 0, a = Math.abs(n);
+    if (a >= 1e7) return `₹${(n / 1e7).toFixed(2)} Cr`;
+    if (a >= 1e5) return `₹${(n / 1e5).toFixed(2)} L`;
+    return money(n);
+};
+
+// first letters of the first two words that start with a letter or digit ("Patel & Sons" → "PS")
+const initials = (name) => (String(name || '').match(/[\p{L}\p{N}]+/gu) || ['?'])
+    .slice(0, 2).map(w => w.charAt(0)).join('').toUpperCase();
+
+// what the customer still owes: red when positive, green when they've overpaid
+const owedColor = (v) => (Number(v) > 0 ? '#dc2626' : Number(v) < 0 ? '#16a34a' : '#0f172a');
+
 const ACTION_BTN = {
     padding: '6px 12px', borderRadius: '9px', border: '1px solid #c7d2fe',
     background: '#eef2ff', color: '#4338ca', fontSize: '12px', fontWeight: 700,
@@ -29,14 +65,14 @@ const ACTION_BTN = {
 // Billing stats ride along on the customers list only when the plan allows,
 // so every export builds its columns from these two sets rather than
 // hard-coding a shape the response might not have.
-const STAT_KEYS = ['invoice_count', 'total_billed', 'last_invoice_date'];
-const STAT_HEADERS = ['Bills', 'Total Billed', 'Last Bill'];
+const STAT_KEYS = ['invoice_count', 'total_billed', 'outstanding_balance', 'last_invoice_date'];
+const STAT_HEADERS = ['Bills', 'Total Billed', 'Outstanding', 'Last Bill'];
 
 // Printed cell value. `row[k] || '—'` would turn a genuine zero into an em
 // dash, which reads as "we don't know" instead of "never billed".
 const cell = (row, key) => {
     const v = row[key];
-    if (key === 'total_billed') return money(v);
+    if (key === 'total_billed' || key === 'outstanding_balance') return money(v);
     if (key === 'last_invoice_date') return day(v);
     if (key === 'invoice_count') return String(Number(v) || 0);
     return (v === 0 || v) ? v : '—';
@@ -123,8 +159,13 @@ function CompanysTable() {
     // one URL so the table and every export agree on what they asked for
     const exportUrl = `companies/?page_size=9999${canStats ? '&with_stats=1' : ''}`;
     const [table_content, set_table_content] = useState([]);
-    const [filters, setFilters] = useState({ s: "", ordering: "-id", page_size: 10 });
+    const [filters, setFilters] = useState(DEFAULT_FILTERS);
     const [page, setPage] = useState(1);
+    const [searchText, setSearchText] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [activeId, setActiveId] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false); // phones: detail is a full-screen sheet
+    const [total, setTotal] = useState(0);
     const [showFilters, setShowFilters] = useState(false);
     const [urls, set_urls] = useState({});
     const [checkbox, setCheckBox] = useState({});
@@ -140,26 +181,41 @@ function CompanysTable() {
 
     useEffect(() => { setPage(1); }, [filters]);
 
+    // one request per pause in typing, not one per keystroke
     useEffect(() => {
+        const t = setTimeout(() => setFilters(prev => (prev.s === searchText ? prev : { ...prev, s: searchText })), 300);
+        return () => clearTimeout(t);
+    }, [searchText]);
+
+    useEffect(() => {
+        let stale = false; // a slower earlier response must not overwrite a newer one
         const params = new URLSearchParams();
-        if (filters.s) params.set('search', filters.s);
+        // this API's search param is `s` (REST_FRAMEWORK SEARCH_PARAM); `search` is ignored
+        if (filters.s) params.set('s', filters.s);
         if (filters.ordering) params.set('ordering', filters.ordering);
         if (filters.page_size) params.set('page_size', filters.page_size);
+        if (filters.state) params.set('state', filters.state);
+        if (filters.has_gst) params.set('has_gst', filters.has_gst);
         if (page > 1) params.set('page', page);
         if (canStats) params.set('with_stats', '1');
 
+        setLoading(true);
         clientToken.get(`companies/?${params.toString()}`).then(response => {
+            if (stale) return;
             if (response.status === 200) {
                 set_table_content(response.data.results);
+                setTotal(response.data.count ?? response.data.results.length);
                 set_urls({ next: !!response.data.next, previous: !!response.data.previous });
                 let a = {};
                 response.data.results.forEach(r => { a[r.id] = false; });
                 setCheckBox(a);
             }
         }).catch(error => {
+            if (stale) return;
             console.log(error);
             setPageError(`Failed to load customers. ${error.message || ''}`);
-        });
+        }).finally(() => { if (!stale) setLoading(false); });
+        return () => { stale = true; };
     }, [filters, page, refresh, canStats]);
 
     // Close export dropdown when clicking outside
@@ -201,6 +257,7 @@ function CompanysTable() {
     const handelUpdate = () => handelsave(`companies/${company_data.id}/`);
 
     const handelDelete = (id) => {
+        if (!window.confirm('Delete this customer? This cannot be undone.')) return;
         clientToken.delete(`companies/${id}/`).then(response => {
             if (response.status === 204) {
                 closePopup();
@@ -213,14 +270,20 @@ function CompanysTable() {
         });
     };
 
-    const handelMultiDelete = () => {
+    const handelMultiDelete = async () => {
         const selectedIds = Object.keys(checkbox).filter(id => checkbox[id]);
         if (selectedIds.length === 0) {
             setPageError('Please select at least one customer to delete.');
             return;
         }
-        if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected customer(s)?`)) {
-            selectedIds.forEach(id => handelDelete(id));
+        if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected customer(s)?`)) return;
+        // one summary and one reload, instead of N independent requests that each
+        // report (or hide) their own failure
+        const results = await Promise.allSettled(selectedIds.map(id => clientToken.delete(`companies/${id}/`)));
+        const failed = results.filter(r => r.status === 'rejected').length;
+        set_refresh(r => !r);
+        if (failed) {
+            setPageError(`${failed} of ${selectedIds.length} customers could not be deleted. They might be linked to existing invoices.`);
         }
     };
 
@@ -236,10 +299,6 @@ function CompanysTable() {
         setCheckBox({});
     };
 
-    const handelSearch = (e) => {
-        setFilters(prev => ({ ...prev, s: e.target.value }));
-    };
-    
     const handleChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
     };
@@ -259,11 +318,7 @@ function CompanysTable() {
                 const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number', ...(canStats ? STAT_KEYS : [])];
                 const csvRows = [headers.join(',')];
                 data.forEach(row => {
-                    const values = keys.map(k => {
-                        const val = (row[k] || '').toString().replace(/"/g, '""');
-                        return `"${val}"`;
-                    });
-                    csvRows.push(values.join(','));
+                    csvRows.push(keys.map(k => csvCell(row, k)).join(','));
                 });
                 const csvString = csvRows.join('\n');
                 const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
@@ -296,7 +351,7 @@ function CompanysTable() {
                 const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number', ...(canStats ? STAT_KEYS : [])];
                 const cleanData = data.map(row => {
                     const obj = {};
-                    keys.forEach(k => { obj[k] = row[k] || ''; });
+                    keys.forEach(k => { obj[k] = raw(row, k); });
                     return obj;
                 });
                 const jsonString = JSON.stringify(cleanData, null, 2);
@@ -332,8 +387,8 @@ function CompanysTable() {
                 const headers = ['#', 'Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone', ...(canStats ? STAT_HEADERS : [])];
                 const rows = data.map((row, i) =>
                     `<tr>
-                        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#94a3b8;text-align:center;">${i + 1}</td>
-                        ${keys.map(k => `<td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#374151;">${cell(row, k)}</td>`).join('')}
+                        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;color:#94a3b8;text-align:center;">${i + 1}</td>
+                        ${keys.map(k => `<td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;color:#334155;">${esc(cell(row, k))}</td>`).join('')}
                     </tr>`
                 ).join('');
                 const html = `
@@ -355,7 +410,7 @@ function CompanysTable() {
                             thead { background: #f1f5f9; }
                             thead th { padding: 10px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; text-align: left; border-bottom: 2px solid #e2e8f0; }
                             thead th:first-child { text-align: center; width: 40px; }
-                            tbody tr:nth-child(even) { background: #fafbfc; }
+                            tbody tr:nth-child(even) { background: #f8fafc; }
                             tbody td:nth-child(2) { color: #4f46e5; font-weight: 700; }
                             .footer { text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
                             @media print {
@@ -411,7 +466,7 @@ function CompanysTable() {
         const keys = ['name', 'address', 'gst_number', 'state', 'state_code', 'phone_number', ...(canStats ? STAT_KEYS : [])];
         const headers = ['Name', 'Address', 'GST Number', 'State', 'State Code', 'Phone', ...(canStats ? STAT_HEADERS : [])];
         const rows = printContent.map(row =>
-            `<tr>${keys.map(k => `<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#374151;">${cell(row, k)}</td>`).join('')}</tr>`
+            `<tr>${keys.map(k => `<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${esc(cell(row, k))}</td>`).join('')}</tr>`
         ).join('');
         const html = `
             <html>
@@ -448,6 +503,16 @@ function CompanysTable() {
 
     const selectedCount = Object.values(checkbox).filter(Boolean).length;
 
+    // the detail panel follows the selected row; until one is picked (or if the
+    // page changes under it) it shows the first customer on the page
+    const currentIndex = Math.max(0, table_content.findIndex(c => c.id === activeId));
+    const current = table_content[currentIndex];
+    const setAll = (checked) => {
+        const list = {};
+        Object.keys(checkbox).forEach(id => { list[id] = checked; });
+        setCheckBox(list);
+    };
+
     const filed = (label, id, basis, numeric = false) => (
         <div className="form_box" style={{ flexBasis: basis }}>
             {label}
@@ -469,7 +534,13 @@ function CompanysTable() {
 
             {/* ── Top Page Title & Actions ── */}
             <div className="companys_page_head">
-                <h1>Customers</h1>
+                <div className="companys_title">
+                    <span className="companys_title_icon"><Users size={20} /></span>
+                    <div>
+                        <h1>Customers</h1>
+                        <p>{canStats ? 'Track balances, bills and contact details for each customer.' : 'Manage your customers and their contact details.'}</p>
+                    </div>
+                </div>
                 <div className="head_actions">
                     {selectedCount > 0 && (
                         <div className="button delete" onClick={handelMultiDelete}>
@@ -492,9 +563,9 @@ function CompanysTable() {
                             <svg style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                             <input
                                 type="text"
-                                value={filters.s}
-                                onChange={handelSearch}
-                                placeholder="Search by name..."
+                                value={searchText}
+                                onChange={e => setSearchText(e.target.value)}
+                                placeholder="Search by name, GST number or phone..."
                                 style={{
                                     width: '100%', padding: '12px 14px 12px 40px', borderRadius: '12px',
                                     border: '1.5px solid #e2e8f0', outline: 'none',
@@ -521,6 +592,16 @@ function CompanysTable() {
                     </button>
                 </div>
 
+                <div className="cust_chips">
+                    {[['', 'All'], ['1', 'GST registered'], ['0', 'Unregistered']].map(([v, label]) => (
+                        <button key={label} type="button"
+                            className={`cust_chip ${filters.has_gst === v ? 'on' : ''}`}
+                            onClick={() => handleChange('has_gst', v)}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Bottom Row: Filters Grid (Collapsible) */}
                 {showFilters && (
                     <div className="companys_filters_grid">
@@ -541,6 +622,21 @@ function CompanysTable() {
                                 <option value="id">Date Added (Oldest)</option>
                                 <option value="name">Name (A-Z)</option>
                                 <option value="-name">Name (Z-A)</option>
+                            </select>
+                        </div>
+
+                        {/* State */}
+                        <div style={{ flex: '1 1 180px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px' }}>State</label>
+                            <select value={filters.state} onChange={(e) => handleChange("state", e.target.value)}
+                                style={{
+                                    width: '100%', padding: '10px 14px', borderRadius: '12px',
+                                    border: '1.5px solid #e2e8f0', outline: 'none',
+                                    fontSize: '14px', color: '#0f172a', transition: 'border-color 0.2s',
+                                    backgroundColor: 'white'
+                                }}>
+                                <option value="">All states</option>
+                                {INDIAN_STATES.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}
                             </select>
                         </div>
 
@@ -567,7 +663,7 @@ function CompanysTable() {
                         {/* Action Buttons */}
                         <div className="companys_filter_actions">
                             <button
-                                onClick={() => setFilters({ s: "", ordering: "-id", page_size: 10 })}
+                                onClick={() => { setSearchText(''); setFilters(DEFAULT_FILTERS); }}
                                 style={{
                                     padding: '10px 20px', borderRadius: '12px', background: '#f1f5f9',
                                     color: '#64748b', border: 'none', fontWeight: 700, cursor: 'pointer',
@@ -586,7 +682,7 @@ function CompanysTable() {
                                         }
                                         setExportOpen(prev => !prev);
                                     }}
-                                    style={{ height: '41px', background: exporting ? 'linear-gradient(135deg,#a5b4fc,#c4b5fd)' : undefined }}
+                                    style={{ height: '41px', background: exporting ? 'linear-gradient(135deg,#c7d2fe,#c7d2fe)' : undefined }}
                                 >
                                     {exporting ? 'Exporting…' : (
                                         <>
@@ -634,7 +730,20 @@ function CompanysTable() {
 
             {/* ── Customer Table ── */}
             <div className="companys_table_raper">
-                {table_content.length === 0 ? (
+                {table_content.length === 0 && loading ? (
+                    <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>Loading customers…</div>
+                ) : table_content.length === 0 && (filters.s || filters.state || filters.has_gst) ? (
+                    <div style={{ padding: '60px 20px', textAlign: 'center', background: '#fff', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>{filters.s ? `No customers match “${filters.s}”` : 'No customers match these filters'}</h3>
+                        <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>Try a different search or clear the filters.</p>
+                        <button
+                            onClick={() => { setSearchText(''); setFilters(DEFAULT_FILTERS); }}
+                            style={{ ...ACTION_BTN, padding: '10px 20px', fontSize: '14px' }}
+                        >
+                            Clear search and filters
+                        </button>
+                    </div>
+                ) : table_content.length === 0 ? (
                     <div style={{ padding: '60px 20px', textAlign: 'center', background: '#fff', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', background: '#eef2ff', color: '#4f46e5', marginBottom: '16px' }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -653,197 +762,125 @@ function CompanysTable() {
                         </button>
                     </div>
                 ) : (
-                    <>
-                        {/* Desktop / tablet: the full table, scrolling sideways if
-                            the stat columns make it wider than the viewport */}
-                        <div className="hidden md:block" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '16px', boxShadow: '0 2px 16px rgba(0, 0, 0, 0.06)', background: 'white' }}>
-                            <table className="table" style={{ boxShadow: 'none', borderRadius: 0, minWidth: canStats ? '1120px' : '700px' }}>
-                                <thead>
-                                    <tr>
-                                        <td style={{ width: '40px' }}>
-                                            <input type="checkbox" className="check-box"
-                                                onChange={e => {
-                                                    const list = {};
-                                                    Object.keys(checkbox).forEach(id => { list[id] = e.target.checked; });
-                                                    setCheckBox(list);
-                                                }}
-                                            />
-                                        </td>
-                                        <td>Name</td>
-                                        <td>GST Number</td>
-                                        <td>State</td>
-                                        <td>State Code</td>
-                                        <td>Phone</td>
-                                        {canStats && (
-                                            <>
-                                                <td style={{ textAlign: 'center' }}>Bills</td>
-                                                <td style={{ textAlign: 'right' }}>Total Billed</td>
-                                                <td>Last Bill</td>
-                                                <td>Reports</td>
-                                            </>
-                                        )}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {table_content.map((obj, key) => (
-                                        <tr key={obj.id}>
-                                            <td>
-                                                <input type="checkbox" className="check-box"
-                                                    checked={!!checkbox[obj.id]}
-                                                    onChange={e => setCheckBox({ ...checkbox, [obj.id]: e.target.checked })}
-                                                    id={String(obj.id)}
-                                                />
-                                            </td>
-                                            <td onClick={() => handelItemsOpen(key)} style={{ cursor: 'pointer' }}>
-                                                {obj.name || '—'}
-                                            </td>
-                                            <td>{obj.gst_number || '—'}</td>
-                                            <td>{obj.state || '—'}</td>
-                                            <td>{obj.state_code || '—'}</td>
-                                            <td>{obj.phone_number || '—'}</td>
-                                            {canStats && (
-                                                <>
-                                                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
-                                                        {Number(obj.invoice_count) || 0}
-                                                    </td>
-                                                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>
-                                                        {money(obj.total_billed)}
-                                                    </td>
-                                                    <td style={{ whiteSpace: 'nowrap', color: '#64748b' }}>
-                                                        {day(obj.last_invoice_date)}
-                                                    </td>
-                                                    <td>
-                                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                                            {canViewBills && (
-                                                                <button
-                                                                    onClick={() => navigate(`/bill_list?customer=${obj.id}&type=sales`)}
-                                                                    title={`See every bill raised for ${obj.name || 'this customer'}`}
-                                                                    style={ACTION_BTN}
-                                                                    onMouseEnter={e => { e.currentTarget.style.background = '#e0e7ff'; }}
-                                                                    onMouseLeave={e => { e.currentTarget.style.background = '#eef2ff'; }}
-                                                                >
-                                                                    View Bills
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                onClick={() => navigate(`/customer-ledger?customer=${obj.id}`)}
-                                                                title={`Open the ledger report for ${obj.name || 'this customer'}`}
-                                                                style={ACTION_BTN}
-                                                                onMouseEnter={e => { e.currentTarget.style.background = '#e0e7ff'; }}
-                                                                onMouseLeave={e => { e.currentTarget.style.background = '#eef2ff'; }}
-                                                            >
-                                                                Ledger
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </>
-                                            )}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile: one card per customer. A 6-to-10 column table
-                            on a phone is a sideways scroll nobody makes. */}
-                        <div className="md:hidden">
-                            {/* the table header carries select-all on desktop; the
-                                cards need their own */}
-                            <label className="customer_cards_selectall">
+                    <div className={`cust_split ${detailOpen ? 'detail_open' : ''}`}>
+                        {/* ── list ── */}
+                        <div className="cust_list">
+                            <label className="cust_list_head">
                                 <input type="checkbox" className="check-box"
+                                    aria-label="Select all customers"
                                     checked={selectedCount > 0 && selectedCount === table_content.length}
-                                    onChange={e => {
-                                        const list = {};
-                                        Object.keys(checkbox).forEach(id => { list[id] = e.target.checked; });
-                                        setCheckBox(list);
-                                    }}
+                                    onChange={e => setAll(e.target.checked)}
                                 />
-                                {selectedCount > 0 ? `${selectedCount} selected` : 'Select all'}
+                                {selectedCount > 0 ? `${selectedCount} selected` : `${total} customer${total === 1 ? '' : 's'}`}
                             </label>
-                            {table_content.map((obj, key) => (
-                                <div className="customer_card" key={obj.id}>
-                                    <div className="customer_card_head">
+                            {table_content.map(obj => {
+                                return (
+                                    <div key={obj.id}
+                                        className={`cust_row ${current && current.id === obj.id ? 'active' : ''}`}
+                                        onClick={() => { setActiveId(obj.id); setDetailOpen(true); }}>
                                         <input type="checkbox" className="check-box"
-                                            style={{ marginTop: '4px' }}
                                             checked={!!checkbox[obj.id]}
+                                            onClick={e => e.stopPropagation()}
                                             onChange={e => setCheckBox({ ...checkbox, [obj.id]: e.target.checked })}
                                             aria-label={`Select ${obj.name || 'customer'}`}
                                         />
-                                        <div className="customer_card_name" onClick={() => handelItemsOpen(key)}>
-                                            {obj.name || '—'}
+                                        <span className="cust_av">{initials(obj.name)}</span>
+                                        <div className="cust_row_main">
+                                            <div className="cust_row_name">{obj.name || '—'}</div>
+                                            <div className="cust_row_sub">
+                                                {canStats
+                                                    ? `${Number(obj.invoice_count) || 0} bills · last ${day(obj.last_invoice_date)}`
+                                                    : (obj.state || obj.phone_number || '—')}
+                                            </div>
                                         </div>
-                                        <button
-                                            onClick={() => handelItemsOpen(key)}
-                                            aria-label="Edit customer"
-                                            style={{ ...ACTION_BTN, padding: '6px 10px' }}
-                                        >
-                                            Edit
+                                        {canStats && (
+                                            <span className="cust_row_amt" style={{ color: owedColor(obj.outstanding_balance) }}>
+                                                {moneyShort(obj.outstanding_balance)}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            <div className="paging">
+                                <span className="paging_summary">
+                                    {`${(page - 1) * Number(filters.page_size) + 1}–${(page - 1) * Number(filters.page_size) + table_content.length} of ${total}`}
+                                </span>
+                                {urls.previous && <div id="previous" onClick={handelUrl}>← Prev</div>}
+                                {urls.next && <div id="next" onClick={handelUrl}>Next →</div>}
+                            </div>
+                        </div>
+
+                        {/* ── detail (a full-screen sheet on phones) ── */}
+                        {current && (
+                            <div className="cust_detail">
+                                <button type="button" className="cust_back" onClick={() => setDetailOpen(false)}>← All customers</button>
+                                <div className="cust_detail_head">
+                                    <span className="cust_av cust_av_lg">
+                                        {initials(current.name)}
+                                    </span>
+                                    <div className="cust_detail_title">
+                                        <h2>{current.name || '—'}</h2>
+                                        <p>{[current.state, current.gst_number].filter(Boolean).join(' · ') || 'No state or GST number'}</p>
+                                    </div>
+                                    <div className="cust_head_actions">
+                                        <button type="button" className="cust_btn" onClick={() => handelItemsOpen(currentIndex)}>Edit</button>
+                                        <button type="button" className="cust_btn danger" title="Delete customer" aria-label="Delete customer"
+                                            onClick={() => handelDelete(current.id)}>
+                                            <Trash2 size={15} />
                                         </button>
                                     </div>
+                                </div>
 
-                                    <div className="customer_card_facts">
-                                        <div className="customer_card_fact">
-                                            <span>GST Number</span>
-                                            <strong>{obj.gst_number || '—'}</strong>
+                                {canStats && (
+                                    <div className="cust_kpis">
+                                        <div className="cust_kpi">
+                                            <span>Outstanding</span>
+                                            <strong style={{ color: owedColor(current.outstanding_balance) }}>{money(current.outstanding_balance)}</strong>
                                         </div>
-                                        <div className="customer_card_fact">
-                                            <span>Phone</span>
-                                            <strong>{obj.phone_number || '—'}</strong>
-                                        </div>
-                                        <div className="customer_card_fact">
-                                            <span>State</span>
-                                            <strong>{obj.state || '—'}</strong>
-                                        </div>
-                                        <div className="customer_card_fact">
-                                            <span>State Code</span>
-                                            <strong>{obj.state_code || '—'}</strong>
+                                        <div className="cust_kpi">
+                                            <span>Total billed</span>
+                                            <strong>{money(current.total_billed)}</strong>
                                         </div>
                                     </div>
+                                )}
 
-                                    {canStats && (
-                                        <>
-                                            <div className="customer_card_stats">
-                                                <div className="customer_card_fact">
-                                                    <span>Bills</span>
-                                                    <strong style={{ color: '#0f172a' }}>{Number(obj.invoice_count) || 0}</strong>
-                                                </div>
-                                                <div className="customer_card_fact">
-                                                    <span>Total Billed</span>
-                                                    <strong style={{ color: '#0f172a' }}>{money(obj.total_billed)}</strong>
-                                                </div>
-                                                <div className="customer_card_fact">
-                                                    <span>Last Bill</span>
-                                                    <strong>{day(obj.last_invoice_date)}</strong>
-                                                </div>
-                                            </div>
-                                            <div className="customer_card_actions">
-                                                {canViewBills && (
-                                                    <button
-                                                        onClick={() => navigate(`/bill_list?customer=${obj.id}&type=sales`)}
-                                                        style={ACTION_BTN}
-                                                    >
-                                                        View Bills
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => navigate(`/customer-ledger?customer=${obj.id}`)}
-                                                    style={ACTION_BTN}
-                                                >
-                                                    Ledger
+                                <dl className="cust_facts">
+                                    <div><dt>Phone</dt><dd>{current.phone_number || '—'}</dd></div>
+                                    <div><dt>Address</dt><dd>{current.address || '—'}</dd></div>
+                                    <div><dt>State</dt><dd>{current.state ? `${current.state}${current.state_code ? ` (${current.state_code})` : ''}` : '—'}</dd></div>
+                                    <div><dt>GST number</dt><dd>{current.gst_number || '—'}</dd></div>
+                                    {canStats && <div><dt>Bills</dt><dd>{Number(current.invoice_count) || 0}</dd></div>}
+                                    {canStats && <div><dt>Last bill</dt><dd>{day(current.last_invoice_date)}</dd></div>}
+                                </dl>
+
+                                <div className="cust_actions">
+                                    <button type="button" className="cust_btn primary"
+                                        onClick={() => navigate(`/newbill?customer=${current.id}`)}>
+                                        <Plus size={16} /> New invoice
+                                    </button>
+                                    {(canViewBills || canStats) && (
+                                        <div className="cust_actions_row">
+                                            {canViewBills && (
+                                                <button type="button" className="cust_btn"
+                                                    onClick={() => navigate(`/bill_list?customer=${current.id}&type=sales`)}
+                                                    title={`See every bill raised for ${current.name || 'this customer'}`}>
+                                                    <FileText size={15} /> View bills
                                                 </button>
-                                            </div>
-                                        </>
+                                            )}
+                                            {canStats && (
+                                                <button type="button" className="cust_btn"
+                                                    onClick={() => navigate(`/customer-ledger?customer=${current.id}`)}
+                                                    title={`Open the ledger report for ${current.name || 'this customer'}`}>
+                                                    <BookOpen size={15} /> Ledger
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
-                            ))}
-                        </div>
-
-                        {/* Pagination */}
-                        <div className="paging">
-                            {urls.previous && <div id="previous" onClick={handelUrl}>← Previous</div>}
-                            {urls.next && <div id="next" onClick={handelUrl}>Next →</div>}
-                        </div>
-                    </>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -938,7 +975,7 @@ function CompanysTable() {
                             <button onClick={closePopup} style={{
                                 padding: '10px 20px', borderRadius: '10px',
                                 border: '1.5px solid #e2e8f0', background: 'white',
-                                color: '#374151', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                                color: '#334155', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
                             }}>Cancel</button>
                             {update && (
                                 <div className="button delete" onClick={() => handelDelete(company_data.id)}>Delete</div>
