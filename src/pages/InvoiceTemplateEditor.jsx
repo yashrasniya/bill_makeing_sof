@@ -24,6 +24,37 @@ const focOut = e => { e.target.style.borderColor = '#cbd5e1'; e.target.style.box
 
 // Columns the exporter computes itself; valid labels for Row Content blocks
 // alongside the fields defined in UI Config.
+/* Keys the backend fills for the header, company and footer blocks (see
+   InvoiceSerializerForPDF and FillValue). `receiver,name` is a path into the
+   customer. Dates print as DD/MM/YYYY, like `date`. A block's label can also
+   be a UI Config header field name, so the box stays free text. */
+const YAML_FIELD_KEYS = [
+    ['invoice_number', 'Invoice number'],
+    ['date', 'Invoice date'],
+    ['due_date', 'Due date'],
+    ['place_of_supply', 'Place of supply'],
+    ['payment_status', 'Payment status'],
+    ['payment_method', 'Payment method'],
+    ['notes', 'Notes'],
+    ['terms', 'Terms and conditions'],
+    ['total_final_amount', 'Invoice total'],
+    ['gst_final_amount', 'Invoice GST'],
+    ['receiver,name', 'Customer name'],
+    ['receiver,address', 'Customer address'],
+    ['receiver,gst_number', 'Customer GST number'],
+    ['receiver,phone_number', 'Customer phone'],
+    ['receiver,state', 'Customer state'],
+    ['receiver,state_code', 'Customer state code'],
+    ['total_amount_with_out_gst', 'Subtotal (before GST)'],
+    ['gst_amount', 'Total GST'],
+    ['total_amount_with_gst', 'Grand total'],
+    ['total_amount_in_text', 'Grand total in words'],
+    ['center_gst_amount', 'CGST amount'],
+    ['state_gst_amount', 'SGST amount'],
+    ['center_gst', 'CGST %'],
+    ['state_gst', 'SGST %'],
+];
+
 const CALCULATED_ROW_LABELS = [
     's.no', 'amount', 'Amount_after_GST', 'row_total_with_out_gst',
     'extra_cal', 'gst', 'gst_amount', 'C_GST', 'S_GST',
@@ -169,6 +200,11 @@ const InvoiceTemplateEditor = () => {
         if (l.includes('total_amount_with_gst')) return '1770.00';
         if (l.includes('state_gst_amount') || l.includes('center_gst_amount')) return '135.00';
         if (l.includes('total_amount_in_text')) return 'One Thousand Seven Hundred Seventy Only';
+        if (l === 'place_of_supply') return 'Maharashtra (27)';
+        if (l === 'payment_status') return 'Unpaid';
+        if (l === 'payment_method') return 'UPI';
+        if (l === 'notes') return 'Thank you for your business.';
+        if (l === 'terms') return 'Payment is due within 30 days.';
         if (l.includes('s.no') || l === 'sno') return '1';
         if (l === '636' || l === 'title') return 'INVOICE';
         return 'Sample Text';
@@ -1227,16 +1263,24 @@ const InvoiceTemplateEditor = () => {
                                                             </select>
                                                         );
                                                     })() : (
+                                                    <>
                                                     <input
                                                         type="text"
+                                                        list="yaml-field-keys"
                                                         value={activeEl.label || activeEl.key || ''}
                                                         onChange={(e) => updateElement(activeEl.id, { label: e.target.value })}
-                                                        placeholder="e.g. invoice_number, date..."
+                                                        placeholder="e.g. invoice_number, due_date, notes..."
                                                         style={{ ...inputStyle, fontWeight: 600, color: '#4f46e5' }}
                                                         onFocus={focIn}
                                                         onBlur={focOut}
-                                                        title="This ID is used by the API to inject data into this specific block."
+                                                        title="This ID is used by the API to inject data into this specific block. Pick one from the list or type your own."
                                                     />
+                                                    <datalist id="yaml-field-keys">
+                                                        {YAML_FIELD_KEYS.map(([key, name]) => (
+                                                            <option key={key} value={key}>{name}</option>
+                                                        ))}
+                                                    </datalist>
+                                                    </>
                                                     )}
                                                 </div>
 
