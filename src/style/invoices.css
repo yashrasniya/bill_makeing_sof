@@ -279,3 +279,64 @@ button.inv_kpi:hover { border-color: #c7d2fe; transform: translateY(-1px); }
 .inv_filecell .by { font-size: 12px; color: #64748b; margin-top: 2px; }
 .inv_chev { transition: transform 0.15s; color: #94a3b8; }
 .inv_chev.open { transform: rotate(180deg); }
+
+/* ── Dashboard ── */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+.dash_row { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; align-items: stretch; }
+.dash_row3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; align-items: stretch; }
+/* cards in a row are the same height, and each body fills its card, so there are no gaps beside a taller neighbour */
+.dash_row > .inv_card, .dash_row3 > .inv_card { display: flex; flex-direction: column; }
+.dash_row .dash_body, .dash_row3 .dash_body { flex: 1; display: flex; flex-direction: column; }
+.dash_body { padding: 0 20px 20px; }
+.dash_empty { margin: auto 0; padding: 22px 0; text-align: center; font-size: 13px; color: #94a3b8; }
+.dash_shortcuts { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 20px 18px; }
+
+.inv_kpi .delta {
+    display: inline-block; margin-top: 8px; padding: 2px 9px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; background: #f1f5f9; color: #475569;
+}
+.inv_kpi .delta.up { background: #dcfce7; color: #166534; }
+.inv_kpi .delta.down { background: #fee2e2; color: #b91c1c; }
+
+.dash_trend { flex: 1; display: flex; align-items: stretch; gap: 10px; min-height: 220px; }
+.dash_trend .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.dash_trend .zone { position: relative; flex: 1; width: 100%; padding-top: 22px; }
+.dash_trend .stack {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 46px; min-height: 3px;
+    height: calc((100% - 22px) * var(--r, 0));
+}
+.dash_trend .bar { width: 100%; height: 100%; border-radius: 8px 8px 4px 4px; background: #e0e7ff; transition: height 0.6s ease; }
+.dash_trend .bar.now { background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%); }
+.dash_trend .amt { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 5px; font-size: 11px; font-weight: 700; color: #64748b; white-space: nowrap; }
+.dash_trend .lbl { font-size: 11px; font-weight: 600; color: #94a3b8; }
+.dash_trend .lbl.now { color: #4338ca; }
+
+.dash_more { margin: 4px 0 0; padding-top: 10px; border-top: 1px solid #f1f5f9; font-size: 13px; }
+
+.dash_item { display: flex; align-items: center; gap: 12px; padding: 10px 8px; margin: 0 -8px; border-radius: 10px; }
+.dash_item.link { cursor: pointer; transition: background 0.15s; }
+.dash_item.link:hover { background: #f8fafc; }
+.dash_item .main { flex: 1; min-width: 0; }
+.dash_item .nm { font-size: 14px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash_item .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+.dash_item .val { font-size: 14px; font-weight: 700; color: #0f172a; white-space: nowrap; }
+
+.dash_bar { margin-bottom: 14px; }
+.dash_bar .row { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 5px; font-size: 13px; }
+.dash_bar .row span:first-child { font-weight: 600; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash_bar .row span:last-child { font-weight: 700; color: #0f172a; white-space: nowrap; }
+.dash_bar .track { height: 6px; background: #f1f5f9; border-radius: 999px; }
+.dash_bar .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4f46e5, #7c3aed); }
+
+.dash_kv { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.dash_kv:last-child { border-bottom: 0; }
+.dash_kv span:first-child { color: #64748b; font-weight: 600; text-transform: capitalize; }
+.dash_kv span:last-child { font-weight: 700; color: #0f172a; }
+
+@media (max-width: 900px) { .dash_row { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767px) {
+    .dash_body { padding: 0 14px 16px; }
+    .dash_shortcuts { padding: 0 14px 16px; }
+    .dash_shortcuts .inv_btn { flex: 1 1 calc(50% - 10px); }
+}

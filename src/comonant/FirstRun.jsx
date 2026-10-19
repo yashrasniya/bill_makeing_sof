@@ -149,17 +149,13 @@ export function SkeletonKpis() {
         { label: 'GST collected', sub: 'Output tax on sales' },
     ];
     return (
-        <div style={{ position: 'relative', marginBottom: '28px' }}>
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ marginBottom: '16px' }}>
+            <div className="inv_kpis" style={{ marginBottom: 0 }}>
                 {tiles.map(t => (
-                    <div key={t.label} style={{
-                        flex: 1, minWidth: '200px', background: 'white', borderRadius: '20px',
-                        padding: '22px', border: '1px dashed #cbd5e1',
-                    }}>
-                        <div style={{ fontSize: '26px', fontWeight: 900, color: '#cbd5e1' }}>₹0</div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', marginTop: '4px' }}>{t.label}</div>
-                        <div style={{ height: '6px', borderRadius: '3px', background: '#f1f5f9', margin: '12px 0 8px' }} />
-                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>{t.sub}</div>
+                    <div key={t.label} className="inv_kpi" style={{ border: '1px dashed #cbd5e1', boxShadow: 'none' }}>
+                        <span style={{ color: '#94a3b8' }}>{t.label}</span>
+                        <strong style={{ color: '#cbd5e1' }}>₹0</strong>
+                        <small style={{ color: '#94a3b8' }}>{t.sub}</small>
                     </div>
                 ))}
             </div>

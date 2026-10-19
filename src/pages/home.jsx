@@ -1,220 +1,26 @@
-import Navbar from "../comonant/navbar.jsx";
-import { VerifyEmailBanner, FirstRunChecklist, SkeletonKpis } from "../comonant/FirstRun.jsx";
-import { useState, useEffect, useMemo } from "react";
-import { clientToken } from "@/axios";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-
-/* ─────────────────────────── formatting ─────────────────────────── */
+import {
+    BarChart3, Building, FileText, LayoutDashboard, LayoutTemplate, Package, Plus, User, UserPlus, Users,
+} from "lucide-react";
+import { clientToken } from "@/axios";
+import { day, money, moneyShort } from "@/utility/money";
+import Navbar from "../comonant/navbar.jsx";
+import PageIcon from "../comonant/PageIcon";
+import { VerifyEmailBanner, FirstRunChecklist, SkeletonKpis } from "../comonant/FirstRun.jsx";
+import { Pill, initials } from "../comonant/invoiceBits";
+import "../style/invoices.css";
 
 const RANGES = [
-    { key: 'this_month', label: 'This month' },
-    { key: 'last_month', label: 'Last month' },
-    { key: 'last_30', label: 'Last 30 days' },
-    { key: 'this_fy', label: 'This FY' },
+    { key: "this_month", label: "This month" },
+    { key: "last_month", label: "Last month" },
+    { key: "last_30", label: "Last 30 days" },
+    { key: "this_fy", label: "This FY" },
 ];
 
-/** Indian-style short money: ₹1.2L, ₹3.4Cr — full value stays in the tooltip. */
-function money(n, { short = false } = {}) {
-    const v = Number(n || 0);
-    if (short) {
-        if (Math.abs(v) >= 1e7) return `₹${(v / 1e7).toFixed(2)}Cr`;
-        if (Math.abs(v) >= 1e5) return `₹${(v / 1e5).toFixed(2)}L`;
-        if (Math.abs(v) >= 1e3) return `₹${(v / 1e3).toFixed(1)}K`;
-    }
-    return `₹${v.toLocaleString('en-IN')}`;
-}
-
-const STATUS_STYLE = {
-    paid: { bg: '#dcfce7', fg: '#166534', label: 'Paid' },
-    partially_paid: { bg: '#fef3c7', fg: '#b45309', label: 'Partial' },
-    unpaid: { bg: '#e0e7ff', fg: '#4338ca', label: 'Unpaid' },
-    overdue: { bg: '#fee2e2', fg: '#b91c1c', label: 'Overdue' },
-};
-
-function StatusChip({ status }) {
-    const s = STATUS_STYLE[status] || STATUS_STYLE.unpaid;
-    return (
-        <span style={{
-            background: s.bg, color: s.fg, fontSize: '11px', fontWeight: 700,
-            padding: '3px 9px', borderRadius: '99px', whiteSpace: 'nowrap',
-        }}>{s.label}</span>
-    );
-}
-
-/* ─────────────────────────── primitives ─────────────────────────── */
-
-function MiniBar({ pct, positive }) {
-    const clamped = Math.min(Math.abs(pct || 0), 100);
-    return (
-        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.2)', borderRadius: '99px', marginTop: '10px' }}>
-            <div style={{
-                height: '100%', borderRadius: '99px',
-                width: clamped + '%',
-                background: positive ? 'rgba(255,255,255,0.85)' : 'rgba(252,165,165,0.9)',
-                transition: 'width 0.8s ease',
-            }} />
-        </div>
-    );
-}
-
-/**
- * KPI card.
- * `pct === null` means "no comparable previous period" — we show a neutral
- * "New" pill instead of inventing a growth number.
- */
-function KpiCard({ icon, label, value, title, sub, pct, color, delay = 0, onClick }) {
-    const hasPct = pct !== undefined && pct !== null;
-    const isPos = (pct || 0) >= 0;
-    const clickable = typeof onClick === 'function';
-    return (
-        <div
-            onClick={onClick}
-            title={title}
-            style={{
-                background: color,
-                borderRadius: '20px',
-                padding: '24px 22px 20px',
-                flex: 1,
-                minWidth: '200px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                position: 'relative',
-                overflow: 'hidden',
-                animation: `fadeUp 0.5s ease ${delay}s both`,
-                cursor: clickable ? 'pointer' : 'default',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.18)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.12)'; }}
-        >
-            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
-
-            <div style={{ fontSize: '26px', marginBottom: '10px' }}>{icon}</div>
-
-            <div style={{ fontSize: '26px', fontWeight: 900, color: 'white', letterSpacing: '-0.5px', lineHeight: 1.1 }}>
-                {value}
-            </div>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', fontWeight: 600, marginTop: '4px' }}>{label}</div>
-
-            {pct !== undefined && (
-                <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '4px',
-                    marginTop: '10px', padding: '3px 10px', borderRadius: '99px',
-                    background: !hasPct ? 'rgba(255,255,255,0.15)'
-                        : isPos ? 'rgba(255,255,255,0.2)' : 'rgba(252,165,165,0.25)',
-                    fontSize: '12px', fontWeight: 700, color: 'white',
-                }}>
-                    {hasPct ? `${isPos ? '↑' : '↓'} ${Math.abs(pct).toFixed(1)}%` : 'No prior period'}
-                </div>
-            )}
-
-            {hasPct && <MiniBar pct={pct} positive={isPos} />}
-
-            {sub && (
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', marginTop: '8px' }}>{sub}</div>
-            )}
-        </div>
-    );
-}
-
-function QuickAction({ icon, label, onClick, accent }) {
-    return (
-        <button
-            onClick={onClick}
-            className="quick-action-btn"
-            style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                background: 'white', border: `2px solid ${accent}18`,
-                borderRadius: '16px', padding: '18px 20px', cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                transition: 'transform 0.15s, box-shadow 0.15s, border-color 0.15s',
-                minWidth: '100px',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${accent}28`; e.currentTarget.style.borderColor = `${accent}55`; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = `${accent}18`; }}
-        >
-            <div style={{
-                width: '44px', height: '44px', borderRadius: '12px',
-                background: `${accent}18`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px',
-            }}>{icon}</div>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>{label}</span>
-        </button>
-    );
-}
-
-function Panel({ title, action, children, delay = 0, style }) {
-    return (
-        <div style={{
-            background: 'white', borderRadius: '20px', padding: '20px 24px 22px',
-            boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
-            animation: `fadeUp 0.5s ease ${delay}s both`,
-            display: 'flex', flexDirection: 'column',
-            ...style,
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px' }}>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>
-                    {title}
-                </p>
-                {action}
-            </div>
-            {children}
-        </div>
-    );
-}
-
-function LinkBtn({ label, onClick }) {
-    return (
-        <button onClick={onClick} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-            fontSize: '12px', fontWeight: 700, color: '#4f46e5', whiteSpace: 'nowrap',
-        }}>{label} →</button>
-    );
-}
-
-function EmptyNote({ children }) {
-    return (
-        <p style={{ fontSize: '13px', color: '#94a3b8', margin: '8px 0', textAlign: 'center', padding: '18px 0' }}>
-            {children}
-        </p>
-    );
-}
-
-/* ─────────────────────── sales trend (inline SVG) ─────────────────────── */
-
-function TrendChart({ data }) {
-    const max = Math.max(...data.map(d => d.total), 1);
-    return (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', height: '170px', paddingTop: '8px' }}>
-            {data.map((d, i) => {
-                const h = Math.max((d.total / max) * 130, d.total > 0 ? 4 : 2);
-                const isLast = i === data.length - 1;
-                return (
-                    <div key={d.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}
-                         title={`${d.label}: ${money(d.total)} · ${d.count} invoice${d.count === 1 ? '' : 's'}`}>
-                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b' }}>
-                            {d.total > 0 ? money(d.total, { short: true }) : ''}
-                        </span>
-                        <div style={{
-                            width: '100%', maxWidth: '46px', height: `${h}px`, borderRadius: '8px 8px 4px 4px',
-                            background: isLast
-                                ? 'linear-gradient(180deg, #4f46e5 0%, #4338ca 100%)'
-                                : '#e0e7ff',
-                            transition: 'height 0.6s ease',
-                        }} />
-                        <span style={{ fontSize: '11px', fontWeight: 600, color: isLast ? '#4f46e5' : '#94a3b8' }}>{d.label}</span>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-/* ─────────────────────────────── page ─────────────────────────────── */
-
 const EMPTY_INFO = {
-    name: '',
+    name: "",
     month_total_final_amount: 0,
     month_gst_final_amount: 0,
     percentage_change: null,
@@ -225,7 +31,7 @@ const EMPTY_INFO = {
     receivable_count: 0,
     overdue_amount: 0,
     overdue_count: 0,
-    range_label: '',
+    range_label: "",
     has_any_invoice: true,   // assume yes until told otherwise, so we don't flash the empty state
 };
 
@@ -234,30 +40,96 @@ const EMPTY_EXTRAS = {
     low_stock: [], payment_methods: [], gst_due: [],
 };
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/* ─────────────────────────── building blocks ─────────────────────────── */
+
+// A card with a title and an optional link on the right
+function Panel({ title, action, children }) {
+    return (
+        <div className="inv_card" style={{ animation: "fadeUp 0.4s ease both" }}>
+            <div className="inv_card_head">
+                <h2>{title}</h2>
+                {action}
+            </div>
+            <div className="dash_body">{children}</div>
+        </div>
+    );
+}
+
+const LinkBtn = ({ label, onClick }) => (
+    <button type="button" className="inv_link" onClick={onClick}>{label} →</button>
+);
+
+/**
+ * Summary card. `pct === null` means "no comparable previous period": no
+ * growth chip is shown rather than inventing a number.
+ */
+function Kpi({ label, value, title, sub, pct, color, onClick }) {
+    const hasPct = pct !== undefined && pct !== null;
+    const Tag = onClick ? "button" : "div";
+    return (
+        <Tag className="inv_kpi" type={onClick ? "button" : undefined} onClick={onClick} title={title}>
+            <span>{label}</span>
+            <strong style={color ? { color } : undefined}>{value}</strong>
+            {sub && <small>{sub}</small>}
+            {hasPct && (
+                <span className={`delta ${pct >= 0 ? "up" : "down"}`}>
+                    {pct >= 0 ? "↑" : "↓"} {Math.abs(pct).toFixed(1)}% vs previous
+                </span>
+            )}
+        </Tag>
+    );
+}
+
+function TrendChart({ data }) {
+    const max = Math.max(...data.map((d) => d.total), 1);
+    return (
+        <div className="dash_trend">
+            {data.map((d, i) => {
+                const now = i === data.length - 1;
+                return (
+                    <div key={d.month} className="col" title={`${d.label}: ${money(d.total)} · ${plural(d.count, "invoice")}`}>
+                        <div className="zone">
+                            <div className="stack" style={{ "--r": d.total / max }}>
+                                {d.total > 0 && <span className="amt">{moneyShort(d.total)}</span>}
+                                <div className={`bar ${now ? "now" : ""}`} />
+                            </div>
+                        </div>
+                        <span className={`lbl ${now ? "now" : ""}`}>{d.label}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+/* ─────────────────────────────── page ─────────────────────────────── */
+
 function Home() {
     const [info, setInfo] = useState(EMPTY_INFO);
     const [extras, setExtras] = useState(EMPTY_EXTRAS);
-    const [range, setRange] = useState('this_month');
+    const [range, setRange] = useState("this_month");
     const [loaded, setLoaded] = useState(false);
     const [onboarding, setOnboarding] = useState(null);
 
     const navigate = useNavigate();
-    const { userInfo } = useSelector(s => s.user);
-    const { permissions, features, isTenantAdmin, status: accessStatus } = useSelector(s => s.access);
+    const { userInfo } = useSelector((s) => s.user);
+    const { permissions, features, isTenantAdmin, status: accessStatus } = useSelector((s) => s.access);
 
     // show everything while access info loads; filter once it's known
-    const can = (perm) => accessStatus !== 'succeeded' || permissions.includes(perm);
-    const hasFeat = (f) => accessStatus !== 'succeeded' || features.includes(f);
-    const isAdmin = accessStatus !== 'succeeded' || isTenantAdmin || userInfo?.is_company_admin;
-    const showKpis = can('invoice.view');
-    // report pages are guarded by BOTH the feature and the permission —
-    // mirror that here so we never link somewhere the user just bounces off
-    const canReport = can('report.view') && hasFeat('advanced_reports');
-    const canInventory = can('inventory.manage') && hasFeat('inventory');
+    const can = (perm) => accessStatus !== "succeeded" || permissions.includes(perm);
+    const hasFeat = (f) => accessStatus !== "succeeded" || features.includes(f);
+    const isAdmin = accessStatus !== "succeeded" || isTenantAdmin || userInfo?.is_company_admin;
+    const showKpis = can("invoice.view");
+    // report pages are guarded by BOTH the feature and the permission, so mirror
+    // that here and never link somewhere the user just bounces off
+    const canReport = can("report.view") && hasFeat("advanced_reports");
+    const canInventory = can("inventory.manage") && hasFeat("inventory");
 
     useEffect(() => {
         let alive = true;
-        clientToken.get(`user_info/?range=${range}`).then(r => {
+        clientToken.get(`user_info/?range=${range}`).then((r) => {
             if (alive && r.status === 200) setInfo({ ...EMPTY_INFO, ...r.data });
         }).catch(() => { }).finally(() => { if (alive) setLoaded(true); });
         return () => { alive = false; };
@@ -265,7 +137,7 @@ function Home() {
 
     useEffect(() => {
         let alive = true;
-        clientToken.get(`dashboard/?range=${range}`).then(r => {
+        clientToken.get(`dashboard/?range=${range}`).then((r) => {
             if (alive && r.status === 200) setExtras({ ...EMPTY_EXTRAS, ...r.data });
         }).catch(() => { });
         return () => { alive = false; };
@@ -273,104 +145,79 @@ function Home() {
 
     useEffect(() => {
         let alive = true;
-        clientToken.get('onboarding/').then(r => { if (alive) setOnboarding(r.data); }).catch(() => { });
+        clientToken.get("onboarding/").then((r) => { if (alive) setOnboarding(r.data); }).catch(() => { });
         return () => { alive = false; };
     }, []);
 
-    const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const today = new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
-    // first-run: account exists but nothing has ever been billed
+    // first-run: the account exists but nothing has ever been billed
     const isNewUser = loaded && showKpis && info.has_any_invoice === false;
 
     const nextGst = useMemo(() => (extras.gst_due || [])[0], [extras.gst_due]);
-    const trendHasData = (extras.trend || []).some(d => d.total > 0);
+    const trendHasData = (extras.trend || []).some((d) => d.total > 0);
     const topCustomerMax = (extras.top_customers[0]?.total) || 1;
+    const goToInvoices = (query) => navigate(query ? `/bill_list?${query}` : "/bill_list");
+    const periodLabel = info.range_label || "this month";
 
-    const goToInvoices = (query) => navigate(query ? `/bill_list?${query}` : '/bill_list');
+    // quick links to the places you're most likely to go next
+    const shortcuts = isNewUser
+        ? [
+            can("customer.manage") && { icon: UserPlus, label: "Add customer", to: "/Customers" },
+            canInventory && { icon: Package, label: "Add product", to: "/inventory" },
+            hasFeat("template_designer") && can("template.manage") && { icon: LayoutTemplate, label: "Templates", to: "/available-templates" },
+            isAdmin && { icon: Building, label: "My company", to: "/CompanyForm" },
+        ]
+        : [
+            can("customer.manage") && { icon: Users, label: "Customers", to: "/Customers" },
+            can("invoice.view") && { icon: FileText, label: "All invoices", to: "/bill_list" },
+            hasFeat("template_designer") && can("template.manage") && { icon: LayoutTemplate, label: "Templates", to: "/available-templates" },
+            canReport && { icon: BarChart3, label: "GST summary", to: "/gst-summary" },
+            isAdmin && { icon: Building, label: "My company", to: "/CompanyForm" },
+            { icon: User, label: "Profile", to: "/profile" },
+        ];
+    const visibleShortcuts = shortcuts.filter(Boolean);
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <div className="inv_page">
             <Navbar />
-
-            <div className="home-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
-
-                {/* ── Welcome strip ── */}
-                <div className="welcome-strip" style={{
-                    background: 'linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #7c3aed 100%)',
-                    borderRadius: '24px',
-                    marginBottom: '20px',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    boxShadow: '0 12px 40px rgba(79,70,229,0.3)',
-                    animation: 'fadeUp 0.4s ease both',
-                }}>
-                    <div style={{ position: 'absolute', top: '-40px', right: '10%', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', bottom: '-50px', right: '30%', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-
-                    <div>
-                        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '6px', fontWeight: 500 }}>
-                            📅 {today}
-                        </p>
-                        <h1 style={{ fontSize: '28px', fontWeight: 900, color: 'white', letterSpacing: '-0.5px', marginBottom: '6px' }}>
-                            Welcome back{info.name ? `, ${info.name}` : ''}! 👋
-                        </h1>
-                        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
-                            {isNewUser
-                                ? "Let's get your first bill out the door."
-                                : `Here's your business snapshot${info.range_label ? ` for ${info.range_label}` : ''}.`}
-                        </p>
+            <div className="inv_wrap">
+                {/* ── header ── */}
+                <div className="inv_head">
+                    <div className="inv_title">
+                        <PageIcon icon={LayoutDashboard} />
+                        <div>
+                            <h1>Welcome back{info.name ? `, ${info.name}` : ""}</h1>
+                            <p>
+                                {today}
+                                {isNewUser
+                                    ? " · Let's get your first bill out the door."
+                                    : ` · Your business snapshot${info.range_label ? ` for ${info.range_label}` : ""}.`}
+                            </p>
+                        </div>
                     </div>
-
-                    {can('invoice.create') && <button
-                        onClick={() => navigate('/newBill')}
-                        className="welcome-strip-btn"
-                        style={{
-                            background: 'white', color: '#4f46e5',
-                            fontWeight: 800, fontSize: '14px',
-                            padding: '12px 24px', borderRadius: '14px',
-                            border: 'none', cursor: 'pointer',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            flexShrink: 0,
-                            transition: 'transform 0.15s, box-shadow 0.15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'; }}
-                    >
-                        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                            <path d="M9 3v12M3 9h12" stroke="#4f46e5" strokeWidth="2.5" strokeLinecap="round" />
-                        </svg>
-                        Create Bill
-                    </button>}
+                    <div className="inv_head_actions">
+                        {showKpis && !isNewUser && (
+                            <div className="inv_seg" role="tablist" aria-label="Period">
+                                {RANGES.map((r) => (
+                                    <button key={r.key} type="button" role="tab" aria-selected={range === r.key}
+                                        className={range === r.key ? "on" : ""} onClick={() => setRange(r.key)}>
+                                        {r.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {can("invoice.create") && (
+                            <button type="button" className="inv_btn primary" onClick={() => navigate("/newBill")}>
+                                <Plus size={16} /> Create invoice
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <VerifyEmailBanner />
 
-                {/* ── Range selector ── */}
-                {showKpis && !isNewUser && (
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                        {RANGES.map(r => (
-                            <button
-                                key={r.key}
-                                onClick={() => setRange(r.key)}
-                                style={{
-                                    border: 'none', cursor: 'pointer',
-                                    padding: '8px 16px', borderRadius: '99px',
-                                    fontSize: '13px', fontWeight: 700,
-                                    background: range === r.key ? '#4f46e5' : 'white',
-                                    color: range === r.key ? 'white' : '#64748b',
-                                    boxShadow: range === r.key
-                                        ? '0 4px 12px rgba(79,70,229,0.3)'
-                                        : '0 2px 8px rgba(0,0,0,0.04)',
-                                    transition: 'all 0.15s',
-                                }}
-                            >{r.label}</button>
-                        ))}
-                    </div>
-                )}
-
-                {/* ── First-run: setup checklist + skeleton stats (mirrors the mobile Home) ── */}
+                {/* ── first run: setup checklist and placeholder numbers ── */}
                 {isNewUser && (
                     <>
                         <FirstRunChecklist data={onboarding} can={can} onDismissed={setOnboarding} />
@@ -378,235 +225,155 @@ function Home() {
                     </>
                 )}
 
-                {/* ── KPI Cards ── */}
-                {showKpis && !isNewUser && <div style={{ display: 'flex', gap: '20px', marginBottom: '28px', flexWrap: 'wrap' }}>
-                    <KpiCard
-                        icon="💰"
-                        label={`Sales · ${info.range_label || 'this month'}`}
-                        value={money(info.month_total_final_amount)}
-                        pct={info.percentage_change}
-                        sub={`${info.invoices_this_month_count || 0} invoice${info.invoices_this_month_count === 1 ? '' : 's'} · prev ${info.invoices_prv_month_count || 0}`}
-                        color="linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)"
-                        delay={0.05}
-                        onClick={() => goToInvoices()}
-                    />
-                    <KpiCard
-                        icon="⏳"
-                        label="Outstanding"
-                        value={money(info.receivable_amount)}
-                        title="Billed but not yet received, net of part-payments"
-                        sub={`${info.receivable_count || 0} bill${info.receivable_count === 1 ? '' : 's'} awaiting payment`}
-                        color="linear-gradient(135deg, #4f46e5 0%, #4f46e5 100%)"
-                        delay={0.1}
-                        onClick={() => goToInvoices('status_group=open')}
-                    />
-                    <KpiCard
-                        icon={info.overdue_amount > 0 ? '🚨' : '✅'}
-                        label="Overdue"
-                        value={money(info.overdue_amount)}
-                        title={info.overdue_after_days
-                            ? `Unpaid for more than ${info.overdue_after_days} days, or marked overdue`
-                            : undefined}
-                        sub={info.overdue_count
-                            ? `${info.overdue_count} bill${info.overdue_count === 1 ? '' : 's'} unpaid ${info.overdue_after_days}+ days — chase these`
-                            : 'Nothing past due. Nice.'}
-                        color={info.overdue_amount > 0
-                            ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-                            : 'linear-gradient(135deg, #16a34a 0%, #16a34a 100%)'}
-                        delay={0.15}
-                        onClick={() => goToInvoices('status_group=overdue')}
-                    />
-                    <KpiCard
-                        icon="🧾"
-                        label="GST collected"
-                        value={money(info.month_gst_final_amount)}
-                        pct={info.percentage_gst_amount}
-                        sub={nextGst
-                            ? `${nextGst.form} due in ${nextGst.days_left} day${nextGst.days_left === 1 ? '' : 's'}`
-                            : 'Output tax on sales'}
-                        color="linear-gradient(135deg, #b45309 0%, #b45309 100%)"
-                        delay={0.2}
-                        onClick={canReport ? () => navigate('/gst-summary') : undefined}
-                    />
-                </div>}
-
-                {/* ── Quick Actions ── */}
-                <div style={{
-                    background: 'white', borderRadius: '20px',
-                    padding: '20px 24px', marginBottom: '28px',
-                    boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
-                    animation: 'fadeUp 0.5s ease 0.25s both',
-                }}>
-                    <p style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '16px' }}>
-                        Quick Actions
-                    </p>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        {isNewUser ? (
-                            <>
-                                {can('customer.manage') && <QuickAction icon="👥" label="Add Customer" onClick={() => navigate('/Customers')} accent="#4f46e5" />}
-                                {canInventory && <QuickAction icon="📦" label="Add Item" onClick={() => navigate('/inventory')} accent="#16a34a" />}
-                                {hasFeat('template_designer') && can('template.manage') && <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />}
-                                {isAdmin && <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#b45309" />}
-                            </>
-                        ) : (
-                            <>
-                        {can('invoice.create') && <QuickAction icon="➕" label="New Bill" onClick={() => navigate('/newBill')} accent="#4f46e5" />}
-                        {hasFeat('template_designer') && can('template.manage') && <QuickAction icon="📋" label="Templates" onClick={() => navigate('/available-templates')} accent="#7c3aed" />}
-                        {can('customer.manage') && <QuickAction icon="👥" label="Customers" onClick={() => navigate('/Customers')} accent="#4f46e5" />}
-                        {can('invoice.view') && <QuickAction icon="📂" label="All Invoices" onClick={() => navigate('/bill_list')} accent="#dc2626" />}
-                        {canReport && <QuickAction icon="📊" label="GST Summary" onClick={() => navigate('/gst-summary')} accent="#16a34a" />}
-                        {isAdmin && <QuickAction icon="🏢" label="My Company" onClick={() => navigate('/CompanyForm')} accent="#b45309" />}
-                        <QuickAction icon="👤" label="Profile" onClick={() => navigate('/profile')} accent="#94a3b8" />
-                            </>
-                        )}
+                {/* ── headline numbers ── */}
+                {showKpis && !isNewUser && (
+                    <div className="inv_kpis">
+                        <Kpi
+                            label={`Sales · ${periodLabel}`}
+                            value={moneyShort(info.month_total_final_amount)}
+                            title={money(info.month_total_final_amount)}
+                            pct={info.percentage_change}
+                            sub={`${plural(info.invoices_this_month_count || 0, "invoice")} · previous ${info.invoices_prv_month_count || 0}`}
+                            onClick={() => goToInvoices()}
+                        />
+                        <Kpi
+                            label="Outstanding"
+                            value={moneyShort(info.receivable_amount)}
+                            title={`${money(info.receivable_amount)}: billed but not yet received, net of part-payments`}
+                            sub={`${plural(info.receivable_count || 0, "bill")} awaiting payment`}
+                            color="#b45309"
+                            onClick={() => goToInvoices("status_group=open")}
+                        />
+                        <Kpi
+                            label="Overdue"
+                            value={moneyShort(info.overdue_amount)}
+                            title={info.overdue_after_days ? `Unpaid for more than ${info.overdue_after_days} days, or marked overdue` : undefined}
+                            sub={info.overdue_count
+                                ? `${plural(info.overdue_count, "bill")} unpaid ${info.overdue_after_days}+ days. Worth chasing.`
+                                : "Nothing past due"}
+                            color={info.overdue_amount > 0 ? "#dc2626" : "#166534"}
+                            onClick={() => goToInvoices("status_group=overdue")}
+                        />
+                        <Kpi
+                            label="GST collected"
+                            value={moneyShort(info.month_gst_final_amount)}
+                            title={money(info.month_gst_final_amount)}
+                            pct={info.percentage_gst_amount}
+                            sub={nextGst ? `${nextGst.form} due in ${plural(nextGst.days_left, "day")}` : "Output tax on sales"}
+                            onClick={canReport ? () => navigate("/gst-summary") : undefined}
+                        />
                     </div>
-                </div>
+                )}
+
+                {/* ── shortcuts ── */}
+                {visibleShortcuts.length > 0 && (
+                    <div className="inv_card" style={{ marginBottom: 16 }}>
+                        <div className="inv_card_head"><h2>Shortcuts</h2></div>
+                        <div className="dash_shortcuts">
+                            {visibleShortcuts.map(({ icon: Icon, label, to }) => (
+                                <button key={label} type="button" className="inv_btn" onClick={() => navigate(to)}>
+                                    <Icon size={16} /> {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {!isNewUser && showKpis && (
                     <>
-                        {/* ── Trend + recent activity ── */}
-                        <div className="dash-grid" style={{ marginBottom: '28px' }}>
-                            <Panel
-                                title="Sales — last 6 months"
-                                delay={0.3}
-                                action={canReport ? <LinkBtn label="Reports" onClick={() => navigate('/sales-register')} /> : null}
-                                style={{ flex: '1 1 460px' }}
-                            >
+                        {/* ── trend and recent activity ── */}
+                        <div className="dash_row">
+                            <Panel title="Sales, last 6 months"
+                                action={canReport ? <LinkBtn label="Reports" onClick={() => navigate("/sales-register")} /> : null}>
                                 {trendHasData
                                     ? <TrendChart data={extras.trend} />
-                                    : <EmptyNote>Not enough history yet — this fills in as you bill.</EmptyNote>}
+                                    : <p className="dash_empty">Not enough history yet. This fills in as you bill.</p>}
                             </Panel>
 
-                            <Panel
-                                title="Recent invoices"
-                                delay={0.35}
-                                action={<LinkBtn label="View all" onClick={() => goToInvoices()} />}
-                                style={{ flex: '1 1 380px' }}
-                            >
-                                {extras.recent_invoices.length === 0 && <EmptyNote>No invoices yet.</EmptyNote>}
-                                {extras.recent_invoices.map(inv => (
-                                    <div
-                                        key={inv.id}
-                                        onClick={() => navigate(`/invoice/${inv.id}/view`)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '12px',
-                                            padding: '10px 8px', borderRadius: '10px', cursor: 'pointer',
-                                            transition: 'background 0.15s',
-                                        }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                                    >
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {inv.customer}
-                                            </div>
-                                            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                                                {inv.invoice_number}{inv.date ? ` · ${new Date(inv.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}
-                                            </div>
+                            <Panel title="Recent invoices" action={<LinkBtn label="View all" onClick={() => goToInvoices()} />}>
+                                {extras.recent_invoices.length === 0 && <p className="dash_empty">No invoices yet.</p>}
+                                {extras.recent_invoices.slice(0, 5).map((inv) => (
+                                    <div key={inv.id} className="dash_item link" onClick={() => navigate(`/invoice/${inv.id}/view`)}>
+                                        <span className="inv_av">{initials(inv.customer)}</span>
+                                        <div className="main">
+                                            <div className="nm">{inv.customer || "—"}</div>
+                                            <div className="sub">{[inv.invoice_number, inv.date ? day(inv.date) : null].filter(Boolean).join(" · ")}</div>
                                         </div>
-                                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap' }}>
-                                            {money(inv.total)}
-                                        </div>
-                                        <StatusChip status={inv.payment_status} />
+                                        <div className="val">{money(inv.total)}</div>
+                                        <Pill obj={{ payment_status: inv.payment_status }} />
                                     </div>
                                 ))}
                             </Panel>
                         </div>
 
-                        {/* ── Customers / stock / payment mix ── */}
-                        <div className="dash-grid">
-                            {can('customer.manage') && (
-                                <Panel
-                                    title={`Top customers · ${info.range_label || 'this month'}`}
-                                    delay={0.4}
-                                    action={canReport ? <LinkBtn label="Ledger" onClick={() => navigate('/customer-ledger')} /> : null}
-                                    style={{ flex: '1 1 320px' }}
-                                >
-                                    {extras.top_customers.length === 0 && <EmptyNote>No customer sales in this period.</EmptyNote>}
-                                    {extras.top_customers.map((c, i) => {
-                                        return (
-                                            <div key={c.id} style={{ marginBottom: '12px' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '5px' }}>
-                                                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {i + 1}. {c.name}
-                                                    </span>
-                                                    <span style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap' }}>{money(c.total, { short: true })}</span>
-                                                </div>
-                                                <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '99px' }}>
-                                                    <div style={{
-                                                        height: '100%', borderRadius: '99px',
-                                                        width: `${Math.max((c.total / topCustomerMax) * 100, 3)}%`,
-                                                        background: 'linear-gradient(90deg, #4f46e5, #7c3aed)',
-                                                    }} />
-                                                </div>
+                        {/* ── customers, stock, payments, filing ── */}
+                        <div className="dash_row3">
+                            {can("customer.manage") && (
+                                <Panel title={`Top customers · ${periodLabel}`}
+                                    action={canReport ? <LinkBtn label="Ledger" onClick={() => navigate("/customer-ledger")} /> : null}>
+                                    {extras.top_customers.length === 0 && <p className="dash_empty">No customer sales in this period.</p>}
+                                    {extras.top_customers.map((c, i) => (
+                                        <div key={c.id} className="dash_bar" title={money(c.total)}>
+                                            <div className="row"><span>{i + 1}. {c.name}</span><span>{moneyShort(c.total)}</span></div>
+                                            <div className="track">
+                                                <div className="fill" style={{ width: `${Math.max((c.total / topCustomerMax) * 100, 3)}%` }} />
                                             </div>
-                                        );
-                                    })}
-                                </Panel>
-                            )}
-
-                            {extras.low_stock.length > 0 && (
-                                <Panel
-                                    title="Low stock"
-                                    delay={0.45}
-                                    action={canInventory ? <LinkBtn label="Inventory" onClick={() => navigate('/inventory')} /> : null}
-                                    style={{ flex: '1 1 320px' }}
-                                >
-                                    {extras.low_stock.map(p => (
-                                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '8px 0' }}>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>{p.sku}</div>
-                                            </div>
-                                            <span style={{
-                                                background: p.current_stock <= 0 ? '#fee2e2' : '#fef3c7',
-                                                color: p.current_stock <= 0 ? '#b91c1c' : '#b45309',
-                                                fontSize: '11px', fontWeight: 700, padding: '4px 10px',
-                                                borderRadius: '99px', whiteSpace: 'nowrap',
-                                            }}>
-                                                {p.current_stock} left / reorder at {p.reorder_level}
-                                            </span>
                                         </div>
                                     ))}
                                 </Panel>
                             )}
 
-                            {extras.payment_methods.length > 0 && (
-                                <Panel title="How you got paid" delay={0.5} style={{ flex: '1 1 280px' }}>
-                                    {extras.payment_methods.map(m => (
-                                        <div key={m.method} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', fontSize: '13px' }}>
-                                            <span style={{ color: '#64748b', fontWeight: 600, textTransform: 'capitalize' }}>
-                                                {m.method.replace('_', ' ')}
+                            {extras.low_stock.length > 0 && (
+                                <Panel title="Low stock"
+                                    action={canInventory ? <LinkBtn label="Inventory" onClick={() => navigate("/inventory")} /> : null}>
+                                    {extras.low_stock.slice(0, 4).map((p) => (
+                                        <div key={p.id} className="dash_item">
+                                            <div className="main">
+                                                <div className="nm">{p.name}</div>
+                                                <div className="sub">{p.sku} · reorder at {p.reorder_level}</div>
+                                            </div>
+                                            <span className={`inv_stock ${p.current_stock <= 0 ? "out" : "low"}`}>
+                                                {p.current_stock <= 0 ? "Out" : `${p.current_stock} left`}
                                             </span>
-                                            <span style={{ fontWeight: 800, color: '#1e293b' }}>{money(m.total, { short: true })}</span>
+                                        </div>
+                                    ))}
+                                    {extras.low_stock.length > 4 && (
+                                        <p className="dash_more">
+                                            {extras.low_stock.length - 4} more low on stock.{" "}
+                                            {canInventory && <button type="button" className="inv_link" onClick={() => navigate("/inventory")}>See all</button>}
+                                        </p>
+                                    )}
+                                </Panel>
+                            )}
+
+                            {extras.payment_methods.length > 0 && (
+                                <Panel title="How you got paid">
+                                    {extras.payment_methods.map((m) => (
+                                        <div key={m.method} className="dash_kv" title={money(m.total)}>
+                                            <span>{m.method.replace("_", " ")}</span>
+                                            <span>{moneyShort(m.total)}</span>
                                         </div>
                                     ))}
                                 </Panel>
                             )}
 
                             {(extras.gst_due || []).length > 0 && (
-                                <Panel
-                                    title="GST filing"
-                                    delay={0.55}
-                                    action={canReport ? <LinkBtn label="Summary" onClick={() => navigate('/gst-summary')} /> : null}
-                                    style={{ flex: '1 1 280px' }}
-                                >
-                                    {extras.gst_due.map(g => (
-                                        <div key={g.form} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                                            <div>
-                                                <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{g.form}</div>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>for {g.period}</div>
+                                <Panel title="GST filing"
+                                    action={canReport ? <LinkBtn label="Summary" onClick={() => navigate("/gst-summary")} /> : null}>
+                                    {extras.gst_due.map((g) => (
+                                        <div key={g.form} className="dash_item">
+                                            <div className="main">
+                                                <div className="nm">{g.form}</div>
+                                                <div className="sub">for {g.period}</div>
                                             </div>
-                                            <span style={{
-                                                background: g.days_left <= 3 ? '#fee2e2' : '#f1f5f9',
-                                                color: g.days_left <= 3 ? '#b91c1c' : '#475569',
-                                                fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px',
-                                            }}>
-                                                {g.days_left === 0 ? 'Due today' : `${g.days_left}d left`}
+                                            <span className="inv_pill" style={g.days_left <= 3
+                                                ? { background: "#fee2e2", color: "#b91c1c" }
+                                                : { background: "#f1f5f9", color: "#475569" }}>
+                                                {g.days_left === 0 ? "Due today" : `${g.days_left}d left`}
                                             </span>
                                         </div>
                                     ))}
-                                    <p style={{ fontSize: '10px', color: '#cbd5e1', marginTop: '8px' }}>
+                                    <p style={{ fontSize: 11, color: "#94a3b8", margin: "8px 0 0" }}>
                                         Standard deadlines. Confirm against the GST portal.
                                     </p>
                                 </Panel>
@@ -614,53 +381,7 @@ function Home() {
                         </div>
                     </>
                 )}
-
             </div>
-
-            <style>{`
-                @keyframes fadeUp {
-                    from { opacity: 0; transform: translateY(18px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                }
-
-                .home-container {
-                    padding: 28px 24px 60px;
-                }
-                .welcome-strip {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 28px 36px;
-                }
-                .dash-grid {
-                    display: flex;
-                    gap: 20px;
-                    flex-wrap: wrap;
-                    align-items: flex-start;
-                }
-
-                @media (max-width: 768px) {
-                    .home-container {
-                        padding: 20px 16px 80px;
-                    }
-                    .welcome-strip {
-                        flex-direction: column;
-                        align-items: flex-start;
-                        padding: 24px 20px;
-                        gap: 20px;
-                    }
-                    .welcome-strip-btn {
-                        width: 100%;
-                        justify-content: center;
-                    }
-                    .quick-action-btn {
-                        flex: 1 1 calc(50% - 12px);
-                    }
-                    .dash-grid > div {
-                        flex: 1 1 100% !important;
-                    }
-                }
-            `}</style>
         </div>
     );
 }
