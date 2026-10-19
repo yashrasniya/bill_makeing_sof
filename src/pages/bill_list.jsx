@@ -44,14 +44,17 @@ const Bill_list = () => {
     //   ?status_group=open        → everything still owing
     //   ?type=purchase            → purchase invoices
     //   ?customer=<id>            → one customer's bills
+    //   ?vendor=<id>              → one vendor's bills (purchases)
     const initialStatus = searchParams.get("payment_status") || "";
     const initialGroup = searchParams.get("status_group") || "";
     const initialType = searchParams.get("type") === "purchase" ? "purchase" : "sales";
     const initialCustomer = searchParams.get("customer");
+    const initialVendor = searchParams.get("vendor");
 
     const [filters, setFilters] = useState({
         s: "",
         customer: initialCustomer ? [Number(initialCustomer)] : [],
+        vendor: initialVendor ? [Number(initialVendor)] : [],
         date_from: "",
         date_to: "",
         invoice_type: initialType,
@@ -65,6 +68,7 @@ const Bill_list = () => {
     const [summary, setSummary] = useState(null);
     const [summaryTick, setSummaryTick] = useState(0);
     const [customerLabel, setCustomerLabel] = useState("");
+    const [vendorLabel, setVendorLabel] = useState("");
     const [pageError, setPageError] = useState("");
     const [exportOpen, setExportOpen] = useState(false);
     const exportRef = useRef(null);
@@ -88,6 +92,16 @@ const Bill_list = () => {
         return () => { alive = false; };
     }, [filters.customer]);
 
+    // same for a vendor deep link
+    useEffect(() => {
+        if (filters.vendor.length !== 1) { setVendorLabel(""); return undefined; }
+        let alive = true;
+        clientToken.get(`vendors/?id=${filters.vendor[0]}`)
+            .then((r) => { if (alive) setVendorLabel(((r.data.results || r.data || [])[0] || {}).name || ""); })
+            .catch(() => { if (alive) setVendorLabel(""); });
+        return () => { alive = false; };
+    }, [filters.vendor]);
+
     // headline numbers + tab counts. The counts follow the search / customer / date
     // filters; the four cards are company-wide and ignore them (server-side).
     useEffect(() => {
@@ -95,13 +109,14 @@ const Bill_list = () => {
         const params = { invoice_type: filters.invoice_type };
         if (filters.s) params.s = filters.s;
         if (filters.customer.length) params.customer = filters.customer.join();
+        if (filters.vendor.length) params.vendor = filters.vendor.join();
         if (filters.date_from) params.date_from = filters.date_from;
         if (filters.date_to) params.date_to = filters.date_to;
         clientToken.get("invoice/summary/", { params })
             .then((r) => { if (!stale) setSummary(r.data); })
             .catch(() => { if (!stale) setSummary(null); }); // the list still works without it
         return () => { stale = true; };
-    }, [filters.invoice_type, filters.s, filters.customer, filters.date_from, filters.date_to, summaryTick]);
+    }, [filters.invoice_type, filters.s, filters.customer, filters.vendor, filters.date_from, filters.date_to, summaryTick]);
 
     useEffect(() => {
         const close = (e) => { if (exportRef.current && !exportRef.current.contains(e.target)) setExportOpen(false); };
@@ -126,12 +141,12 @@ const Bill_list = () => {
         setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set("type", type); return next; }, { replace: true });
     };
 
-    const hasFilters = !!(filters.s || filters.customer.length || filters.date_from || filters.date_to
+    const hasFilters = !!(filters.s || filters.customer.length || filters.vendor.length || filters.date_from || filters.date_to
         || filters.payment_status || filters.status_group);
     const clearAll = () => {
         setSearchTerm("");
         setFilters((prev) => ({
-            s: "", customer: [], date_from: "", date_to: "", invoice_type: prev.invoice_type,
+            s: "", customer: [], vendor: [], date_from: "", date_to: "", invoice_type: prev.invoice_type,
             page_size: 15, payment_status: "", ordering: "-date",
         }));
     };
@@ -294,12 +309,17 @@ const Bill_list = () => {
                     )}
 
                     {/* filters that came in by link or aren't a tab */}
-                    {(customerLabel || filters.status_group === "open") && (
+                    {(customerLabel || vendorLabel || filters.status_group === "open") && (
                         <div className="inv_chips">
                             <span className="lead">Showing:</span>
                             {customerLabel && (
                                 <button type="button" className="inv_chip" title="Remove this filter" onClick={() => handleChange("customer", [])}>
                                     {customerLabel} <span aria-hidden="true">×</span>
+                                </button>
+                            )}
+                            {vendorLabel && (
+                                <button type="button" className="inv_chip" title="Remove this filter" onClick={() => handleChange("vendor", [])}>
+                                    {vendorLabel} <span aria-hidden="true">×</span>
                                 </button>
                             )}
                             {filters.status_group === "open" && (

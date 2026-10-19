@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { clientToken } from '../axios';
 import Navbar from '../comonant/navbar';
 import { BookOpen, Calendar, IndianRupee } from 'lucide-react';
 
 export default function SupplierLedger() {
+  const [searchParams] = useSearchParams();
+  const requestedVendor = searchParams.get('vendor') || '';
   const [suppliers, setSuppliers] = useState([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
   
@@ -18,11 +21,16 @@ export default function SupplierLedger() {
 
   useEffect(() => {
     // Fetch suppliers (vendors)
-    clientToken.get('/vendors/')
+    // page_size: the endpoint pages by 10, which would hide every other supplier
+    clientToken.get('/vendors/?page_size=999')
       .then(res => {
         const vends = res.data.results || res.data;
         setSuppliers(vends);
-        if (vends.length > 0) {
+        // a link from the Vendors page names the supplier to open
+        const wanted = vends.find(v => String(v.id) === requestedVendor);
+        if (wanted) {
+          setSelectedSupplierId(wanted.id);
+        } else if (vends.length > 0) {
           setSelectedSupplierId(vends[0].id);
         }
       })

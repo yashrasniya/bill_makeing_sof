@@ -249,6 +249,11 @@ function NewBillBody({ id }) {
         if (customerParam && !id && !InvoiceData?.receiver) {
             setInvoiceData(prev => (prev.receiver ? prev : { ...prev, receiver: customerParam }));
         }
+        // ?vendor=<id> (from the Vendors page) starts the purchase for that vendor
+        const vendorParam = params.get('vendor');
+        if (vendorParam && !id && !InvoiceData?.vendor) {
+            setInvoiceData(prev => (prev.vendor ? prev : { ...prev, vendor: vendorParam }));
+        }
     }, [location.search, id]);
 
     const showToast = useCallback((message, type = 'error') => {

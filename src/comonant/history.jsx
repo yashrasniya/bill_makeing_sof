@@ -69,6 +69,7 @@ function History({ filters = {}, hasFilters = false, onClearFilters, onChanged }
         setLoading(true);
         const params = { ...filters, page };
         if (Array.isArray(filters.customer)) params.customer = filters.customer.join();
+        if (Array.isArray(filters.vendor)) params.vendor = filters.vendor.join();
         clientToken.get("invoice/", { params })
             .then((response) => {
                 if (stale || response.status !== 200) return;
