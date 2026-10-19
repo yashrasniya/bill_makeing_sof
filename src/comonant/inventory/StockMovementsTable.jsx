@@ -1,160 +1,172 @@
-import React, { useState, useEffect } from 'react';
-import { clientToken } from '../../axios.js';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
+import { clientToken } from "../../axios.js";
+import { initials } from "../invoiceBits";
+import StockMovementModal from "./StockMovementModal";
 
-function StockMovementsTable() {
+const PAGE_SIZE = 25;
+
+// a movement's own timestamp, in the viewer's time zone ("22 Aug 2026, 4:05 pm")
+const when = (iso) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return `${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}, ${d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`;
+};
+
+// `addSignal` changes when the page's "Record movement" button is pressed
+function StockMovementsTable({ addSignal = 0 }) {
     const [movements, setMovements] = useState([]);
     const [products, setProducts] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    const [formData, setFormData] = useState({ product: '', quantity: 1, movement_type: 'IN', notes: '' });
-
-    const fetchProducts = () => {
-        clientToken.get(`/inventory/products/?limit=100`).then(res => setProducts(res.data.results || res.data));
-    };
-
-    const fetchMovements = () => {
-        const url = `/inventory/stock-movements/${searchQuery ? `?s=${encodeURIComponent(searchQuery)}` : ''}`;
-        clientToken.get(url).then(res => setMovements(res.data.results || res.data)).catch(console.error);
-    };
+    const [loaded, setLoaded] = useState(false);
+    const [refresh, setRefresh] = useState(0);
+    const [error, setError] = useState("");
+    const [searchText, setSearchText] = useState("");
+    const [search, setSearch] = useState("");
+    const [type, setType] = useState("");            // "", "IN", "OUT"
+    const [page, setPage] = useState(1);
+    const [recording, setRecording] = useState(false);
 
     useEffect(() => {
-        fetchMovements();
-        fetchProducts();
-    }, [searchQuery]);
+        const t = setTimeout(() => setSearch(searchText.trim().toLowerCase()), 250);
+        return () => clearTimeout(t);
+    }, [searchText]);
+    useEffect(() => { setPage(1); }, [search, type]);
 
-    const handleSave = (e) => {
-        e.preventDefault();
+    // the lists aren't paginated by the API, so everything loads at once
+    useEffect(() => {
+        let stale = false;
+        Promise.all([clientToken.get("/inventory/stock-movements/"), clientToken.get("/inventory/products/")])
+            .then(([m, p]) => {
+                if (stale) return;
+                setMovements(m.data.results || m.data);
+                setProducts(p.data.results || p.data);
+            })
+            .catch((e) => { if (!stale) setError(`Could not load stock movements. ${e.message || ""}`); })
+            .finally(() => { if (!stale) setLoaded(true); });
+        return () => { stale = true; };
+    }, [refresh]);
 
-        // Always POST (no edit for safety on movements)
-        clientToken.post(`/inventory/stock-movements/`, formData).then(() => {
-            setIsModalOpen(false);
-            setFormData({ product: '', quantity: 1, movement_type: 'IN', notes: '' });
-            fetchMovements();
-        }).catch(err => alert("Error recording stock movement. Ensure quantity is valid."));
+    const first = useRef(addSignal);
+    useEffect(() => { if (addSignal !== first.current) setRecording(true); }, [addSignal]);
+
+    const skuOf = useMemo(() => Object.fromEntries(products.map((p) => [p.id, p.sku])), [products]);
+
+    const filtered = useMemo(() => [...movements]
+        .sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id)
+        .filter((m) => !type || m.movement_type === type)
+        .filter((m) => !search || [m.product_name, skuOf[m.product], m.notes]
+            .some((f) => String(f || "").toLowerCase().includes(search))), [movements, type, search, skuOf]);
+
+    const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const from = rows.length ? (page - 1) * PAGE_SIZE + 1 : 0;
+
+    const remove = (m) => {
+        if (!window.confirm(`Delete this ${m.movement_type === "IN" ? "stock in" : "stock out"} of ${m.quantity} × ${m.product_name}? Its effect on stock is reversed.`)) return;
+        clientToken.delete(`/inventory/stock-movements/${m.id}/`)
+            .then(() => setRefresh((n) => n + 1))
+            .catch(() => setError("Could not delete this movement."));
     };
 
-    const handleDelete = (id) => {
-        if (confirm("Deleting a movement will NOT reverse stock naturally. Proceed?")) {
-            clientToken.delete(`/inventory/stock-movements/${id}/`).then(fetchMovements).catch(console.error);
-        }
-    };
+    const pill = (m) => (
+        <span className={`inv_stock ${m.movement_type === "IN" ? "ok" : "out"}`}>{m.movement_type === "IN" ? "Stock in" : "Stock out"}</span>
+    );
+    const qty = (m) => <span className={`inv_qty ${m.movement_type === "IN" ? "in" : "out"}`}>{m.movement_type === "IN" ? "+" : "−"}{m.quantity}</span>;
+
+    if (!loaded) return <div className="inv_loading">Loading stock movements…</div>;
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-                <div>
-                    <h3 className="text-xl font-bold text-slate-800">Stock Movements Ledger</h3>
-                    <p className="text-sm text-slate-500 mt-1">Record items coming in and going out.</p>
+        <div className="inv_card">
+            {error && <div className="inv_notice err" style={{ margin: "16px 20px 0" }}>{error}<button type="button" aria-label="Dismiss" onClick={() => setError("")}>✕</button></div>}
+
+            <div className="inv_toolbar">
+                <div className="inv_search">
+                    <Search size={18} />
+                    <input type="text" value={searchText} onChange={(e) => setSearchText(e.target.value)}
+                        placeholder="Search by product, SKU or note" aria-label="Search stock movements" />
                 </div>
-                <div className="flex gap-4">
-                    <input
-                        type="text"
-                        placeholder="Search product..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm"
-                    />
-                    <button onClick={() => setIsModalOpen(true)} className="px-5 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors shadow-sm flex items-center gap-2">
-                        <span>Record Movement</span>
-                    </button>
+                <div className="cust_chips">
+                    {[["", "All"], ["IN", "Stock in"], ["OUT", "Stock out"]].map(([v, label]) => (
+                        <button key={label} type="button" className={`cust_chip ${type === v ? "on" : ""}`} onClick={() => setType(v)}>{label}</button>
+                    ))}
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50 text-slate-500 text-sm">
-                        <tr>
-                            <th className="px-6 py-4 font-medium">Date</th>
-                            <th className="px-6 py-4 font-medium">Product</th>
-                            <th className="px-6 py-4 font-medium">Type</th>
-                            <th className="px-6 py-4 font-medium">Quantity</th>
-                            <th className="px-6 py-4 font-medium">Notes</th>
-                            <th className="px-6 py-4 font-medium text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {movements.length === 0 && (
-                            <tr>
-                                <td colSpan="6" className="px-6 py-12 text-center">
-                                    <div className="flex flex-col items-center justify-center">
-                                        <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
-                                            <span className="text-2xl">📋</span>
-                                        </div>
-                                        <h3 className="text-lg font-medium text-slate-900 mb-1">No stock movements found</h3>
-                                        <p className="text-slate-500 mb-4">Record your first stock movement to track inventory.</p>
-                                        <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors shadow-sm">
-                                            Record Movement
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
-                        {movements.map(mov => {
-                            const date = new Date(mov.date).toLocaleDateString() + ' ' + new Date(mov.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            return (
-                                <tr key={mov.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">{date}</td>
-                                    <td className="px-6 py-4 font-medium text-slate-800">{mov.product_name}</td>
-                                    <td className="px-6 py-4 text-slate-600">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${mov.movement_type === 'IN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                            {mov.movement_type === 'IN' ? 'Stock In ↑' : 'Stock Out ↓'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 font-mono font-medium text-slate-800">{mov.quantity}</td>
-                                    <td className="px-6 py-4 text-slate-500 text-sm truncate max-w-[200px]">{mov.notes || '-'}</td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button onClick={() => handleDelete(mov.id)} className="text-red-500 hover:text-red-700 font-medium text-sm">Delete</button>
-                                    </td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
-            </div>
-
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl w-full max-w-md shadow-2xl flex flex-col">
-                        <div className="p-6 border-b border-slate-100">
-                            <h2 className="text-2xl font-bold text-slate-800">Record Movement</h2>
-                        </div>
-
-                        <form id="movementForm" onSubmit={handleSave} className="p-6 space-y-5">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Product *</label>
-                                <select required value={formData.product} onChange={e => setFormData({ ...formData, product: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white outline-none">
-                                    <option value="">Select Product...</option>
-                                    {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.current_stock} in stock)</option>)}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Type *</label>
-                                    <select required value={formData.movement_type} onChange={e => setFormData({ ...formData, movement_type: e.target.value })} className={`w-full px-4 py-2 border rounded-lg font-bold outline-none ${formData.movement_type === 'IN' ? 'text-green-700 focus:ring-green-500' : 'text-red-700 focus:ring-red-500'}`}>
-                                        <option value="IN">Stock IN</option>
-                                        <option value="OUT">Stock OUT</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Quantity *</label>
-                                    <input required type="number" min="1" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. 50" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Notes / Reason</label>
-                                <input type="text" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Purchase order #, breakage..." />
-                            </div>
-                        </form>
-
-                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-xl">
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors font-medium">Cancel</button>
-                            <button type="submit" form="movementForm" className="px-6 py-2 bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] text-white rounded-xl font-bold transition-colors shadow-sm">Confirm Movement</button>
-                        </div>
+            {filtered.length === 0 ? (
+                <div className="inv_state">
+                    <div className="ico"><ArrowLeftRight size={30} /></div>
+                    {movements.length === 0 ? (
+                        <>
+                            <h3>Record your first stock movement</h3>
+                            <p>Every item that comes in or goes out is logged here, and stock updates automatically.</p>
+                            <button type="button" className="inv_btn primary" onClick={() => setRecording(true)}>Record movement</button>
+                        </>
+                    ) : (
+                        <>
+                            <h3>No movements match</h3>
+                            <p>Try a different search, or clear the filters.</p>
+                            <button type="button" className="inv_btn" onClick={() => { setSearchText(""); setSearch(""); setType(""); }}>Clear search and filters</button>
+                        </>
+                    )}
+                </div>
+            ) : (
+                <>
+                    <div className="inv_table_wrap">
+                        <table className="inv_table" style={{ minWidth: 720 }}>
+                            <thead>
+                                <tr><th>Date</th><th>Product</th><th>Type</th><th className="num">Quantity</th><th>Note</th><th style={{ width: 48 }} /></tr>
+                            </thead>
+                            <tbody>
+                                {rows.map((m) => (
+                                    <tr key={m.id} style={{ cursor: "default" }}>
+                                        <td style={{ whiteSpace: "nowrap", color: "#64748b", fontSize: 13 }}>{when(m.date)}</td>
+                                        <td>
+                                            <div className="inv_party">
+                                                <span className="inv_av">{initials(m.product_name)}</span>
+                                                <div style={{ minWidth: 0 }}>
+                                                    <div className="name" style={{ fontWeight: 600 }}>{m.product_name}</div>
+                                                    {skuOf[m.product] && <div className="inv_sku">{skuOf[m.product]}</div>}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{pill(m)}</td>
+                                        <td className="num">{qty(m)}</td>
+                                        <td style={{ color: "#64748b", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={m.notes || ""}>{m.notes || "—"}</td>
+                                        <td className="num">
+                                            <button type="button" className="inv_inline_btn danger" aria-label="Delete movement" title="Delete movement" onClick={() => remove(m)}><Trash2 size={16} /></button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                </div>
+
+                    <div className="inv_cards">
+                        {rows.map((m) => (
+                            <div className="inv_inv_card" key={m.id} style={{ cursor: "default" }}>
+                                <div className="top">
+                                    <span className="inv_av">{initials(m.product_name)}</span>
+                                    <div className="party">{m.product_name}</div>
+                                    <button type="button" className="inv_inline_btn danger" aria-label="Delete movement" onClick={() => remove(m)}><Trash2 size={16} /></button>
+                                </div>
+                                <div className="meta">
+                                    <div><div style={{ marginBottom: 4 }}>{when(m.date)}</div>{pill(m)}</div>
+                                    <div className="amt">{qty(m)}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="inv_foot">
+                        <span className="summary">{`${from}–${from + rows.length - 1} of ${filtered.length}`}</span>
+                        <button type="button" className="inv_page_btn" aria-label="Previous page" disabled={page === 1} onClick={() => setPage((n) => n - 1)}><ChevronLeft size={18} /></button>
+                        <button type="button" className="inv_page_btn" aria-label="Next page" disabled={page * PAGE_SIZE >= filtered.length} onClick={() => setPage((n) => n + 1)}><ChevronRight size={18} /></button>
+                    </div>
+                </>
+            )}
+
+            {recording && (
+                <StockMovementModal products={products} onClose={() => setRecording(false)}
+                    onSaved={() => { setRecording(false); setRefresh((n) => n + 1); }} />
             )}
         </div>
     );

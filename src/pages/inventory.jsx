@@ -1,59 +1,62 @@
-import React, { useState } from 'react';
-import { Package } from 'lucide-react';
-import PageIcon from '../comonant/PageIcon';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Package, Plus } from "lucide-react";
 import Navbar from "../comonant/navbar";
+import PageIcon from "../comonant/PageIcon";
 import ProductsTable from "../comonant/inventory/ProductsTable";
 import CategoriesTable from "../comonant/inventory/CategoriesTable";
 import StockMovementsTable from "../comonant/inventory/StockMovementsTable";
+import "../style/invoices.css";
+import "../style/Companys.css";
+
+const TABS = [
+    { id: "products", label: "Products", action: "Add product" },
+    { id: "movements", label: "Stock movements", action: "Record movement" },
+    { id: "categories", label: "Categories", action: "Add category" },
+];
 
 function InventoryPage() {
-    const [activeTab, setActiveTab] = useState('products');
     const navigate = useNavigate();
-
-    // Vendors are shared with the Purchases page — the tab jumps there
-    const tabs = [
-        { id: 'products', label: 'Products Master' },
-        { id: 'movements', label: 'Stock Movements' },
-        { id: 'categories', label: 'Categories' },
-        { id: 'vendors', label: 'Vendors ↗' },
-    ];
+    const [activeTab, setActiveTab] = useState("products");
+    // pressing the header button bumps this; the open tab reacts by opening its form
+    const [addSignal, setAddSignal] = useState(0);
+    const current = TABS.find((t) => t.id === activeTab);
 
     return (
-        <div className="min-h-screen bg-slate-50 bg-opacity-50 font-sans">
+        <div className="inv_page">
             <Navbar />
-
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8">
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div className="inv_wrap">
+                <div className="inv_head">
+                    <div className="inv_title">
                         <PageIcon icon={Package} />
                         <div>
-                    <h1 className="text-[22px] font-bold tracking-tight text-slate-900">Inventory Management</h1>
-                    <p className="mt-1 text-[13px] text-slate-500">Manage your product catalog, monitor stock levels, and track vendor shipments.</p>
+                            <h1>Inventory</h1>
+                            <p>Your product catalogue, what's in stock, and every movement in and out.</p>
+                        </div>
                     </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 p-1 inline-flex space-x-1">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => tab.id === 'vendors' ? navigate('/vendors') : setActiveTab(tab.id)}
-                            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                                    ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                                }`}
-                        >
-                            {tab.label}
+                    <div className="inv_head_actions">
+                        <button type="button" className="inv_btn primary" onClick={() => setAddSignal((n) => n + 1)}>
+                            <Plus size={16} /> {current.action}
                         </button>
-                    ))}
+                    </div>
                 </div>
 
-                <div className="mt-4 animate-in fade-in duration-300">
-                    {activeTab === 'products' && <ProductsTable />}
-                    {activeTab === 'movements' && <StockMovementsTable />}
-                    {activeTab === 'categories' && <CategoriesTable />}
+                <div className="inv_card" style={{ marginBottom: 16 }}>
+                    <div className="inv_tabs" role="tablist" aria-label="Inventory sections" style={{ borderBottom: 0 }}>
+                        {TABS.map((t) => (
+                            <button key={t.id} type="button" role="tab" aria-selected={activeTab === t.id}
+                                className={`inv_tab ${activeTab === t.id ? "on" : ""}`} onClick={() => setActiveTab(t.id)}>
+                                {t.label}
+                            </button>
+                        ))}
+                        {/* vendors are shared with the Purchases page, so this tab is a link */}
+                        <button type="button" className="inv_tab" onClick={() => navigate("/vendors")}>Vendors ↗</button>
+                    </div>
                 </div>
+
+                {activeTab === "products" && <ProductsTable addSignal={addSignal} />}
+                {activeTab === "movements" && <StockMovementsTable addSignal={addSignal} />}
+                {activeTab === "categories" && <CategoriesTable addSignal={addSignal} />}
             </div>
         </div>
     );
