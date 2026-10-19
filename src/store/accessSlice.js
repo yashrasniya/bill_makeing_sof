@@ -33,6 +33,7 @@ const initialState = {
     subscription: null,
     companyId: null,
     companyName: null,
+    companyStateCode: null,
     isTenantAdmin: false,
     isProductOwner: false,
     // Company-level opt-in switches, distinct from `features` (what the
@@ -70,6 +71,7 @@ const accessSlice = createSlice({
                 state.subscription = action.payload.subscription;
                 state.companyId = action.payload.company_id;
                 state.companyName = action.payload.company_name;
+                state.companyStateCode = action.payload.company_state_code ?? null;
                 state.isTenantAdmin = !!action.payload.is_tenant_admin;
                 state.isProductOwner = !!action.payload.is_product_owner;
                 state.lineItemImagesEnabled = !!action.payload.line_item_images_enabled;
