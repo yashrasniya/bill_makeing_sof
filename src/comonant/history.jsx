@@ -7,37 +7,9 @@ import { ChevronLeft, ChevronRight, Download, FileText, MoreVertical, Plus, Tras
 import { clientToken } from "../axios";
 import PdfOpener from "@/utility/pdf_opener";
 import { day, money } from "@/utility/money";
-
-// Payment status pills. Colors follow DESIGN_SYSTEM.md: unpaid is the neutral
-// indigo tint so that red stays reserved for "overdue".
-const STATUS = {
-    unpaid: { label: "Unpaid", bg: "#eef2ff", fg: "#4338ca" },
-    partially_paid: { label: "Partial", bg: "#fef3c7", fg: "#b45309" },
-    paid: { label: "Paid", bg: "#dcfce7", fg: "#166534" },
-    overdue: { label: "Overdue", bg: "#fecdd3", fg: "#9f1239" },
-};
-
-// Overdue is derived on the server (an open bill past the cut-off), so it can
-// be true while the stored status still says "unpaid".
-const statusOf = (obj) => (obj.is_overdue ? STATUS.overdue : STATUS[obj.payment_status] || STATUS.unpaid);
-
-const isOpen = (obj) => obj.payment_status !== "paid" && Number(obj.balance_due) > 0;
+import { Hint, Pill, initials, isOpen } from "./invoiceBits";
 
 const partyOf = (obj) => (obj.invoice_type === "purchase" ? obj.vendor_name : obj.receiver_name) || "—";
-
-const initials = (name) => (String(name || "").match(/[\p{L}\p{N}]+/gu) || ["?"])
-    .slice(0, 2).map((w) => w.charAt(0)).join("").toUpperCase();
-
-const Pill = ({ obj }) => {
-    const s = statusOf(obj);
-    return <span className="inv_pill" style={{ background: s.bg, color: s.fg }}>{s.label}</span>;
-};
-
-// "12 days old" under the pill for anything still owing, so people can see
-// what is getting stale without opening it
-const Hint = ({ obj }) => (isOpen(obj) && obj.age_days != null
-    ? <div className="inv_hint">{obj.age_days === 0 ? "today" : `${obj.age_days} day${obj.age_days === 1 ? "" : "s"} old`}</div>
-    : null);
 
 function RowMenu({ obj, canDelete, onDelete }) {
     const [open, setOpen] = useState(false);

@@ -1,453 +1,256 @@
-import React, { useState, useEffect } from "react";
-import { ShoppingCart } from 'lucide-react';
-import PageIcon from '../comonant/PageIcon';
-import Navbar from "../comonant/navbar.jsx";
-import { clientToken } from "@/axios";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-
-function KpiCard({ icon, label, value, sub, color, delay = 0 }) {
-    return (
-        <div style={{
-            background: color,
-            borderRadius: '20px',
-            padding: '24px 22px 20px',
-            flex: 1,
-            minWidth: '200px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            position: 'relative',
-            overflow: 'hidden',
-            animation: `fadeUp 0.5s ease ${delay}s both`,
-            cursor: 'default',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-        }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 16px 40px rgba(0,0,0,0.18)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.12)'; }}
-        >
-            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
-            <div style={{ fontSize: '26px', marginBottom: '10px' }}>{icon}</div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: 'white', letterSpacing: '-0.5px', lineHeight: 1.1 }}>
-                {value}
-            </div>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', fontWeight: 600, marginTop: '4px' }}>{label}</div>
-            {sub && (
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', marginTop: '8px' }}>{sub}</div>
-            )}
-        </div>
-    );
-}
+import { Plus, RefreshCw, ShoppingCart, Upload } from "lucide-react";
+import { clientToken } from "@/axios";
+import Navbar from "../comonant/navbar.jsx";
+import PageIcon from "../comonant/PageIcon";
+import { Hint, Pill, initials, isOpen } from "../comonant/invoiceBits";
+import { day, money, moneyShort } from "@/utility/money";
+import "../style/invoices.css";
 
 const PurchaseInvoices = () => {
+    const navigate = useNavigate();
     const { features, status: accessStatus } = useSelector((state) => state.access);
-    const hasOcrFeature = accessStatus === 'succeeded' && features.includes('ocr_purchase_invoice');
-    const [summary, setSummary] = useState(null);
+    const hasOcrFeature = accessStatus === "succeeded" && features.includes("ocr_purchase_invoice");
+
+    const [summary, setSummary] = useState(null);      // purchase-summary: totals + recent bills
+    const [owed, setOwed] = useState(null);            // invoice/summary: what is still to pay
+    const [pendingJobs, setPendingJobs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [pendingJobs, setPendingJobs] = useState([]);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-    const navigate = useNavigate();
+    const [uploading, setUploading] = useState(false);
+    const [notice, setNotice] = useState(null);        // { type: "ok" | "err", text }
+    const fileInput = useRef(null);
 
-    const fetchData = () => {
-        const fetchSummary = clientToken.get('purchase-summary/').then(res => res.data);
-        const fetchPending = clientToken.get('purchase/pending-jobs/').then(res => res.data);
+    const load = () => Promise.allSettled([
+        clientToken.get("purchase-summary/"),
+        clientToken.get("purchase/pending-jobs/"),
+        clientToken.get("invoice/summary/", { params: { invoice_type: "purchase" } }),
+    ]).then(([totals, jobs, due]) => {
+        if (totals.status === "fulfilled") setSummary(totals.value.data);
+        else setNotice({ type: "err", text: `Could not load purchases. ${totals.reason?.message || ""}` });
+        if (jobs.status === "fulfilled") setPendingJobs(jobs.value.data || []);
+        if (due.status === "fulfilled") setOwed(due.value.data);   // the page still works without it
+    }).finally(() => { setLoading(false); setRefreshing(false); });
 
-        return Promise.all([fetchSummary, fetchPending])
-            .then(([summaryData, pendingData]) => {
-                setSummary(summaryData);
-                setPendingJobs(pendingData);
-            })
-            .catch(err => {
-                console.error("Error fetching dashboard data:", err);
-            })
-            .finally(() => {
-                setLoading(false);
-                setRefreshing(false);
-            });
-    };
+    useEffect(() => { load(); }, []);
 
-    // Refetches summary + pending jobs without blanking the dashboard.
+    // refetches everything without blanking the page
     const handleRefresh = () => {
         if (refreshing) return;
         setRefreshing(true);
-        fetchData();
+        load();
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const handleRefreshStatus = (job_id) => {
-        clientToken.get(`purchase/status/${job_id}/`)
-            .then(res => {
-                const newStatus = res.data.status;
-                if (newStatus === "success" || newStatus === "done") {
-                    setPendingJobs(prev => prev.filter(job => job.job_id !== job_id));
-                    fetchData(); // Refetch summary to show new invoice
+    const handleRefreshStatus = (jobId) => {
+        clientToken.get(`purchase/status/${jobId}/`)
+            .then((res) => {
+                const next = res.data.status;
+                if (next === "success" || next === "done") {
+                    setPendingJobs((prev) => prev.filter((j) => j.job_id !== jobId));
+                    load(); // the new invoice now counts toward the totals
                 } else {
-                    setPendingJobs(prev => prev.map(job => job.job_id === job_id ? { ...job, status: newStatus } : job));
+                    setPendingJobs((prev) => prev.map((j) => (j.job_id === jobId ? { ...j, status: next } : j)));
                 }
             })
-            .catch(err => console.error("Error refreshing status:", err));
+            .catch(() => setNotice({ type: "err", text: "Could not check that bill's status. Try again." }));
     };
 
-    return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
-            <Navbar />
+    const handleUpload = (e) => {
+        const file = e.target.files[0];
+        e.target.value = ""; // allow picking the same file again
+        if (!file) return;
+        if (!hasOcrFeature) {
+            setNotice({ type: "err", text: "Your current subscription does not contain this feature" });
+            return;
+        }
+        const form = new FormData();
+        form.append("file", file);
+        setUploading(true);
+        clientToken.post("purchase/upload/", form, { headers: { "Content-Type": "multipart/form-data" } })
+            .then((res) => {
+                if (res.status === 200 || res.status === 201) {
+                    setNotice({ type: "ok", text: "Bill uploaded. It's being read in the background and will appear here shortly." });
+                    load();
+                }
+            })
+            .catch((err) => setNotice({
+                type: "err",
+                text: err.response?.data?.error || "Could not upload that bill. Please try again.",
+            }))
+            .finally(() => setUploading(false));
+    };
 
-            <div className="main-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
-                <div className="purchase-header" style={{
-                    marginBottom: '28px',
-                    animation: 'fadeUp 0.4s ease both',
-                    position: 'relative',
-                    zIndex: 100,
-                }}>
-                    <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                            <PageIcon icon={ShoppingCart} />
-                            <div>
-                        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', marginBottom: '6px' }}>
-                            Purchase Dashboard
-                        </h1>
-                        <p style={{ fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
-                            Overview of your purchase invoices and vendor expenses.
-                        </p>
-                        </div>
+    const kpi = (label, value, sub, onClick, color) => {
+        const Tag = onClick ? "button" : "div";
+        return (
+            <Tag className="inv_kpi" type={onClick ? "button" : undefined} onClick={onClick}>
+                <span>{label}</span>
+                <strong style={color ? { color } : undefined}>{value}</strong>
+                {sub && <small>{sub}</small>}
+            </Tag>
+        );
+    };
+
+    const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+    const recent = summary?.recent_purchases || [];
+
+    return (
+        <div className="inv_page">
+            <Navbar />
+            <div className="inv_wrap">
+                {/* ── header ── */}
+                <div className="inv_head">
+                    <div className="inv_title">
+                        <PageIcon icon={ShoppingCart} />
+                        <div>
+                            <h1>Purchases</h1>
+                            <p>Track what you've bought, what you owe vendors, and bills waiting to be read.</p>
                         </div>
                     </div>
-
-                    <div className="header-actions">
-                        <button
-                            onClick={handleRefresh}
-                            disabled={refreshing}
-                            className="action-btn"
-                            title="Refresh invoices"
-                            aria-label="Refresh invoices"
-                            style={{
-                                background: '#f8fafc', color: '#4f46e5',
-                                fontWeight: 800, fontSize: '14px',
-                                padding: '12px 20px', borderRadius: '14px',
-                                border: '2px solid #e2e8f0',
-                                cursor: refreshing ? 'wait' : 'pointer',
-                                opacity: refreshing ? 0.7 : 1,
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                transition: 'all 0.15s',
-                            }}
-                            onMouseEnter={e => { if (!refreshing) { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.background = '#f1f5f9'; } }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
-                        >
-                            <svg
-                                width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                                style={refreshing ? { animation: 'spin 0.8s linear infinite' } : undefined}
-                            >
-                                <polyline points="23 4 23 10 17 10" />
-                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                            </svg>
-                            {refreshing ? 'Refreshing...' : 'Refresh'}
+                    <div className="inv_head_actions">
+                        <button type="button" className="inv_iconbtn" onClick={handleRefresh} disabled={refreshing}
+                            title="Refresh" aria-label="Refresh purchases">
+                            <RefreshCw size={17} className={refreshing ? "inv_spin" : undefined} />
                         </button>
-
-                        <input
-                            type="file"
-                            id="invoice-upload"
-                            style={{ display: 'none' }}
-                            accept="application/pdf,image/*"
-                            onChange={(e) => {
-                                if (!hasOcrFeature) {
-                                    alert("Your current subscription does not contain this feature");
-                                    e.target.value = '';
-                                    return;
-                                }
-
-                                const file = e.target.files[0];
-                                if (!file) return;
-
-                                const formData = new FormData();
-                                formData.append("file", file);
-
-                                setLoading(true);
-                                clientToken.post('purchase/upload/', formData, {
-                                    headers: { 'Content-Type': 'multipart/form-data' }
-                                })
-                                .then(res => {
-                                    setLoading(false);
-                                    if (res.status === 200 || res.status === 201) {
-                                        alert("Invoice uploaded and sent for background processing!");
-                                        fetchData();
-                                    }
-                                })
-                                .catch(err => {
-                                    setLoading(false);
-                                    console.error("Upload failed:", err);
-                                    const errorMessage = err.response?.data?.error || "Failed to upload/process invoice. Please try again.";
-                                    alert(errorMessage);
-                                });
-                            }}
-                        />
-                        <button
-                            onClick={() => document.getElementById('invoice-upload').click()}
-                            className="action-btn"
-                            style={{
-                                background: '#f8fafc', color: '#4f46e5',
-                                fontWeight: 800, fontSize: '14px',
-                                padding: '12px 24px', borderRadius: '14px',
-                                border: '2px solid #e2e8f0', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                transition: 'all 0.15s',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.background = '#f1f5f9'; }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="17 8 12 3 7 8" />
-                                <line x1="12" y1="3" x2="12" y2="15" />
-                            </svg>
-                            Upload PDF/Image
+                        <input ref={fileInput} type="file" accept="application/pdf,image/*" hidden onChange={handleUpload} />
+                        <button type="button" className="inv_btn" disabled={uploading} onClick={() => fileInput.current.click()}>
+                            <Upload size={16} /> {uploading ? "Uploading…" : "Upload bill"}
                         </button>
-
-                        <button
-                            onClick={() => navigate('/newBill?type=purchase')}
-                            className="action-btn"
-                            style={{
-                                background: '#4f46e5', color: 'white',
-                                fontWeight: 800, fontSize: '14px',
-                                padding: '12px 24px', borderRadius: '14px',
-                                border: 'none', cursor: 'pointer',
-                                boxShadow: '0 4px 16px rgba(79,70,229,0.25)',
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                transition: 'transform 0.15s, box-shadow 0.15s',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(79,70,229,0.35)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(79,70,229,0.25)'; }}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                                <path d="M9 3v12M3 9h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                            </svg>
-                            Add Manually
+                        <button type="button" className="inv_btn primary" onClick={() => navigate("/newBill?type=purchase")}>
+                            <Plus size={16} /> Add purchase
                         </button>
-
-                        {/* Pending Jobs Dropdown */}
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => setDropdownOpen(!dropdownOpen)}
-                                style={{
-                                    background: '#f8fafc', color: '#475569',
-                                    fontWeight: 700, fontSize: '14px',
-                                    padding: '10px 16px', borderRadius: '14px',
-                                    border: '2px solid #e2e8f0', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    position: 'relative',
-                                    transition: 'all 0.15s',
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.background = '#f1f5f9'; }}
-                                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
-                            >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <polyline points="12 6 12 12 16 14" />
-                                </svg>
-                                {pendingJobs.length > 0 && (
-                                    <span style={{
-                                        background: '#ef4444', color: 'white', fontSize: '11px',
-                                        padding: '2px 6px', borderRadius: '10px',
-                                        position: 'absolute', top: '-8px', right: '-8px'
-                                    }}>
-                                        {pendingJobs.length}
-                                    </span>
-                                )}
-                            </button>
-                            
-                            {dropdownOpen && (
-                                <div style={{
-                                    position: 'absolute', top: '100%', right: 0, marginTop: '8px',
-                                    width: '320px', background: 'white', borderRadius: '16px',
-                                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)', zIndex: 9999,
-                                    padding: '12px', border: '1px solid #e2e8f0'
-                                }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 12px 4px' }}>
-                                        Pending Extractions
-                                    </h3>
-                                    {pendingJobs.length === 0 ? (
-                                        <p style={{ color: '#64748b', fontSize: '13px', margin: '4px' }}>No pending tasks.</p>
-                                    ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {pendingJobs.map(job => (
-                                                <div key={job.job_id} style={{
-                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                    padding: '10px', background: '#f8fafc', borderRadius: '10px'
-                                                }}>
-                                                    <div style={{ overflow: 'hidden', marginRight: '8px' }}>
-                                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={job.file_name}>
-                                                            {job.file_name}
-                                                        </div>
-                                                        <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, marginTop: '2px' }}>
-                                                            Status: {job.status}
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleRefreshStatus(job.job_id)}
-                                                        style={{
-                                                            background: '#e0e7ff', color: '#4f46e5', border: 'none',
-                                                            borderRadius: '8px', padding: '6px', cursor: 'pointer',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                        }}
-                                                        title="Refresh Status"
-                                                    >
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                                            <polyline points="23 4 23 10 17 10" />
-                                                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
                     </div>
                 </div>
 
-                {loading ? (
-                    <div className="flex justify-center items-center py-10">
-                        <div style={{ width: '32px', height: '32px', border: '3px solid #e0e7ff', borderTop: '3px solid #4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-                        <p style={{ marginLeft: '12px', color: '#4f46e5', fontWeight: 600 }}>Loading Data...</p>
+                {notice && (
+                    <div className={`inv_notice ${notice.type}`}>
+                        {notice.text}
+                        <button type="button" aria-label="Dismiss" onClick={() => setNotice(null)}>✕</button>
                     </div>
+                )}
+
+                {loading ? (
+                    <div className="inv_loading">Loading purchases…</div>
                 ) : (
                     <>
-                        <div style={{ display: 'flex', gap: '20px', marginBottom: '28px', flexWrap: 'wrap' }}>
-                            <KpiCard
-                                icon="📦"
-                                label="Total Purchase Amount"
-                                value={`₹${(summary?.total_purchases_amount || 0).toLocaleString('en-IN')}`}
-                                sub={`Across ${summary?.total_count || 0} invoices`}
-                                color="linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)"
-                                delay={0.05}
-                            />
-                            <KpiCard
-                                icon="📅"
-                                label="This Month Purchases"
-                                value={`₹${(summary?.this_month_purchases_amount || 0).toLocaleString('en-IN')}`}
-                                sub={`${summary?.this_month_count || 0} invoices this month`}
-                                color="linear-gradient(135deg, #b45309 0%, #b45309 100%)"
-                                delay={0.1}
-                            />
-                            <KpiCard
-                                icon="🧾"
-                                label="Total Purchase GST"
-                                value={`₹${(summary?.total_purchases_gst || 0).toLocaleString('en-IN')}`}
-                                color="linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)"
-                                delay={0.15}
-                            />
+                        {/* ── headline numbers ── */}
+                        <div className="inv_kpis">
+                            {kpi("Purchased this month", moneyShort(summary?.this_month_purchases_amount),
+                                plural(summary?.this_month_count || 0, "invoice"))}
+                            {owed && kpi("To pay", moneyShort(owed.awaiting_amount), plural(owed.awaiting_count, "invoice"),
+                                () => navigate("/bill_list?type=purchase&status_group=open"), "#b45309")}
+                            {owed && kpi("Overdue", moneyShort(owed.overdue_amount),
+                                `${owed.overdue_count} older than ${owed.overdue_after_days} days`,
+                                () => navigate("/bill_list?type=purchase&status_group=overdue"),
+                                owed.overdue_amount > 0 ? "#dc2626" : undefined)}
+                            {kpi("All purchases", moneyShort(summary?.total_purchases_amount),
+                                `${plural(summary?.total_count || 0, "invoice")} · ${moneyShort(summary?.total_purchases_gst)} GST`)}
                         </div>
 
-                        <div style={{
-                            background: 'white', borderRadius: '20px',
-                            padding: '24px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
-                            animation: 'fadeUp 0.5s ease 0.25s both',
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Recent Purchases</h2>
-                                <button
-                                    onClick={() => navigate('/bill_list?type=purchase')}
-                                    style={{ background: 'transparent', border: 'none', color: '#4f46e5', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
-                                >
-                                    View All Invoices →
+                        {/* ── bills being read (OCR) ── */}
+                        {pendingJobs.length > 0 && (
+                            <div className="inv_card inv_jobs">
+                                <div className="inv_card_head">
+                                    <h2>Reading your bills<small>{pendingJobs.length}</small></h2>
+                                </div>
+                                {pendingJobs.map((job) => (
+                                    <div className="inv_job" key={job.job_id}>
+                                        <span className="file" title={job.file_name}>{job.file_name}</span>
+                                        <span className="state">{job.status}</span>
+                                        <button type="button" className="inv_iconbtn" style={{ width: 34, height: 34 }}
+                                            title="Check status" aria-label={`Check status of ${job.file_name}`}
+                                            onClick={() => handleRefreshStatus(job.job_id)}>
+                                            <RefreshCw size={15} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* ── recent purchases ── */}
+                        <div className="inv_card">
+                            <div className="inv_card_head">
+                                <h2>Recent purchases</h2>
+                                <button type="button" className="inv_link" onClick={() => navigate("/bill_list?type=purchase")}>
+                                    View all invoices →
                                 </button>
                             </div>
 
-                            {summary?.recent_purchases?.length > 0 ? (
-                                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                        <thead>
-                                            <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                                                <th style={{ padding: '12px 8px', color: '#64748b', fontWeight: 700, fontSize: '12px', textTransform: 'uppercase' }}>Invoice No.</th>
-                                                <th style={{ padding: '12px 8px', color: '#64748b', fontWeight: 700, fontSize: '12px', textTransform: 'uppercase' }}>Date</th>
-                                                <th style={{ padding: '12px 8px', color: '#64748b', fontWeight: 700, fontSize: '12px', textTransform: 'uppercase' }}>Vendor</th>
-                                                <th style={{ padding: '12px 8px', color: '#64748b', fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', textAlign: 'right' }}>Amount</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {summary.recent_purchases.map(inv => (
-                                                <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }} onClick={() => navigate(`/invoice/${inv.id}/view`)} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                                    <td style={{ padding: '14px 8px', fontWeight: 700, color: '#0f172a' }}>{inv.invoice_number || '-'}</td>
-                                                    <td style={{ padding: '14px 8px', color: '#475569', fontSize: '14px' }}>{inv.date}</td>
-                                                    <td style={{ padding: '14px 8px', color: '#475569', fontSize: '14px' }}>{inv.vendor_name}</td>
-                                                    <td style={{ padding: '14px 8px', fontWeight: 700, color: '#0f172a', textAlign: 'right' }}>₹{(inv.amount || 0).toLocaleString('en-IN')}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: '#f8fafc', color: '#94a3b8', marginBottom: '16px' }}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                                    </div>
-                                    <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>No Purchases Found</h4>
-                                    <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '20px' }}>You haven't recorded any purchase invoices yet.</p>
-                                    <button
-                                        onClick={() => navigate("/newBill?type=purchase")}
-                                        style={{ background: 'white', color: '#0f172a', fontWeight: 600, fontSize: '14px', padding: '8px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                                    >
-                                        Record Purchase
+                            {recent.length === 0 ? (
+                                <div className="inv_state">
+                                    <div className="ico"><ShoppingCart size={30} /></div>
+                                    <h3>Record your first purchase</h3>
+                                    <p>Bills from your vendors show up here with what is still left to pay.</p>
+                                    <button type="button" className="inv_btn primary" onClick={() => navigate("/newBill?type=purchase")}>
+                                        <Plus size={16} /> Add purchase
                                     </button>
                                 </div>
+                            ) : (
+                                <>
+                                    <div className="inv_table_wrap">
+                                        <table className="inv_table" style={{ minWidth: 760 }}>
+                                            <thead>
+                                                <tr>
+                                                    <th>Invoice</th>
+                                                    <th>Vendor</th>
+                                                    <th>Date</th>
+                                                    <th className="num">Amount</th>
+                                                    <th className="num">Balance due</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {recent.map((inv) => (
+                                                    <tr key={inv.id} onClick={() => navigate(`/invoice/${inv.id}/view`)}>
+                                                        <td className="no">{inv.invoice_number || "No number"}</td>
+                                                        <td>
+                                                            <div className="inv_party">
+                                                                <span className="inv_av">{initials(inv.vendor_name)}</span>
+                                                                <span className="name" title={inv.vendor_name}>{inv.vendor_name || "—"}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ whiteSpace: "nowrap" }}>{day(inv.date)}</td>
+                                                        <td className="num strong">{money(inv.amount)}</td>
+                                                        <td className={`num ${isOpen(inv) ? "owed" : "muted"}`}>
+                                                            {isOpen(inv) ? money(inv.balance_due) : "—"}
+                                                        </td>
+                                                        <td><Pill obj={inv} /><Hint obj={inv} /></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="inv_cards">
+                                        {recent.map((inv) => (
+                                            <div className="inv_inv_card" key={inv.id} onClick={() => navigate(`/invoice/${inv.id}/view`)}>
+                                                <div className="top">
+                                                    <span className="inv_av">{initials(inv.vendor_name)}</span>
+                                                    <div className="party">{inv.vendor_name || "—"}</div>
+                                                </div>
+                                                <div className="meta">
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, color: "#4338ca", marginBottom: 4 }}>
+                                                            {inv.invoice_number || "No number"} · {day(inv.date)}
+                                                        </div>
+                                                        <Pill obj={inv} />
+                                                    </div>
+                                                    <div className="amt">
+                                                        {money(inv.amount)}
+                                                        {isOpen(inv) && <small>{money(inv.balance_due)} due</small>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
                             )}
                         </div>
                     </>
                 )}
             </div>
-
-            <style>{`
-                @keyframes fadeUp {
-                    from { opacity: 0; transform: translateY(18px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                }
-
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to   { transform: rotate(360deg); }
-                }
-
-                .main-container {
-                    padding: 28px 24px 60px;
-                }
-                
-                .purchase-header {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                }
-                
-                .header-actions {
-                    display: flex;
-                    gap: 12px;
-                    align-items: center;
-                }
-
-                @media (max-width: 768px) {
-                    .main-container {
-                        padding: 20px 16px 60px;
-                    }
-                    .purchase-header {
-                        flex-direction: column;
-                        align-items: flex-start;
-                        gap: 20px;
-                    }
-                    .header-actions {
-                        width: 100%;
-                        flex-wrap: wrap;
-                    }
-                    .action-btn {
-                        flex: 1;
-                        justify-content: center;
-                        min-width: 140px;
-                    }
-                }
-            `}</style>
         </div>
     );
 };

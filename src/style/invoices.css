@@ -197,3 +197,32 @@ button.inv_kpi:hover { border-color: #c7d2fe; transform: translateY(-1px); }
     .inv_cards { display: block; }
     .inv_search input, .inv_field select, .inv_field input[type="date"] { font-size: 16px; }
 }
+
+/* ── shared by the Purchase page ── */
+.inv_iconbtn {
+    display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px;
+    border: 1px solid #e2e8f0; background: white; color: #4338ca; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+}
+.inv_iconbtn:hover:not(:disabled) { background: #eef2ff; border-color: #c7d2fe; }
+.inv_iconbtn:disabled { cursor: wait; opacity: 0.7; }
+.inv_spin { animation: invSpin 0.8s linear infinite; }
+@keyframes invSpin { to { transform: rotate(360deg); } }
+
+.inv_notice {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 12px 16px; border-radius: 12px;
+    font-size: 14px; font-weight: 500; border: 1px solid; font-family: 'Inter', sans-serif;
+}
+.inv_notice.ok { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+.inv_notice.err { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.inv_notice button { margin-left: auto; background: none; border: 0; color: inherit; cursor: pointer; font-size: 16px; }
+
+.inv_card_head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; }
+.inv_card_head h2 { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }
+.inv_card_head h2 small { margin-left: 8px; font-size: 12px; font-weight: 700; color: #4338ca; background: #eef2ff; border-radius: 999px; padding: 2px 8px; }
+.inv_link { background: none; border: 0; padding: 0; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; color: #4338ca; }
+.inv_link:hover { text-decoration: underline; }
+
+.inv_jobs { margin-bottom: 16px; }
+.inv_job { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid #f1f5f9; }
+.inv_job .file { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv_job .state { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #fef3c7; color: #b45309; white-space: nowrap; text-transform: capitalize; }
