@@ -1,612 +1,428 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ScanLine } from 'lucide-react';
-import PageIcon from '../comonant/PageIcon';
-import Navbar from "../comonant/navbar.jsx";
-import { clientToken } from "@/axios";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { ChevronDown, ExternalLink, FileText, RefreshCw, ScanLine, Upload } from "lucide-react";
+import { clientToken } from "@/axios";
+import { day, money } from "@/utility/money";
+import Navbar from "../comonant/navbar.jsx";
+import PageIcon from "../comonant/PageIcon";
+import "../style/invoices.css";
 
-/* ── status presentation ── */
-const STATE_META = {
-    completed: { label: "Completed", color: "#16a34a", bg: "#dcfce7", border: "#dcfce7" },
-    processing: { label: "Processing", color: "#b45309", bg: "#fef3c7", border: "#fef3c7" },
-    failed: { label: "Failed", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-};
-
-/* WhatsApp intake — invoices sent from a registered mobile number land in this list */
+// WhatsApp intake: invoices sent from a registered mobile number land in this list
 const WHATSAPP_NUMBER_DISPLAY = "+91 81928 43910";
 const WHATSAPP_NUMBER_E164 = "918192843910";
 
-const money = (v) => {
-    const n = Number(v);
-    if (v === null || v === undefined || v === "" || Number.isNaN(n)) return "—";
-    return `₹${n.toLocaleString("en-IN")}`;
+const STEP = 50;          // jobs fetched per "show more"
+const MAX_JOBS = 200;     // the API's ceiling
+
+const TABS = [
+    { key: "all", label: "All" },
+    { key: "completed", label: "Completed" },
+    { key: "processing", label: "Processing" },
+    { key: "failed", label: "Failed" },
+];
+
+// same palette as the invoice status pills (DESIGN_SYSTEM.md)
+const STATE = {
+    completed: { label: "Completed", bg: "#dcfce7", fg: "#166534" },
+    processing: { label: "Processing", bg: "#fef3c7", fg: "#b45309" },
+    failed: { label: "Failed", bg: "#fee2e2", fg: "#b91c1c" },
 };
+
+const StatePill = ({ job }) => {
+    const s = STATE[job.state] || STATE.processing;
+    return <span className="inv_pill" title={job.status || s.label} style={{ background: s.bg, color: s.fg }}>{s.label}</span>;
+};
+
+const amount = (v) => (v === null || v === undefined || v === "" || Number.isNaN(Number(v)) ? "—" : money(v));
+
+// the pipeline's own date text when it isn't a plain ISO date
+const shownDate = (v) => (v ? (day(v) !== "—" ? day(v) : String(v)) : "—");
 
 const when = (iso) => {
-    if (!iso) return "—";
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleString("en-IN", {
-        day: "2-digit", month: "short", year: "numeric",
-        hour: "2-digit", minute: "2-digit",
-    });
+    if (!iso || Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 };
 
-function StatCard({ icon, label, value, sub, color, delay = 0 }) {
-    return (
-        <div style={{
-            background: color, borderRadius: '20px', padding: '22px 20px 18px',
-            flex: 1, minWidth: '190px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            position: 'relative', overflow: 'hidden',
-            animation: `fadeUp 0.5s ease ${delay}s both`,
-        }}>
-            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>
-            <div style={{ fontSize: '25px', fontWeight: 900, color: 'white', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{value}</div>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginTop: '4px' }}>{label}</div>
-            {sub && <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', marginTop: '6px' }}>{sub}</div>}
-        </div>
-    );
-}
-
-function StatePill({ state, status }) {
-    const meta = STATE_META[state] || STATE_META.processing;
-    return (
-        <span
-            title={status || meta.label}
-            style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                padding: '4px 10px', borderRadius: '999px',
-                background: meta.bg, border: `1px solid ${meta.border}`, color: meta.color,
-                fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap',
-            }}
-        >
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: meta.color }} />
-            {meta.label}
-        </span>
-    );
-}
-
 const OcrInvoices = () => {
+    const navigate = useNavigate();
     const { features, status: accessStatus } = useSelector((state) => state.access);
-    const hasOcrFeature = accessStatus === 'succeeded' && features.includes('ocr_purchase_invoice');
+    const hasOcrFeature = accessStatus === "succeeded" && features.includes("ocr_purchase_invoice");
 
     const [data, setData] = useState({ usage: null, counts: null, jobs: [] });
-    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState("all");
+    const [limit, setLimit] = useState(STEP);
+    const [loaded, setLoaded] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [dragOver, setDragOver] = useState(false);
-    const [filter, setFilter] = useState('all');
     const [expanded, setExpanded] = useState(null);
-    const [toast, setToast] = useState(null);
+    const [notice, setNotice] = useState(null);       // { type: "ok" | "err", text }
     const [busyJob, setBusyJob] = useState(null);
-    const [copiedNumber, setCopiedNumber] = useState(false);
-
+    const [checkingAll, setCheckingAll] = useState(false);
+    const [copied, setCopied] = useState(false);
     const fileRef = useRef(null);
-    const navigate = useNavigate();
+    const noticeTimer = useRef(null);
 
-    const showToast = (type, msg) => {
-        setToast({ type, msg });
-        setTimeout(() => setToast(null), 4000);
+    const say = (type, text) => {
+        setNotice({ type, text });
+        clearTimeout(noticeTimer.current);
+        noticeTimer.current = setTimeout(() => setNotice(null), 6000);
     };
+    useEffect(() => () => clearTimeout(noticeTimer.current), []);
 
-    const copyWhatsappNumber = () => {
-        const write = navigator.clipboard?.writeText(WHATSAPP_NUMBER_DISPLAY);
-        if (!write) {
-            showToast('error', `Copy failed — the number is ${WHATSAPP_NUMBER_DISPLAY}`);
-            return;
-        }
-        write
-            .then(() => {
-                setCopiedNumber(true);
-                setTimeout(() => setCopiedNumber(false), 2000);
-            })
-            .catch(() => showToast('error', `Copy failed — the number is ${WHATSAPP_NUMBER_DISPLAY}`));
-    };
-
+    // the tab and the limit go to the server, so a tab's list really is that
+    // tab's jobs (counts always cover the whole history)
     const fetchJobs = useCallback(() => {
-        return clientToken.get('purchase/ocr-jobs/')
-            .then(res => {
-                setData({
-                    usage: res.data?.usage || null,
-                    counts: res.data?.counts || null,
-                    jobs: Array.isArray(res.data?.jobs) ? res.data.jobs : [],
-                });
-            })
-            .catch(err => {
-                console.error("Failed to load OCR jobs:", err);
-                showToast('error', err.response?.data?.error || 'Failed to load OCR history.');
-            })
-            .finally(() => {
-                setLoading(false);
-                setRefreshing(false);
-            });
-    }, []);
+        const params = { limit };
+        if (filter !== "all") params.state = filter;
+        return clientToken.get("purchase/ocr-jobs/", { params })
+            .then((res) => setData({
+                usage: res.data?.usage || null,
+                counts: res.data?.counts || null,
+                jobs: Array.isArray(res.data?.jobs) ? res.data.jobs : [],
+            }))
+            .catch((err) => say("err", err.response?.data?.error || "Could not load your OCR history."))
+            .finally(() => { setLoaded(true); setRefreshing(false); });
+    }, [filter, limit]);
 
     useEffect(() => { fetchJobs(); }, [fetchJobs]);
+    useEffect(() => { setLimit(STEP); setExpanded(null); }, [filter]);
 
-    const handleRefresh = () => {
-        if (refreshing) return;
-        setRefreshing(true);
-        fetchJobs();
+    const refresh = () => { if (!refreshing) { setRefreshing(true); fetchJobs(); } };
+
+    const usage = data.usage;
+    const counts = data.counts || { completed: 0, processing: 0, failed: 0 };
+    const totalAll = usage?.total ?? 0;
+    const monthlyLimit = usage?.monthly_limit;
+    const monthlyLabel = monthlyLimit === null || monthlyLimit === undefined ? "Unlimited on your plan" : `of ${monthlyLimit} this month`;
+    const monthlyExhausted = typeof monthlyLimit === "number" && monthlyLimit > 0 && (usage?.this_month || 0) >= monthlyLimit;
+    const dailyExhausted = !!usage && usage.today >= usage.daily_limit;
+    const blocked = uploading || !hasOcrFeature || monthlyExhausted || dailyExhausted;
+
+    // why an upload can't start right now, or null
+    const blockedReason = !hasOcrFeature ? "Your current subscription does not include OCR invoice scanning."
+        : dailyExhausted ? "You've reached today's upload limit."
+            : monthlyExhausted ? "You've used this month's scan quota."
+                : null;
+
+    const startUpload = () => {
+        if (uploading) return;
+        if (blockedReason) { say("err", blockedReason); return; }
+        fileRef.current?.click();
     };
 
     const upload = (file) => {
         if (!file) return;
-        if (!hasOcrFeature) {
-            showToast('error', 'Your current subscription does not include OCR invoice scanning.');
-            return;
-        }
-
+        if (blockedReason) { say("err", blockedReason); return; }
         const form = new FormData();
         form.append("file", file);
         form.append("invoice_type", "purchase");
-
         setUploading(true);
-        clientToken.post('purchase/upload/', form, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        })
-            .then(() => {
-                showToast('success', `"${file.name}" uploaded — extraction started.`);
-                fetchJobs();
-            })
-            .catch(err => {
-                console.error("Upload failed:", err);
-                showToast('error', err.response?.data?.error || 'Failed to upload invoice. Please try again.');
-            })
-            .finally(() => {
-                setUploading(false);
-                if (fileRef.current) fileRef.current.value = '';
-            });
-    };
-
-    // Re-polls one job against the pipeline, then refreshes the list so the
-    // extracted fields and counts stay in sync with the new status.
-    const refreshJob = (job) => {
-        if (!job.job_id || busyJob) return;
-        setBusyJob(job.job_id);
-        clientToken.get(`purchase/status/${job.job_id}/`)
-            .then(res => {
-                showToast('success', `Status: ${res.data?.status || 'updated'}`);
-                return fetchJobs();
-            })
-            .catch(err => {
-                console.error("Status check failed:", err);
-                showToast('error', err.response?.data?.error || 'Could not check job status.');
-            })
-            .finally(() => setBusyJob(null));
+        clientToken.post("purchase/upload/", form, { headers: { "Content-Type": "multipart/form-data" } })
+            .then(() => { say("ok", `"${file.name}" uploaded. Extraction has started.`); fetchJobs(); })
+            .catch((err) => say("err", err.response?.data?.error || "Could not upload that invoice. Please try again."))
+            .finally(() => { setUploading(false); if (fileRef.current) fileRef.current.value = ""; });
     };
 
     const onDrop = (e) => {
         e.preventDefault();
         setDragOver(false);
-        if (uploading) return;
-        const file = e.dataTransfer?.files?.[0];
-        if (file) upload(file);
+        if (blocked) return;
+        upload(e.dataTransfer?.files?.[0]);
     };
 
-    const usage = data.usage;
-    const counts = data.counts || { completed: 0, processing: 0, failed: 0 };
-    const monthlyLimit = usage?.monthly_limit;
-    const monthlyLabel = monthlyLimit === null || monthlyLimit === undefined
-        ? 'Unlimited on your plan'
-        : `of ${monthlyLimit} this month`;
-    const monthlyExhausted = typeof monthlyLimit === 'number'
-        && monthlyLimit > 0 && (usage?.this_month || 0) >= monthlyLimit;
-    const dailyExhausted = usage && usage.today >= usage.daily_limit;
-    const uploadBlocked = uploading || !hasOcrFeature || monthlyExhausted || dailyExhausted;
+    // re-polls one job against the pipeline, then reloads so the extracted
+    // fields and counts match the new status
+    const checkJob = (job) => {
+        if (!job.job_id || busyJob || checkingAll) return;
+        setBusyJob(job.job_id);
+        clientToken.get(`purchase/status/${job.job_id}/`)
+            .then((res) => { say("ok", `Status: ${res.data?.status || "updated"}`); return fetchJobs(); })
+            .catch((err) => say("err", err.response?.data?.error || "Could not check that job's status."))
+            .finally(() => setBusyJob(null));
+    };
 
-    const visibleJobs = filter === 'all'
-        ? data.jobs
-        : data.jobs.filter(j => j.state === filter);
+    // one pass over everything still processing, one at a time so the pipeline isn't hit all at once
+    const checkProcessing = async () => {
+        const pending = data.jobs.filter((j) => j.state === "processing" && j.job_id);
+        if (!pending.length || checkingAll || busyJob) return;
+        setCheckingAll(true);
+        let failedChecks = 0;
+        for (const job of pending) {
+            try { await clientToken.get(`purchase/status/${job.job_id}/`); } catch { failedChecks += 1; }
+        }
+        await fetchJobs();
+        setCheckingAll(false);
+        say(failedChecks ? "err" : "ok", failedChecks
+            ? `Checked ${pending.length - failedChecks} of ${pending.length}. ${failedChecks} could not be reached.`
+            : `Checked ${pending.length} bill${pending.length === 1 ? "" : "s"}.`);
+    };
+
+    const copyNumber = () => {
+        const write = navigator.clipboard?.writeText(WHATSAPP_NUMBER_DISPLAY);
+        if (!write) { say("err", `Copy failed. The number is ${WHATSAPP_NUMBER_DISPLAY}`); return; }
+        write.then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
+            .catch(() => say("err", `Copy failed. The number is ${WHATSAPP_NUMBER_DISPLAY}`));
+    };
+
+    const totalForTab = filter === "all" ? totalAll : counts[filter] || 0;
+    const jobs = data.jobs;
+    const canShowMore = jobs.length < totalForTab && limit < MAX_JOBS;
+    const capped = jobs.length < totalForTab && limit >= MAX_JOBS;
+
+    const kpi = (label, value, sub, color) => (
+        <div className="inv_kpi">
+            <span>{label}</span>
+            <strong style={color ? { color } : undefined}>{value}</strong>
+            {sub && <small>{sub}</small>}
+        </div>
+    );
+
+    const details = (job) => {
+        const ex = job.extracted || {};
+        return (
+            <>
+                <dl className="inv_detail_grid">
+                    {[
+                        ["Invoice number", ex.invoice_number || "—"],
+                        ["Invoice date", shownDate(ex.date)],
+                        ["Vendor", ex.vendor_name || (ex.vendor_id ? `#${ex.vendor_id}` : "—")],
+                        ["Total amount", amount(ex.total_amount)],
+                        ["GST amount", amount(ex.gst_amount)],
+                        ["Type", job.invoice_type || "purchase"],
+                        ["Pipeline status", job.status || "—"],
+                        ["Job ID", job.job_id || "—"],
+                    ].map(([label, value]) => (
+                        <div key={label}><dt>{label}</dt><dd title={String(value)}>{value}</dd></div>
+                    ))}
+                </dl>
+                <div className="inv_detail_actions">
+                    {job.file_url && (
+                        <a className="inv_btn" href={job.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ textDecoration: "none" }}>
+                            <ExternalLink size={15} /> View original file
+                        </a>
+                    )}
+                    {job.state !== "completed" && job.job_id && (
+                        <button type="button" className="inv_btn" disabled={busyJob === job.job_id || checkingAll}
+                            onClick={(e) => { e.stopPropagation(); checkJob(job); }}>
+                            <RefreshCw size={15} className={busyJob === job.job_id ? "inv_spin" : undefined} />
+                            {busyJob === job.job_id ? "Checking…" : "Check status"}
+                        </button>
+                    )}
+                </div>
+            </>
+        );
+    };
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
+        <div className="inv_page">
             <Navbar />
-
-            {toast && (
-                <div style={{
-                    position: 'fixed', top: '20px', right: '20px', zIndex: 9999,
-                    background: toast.type === 'success' ? '#dcfce7' : '#fef2f2',
-                    border: `1px solid ${toast.type === 'success' ? '#dcfce7' : '#fecaca'}`,
-                    color: toast.type === 'success' ? '#166534' : '#dc2626',
-                    padding: '12px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '14px',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)', maxWidth: '380px',
-                    animation: 'fadeUp 0.3s ease',
-                }}>
-                    {toast.type === 'success' ? '✅ ' : '❌ '}{toast.msg}
-                </div>
-            )}
-
-            <div className="ocr-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
-                {/* Header */}
-                <div className="ocr-header" style={{ marginBottom: '24px', animation: 'fadeUp 0.4s ease both' }}>
-                    <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                            <PageIcon icon={ScanLine} />
-                            <div>
-                        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', marginBottom: '6px' }}>
-                            OCR Invoice Scanning
-                        </h1>
-                        <p style={{ fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
-                            Upload a purchase invoice and let OCR read the details for you.
-                        </p>
-                        </div>
+            <div className="inv_wrap">
+                {/* ── header ── */}
+                <div className="inv_head">
+                    <div className="inv_title">
+                        <PageIcon icon={ScanLine} />
+                        <div>
+                            <h1>OCR invoices</h1>
+                            <p>Upload a purchase bill and let OCR read the details for you.</p>
                         </div>
                     </div>
-
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={handleRefresh}
-                            disabled={refreshing}
-                            title="Refresh OCR history"
-                            style={{
-                                background: '#f8fafc', color: '#4f46e5', fontWeight: 800, fontSize: '14px',
-                                padding: '12px 20px', borderRadius: '14px', border: '2px solid #e2e8f0',
-                                cursor: refreshing ? 'wait' : 'pointer', opacity: refreshing ? 0.7 : 1,
-                                display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s',
-                            }}
-                            onMouseEnter={e => { if (!refreshing) { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.background = '#f1f5f9'; } }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; }}
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                                 style={refreshing ? { animation: 'spin 0.8s linear infinite' } : undefined}>
-                                <polyline points="23 4 23 10 17 10" />
-                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                            </svg>
-                            {refreshing ? 'Refreshing...' : 'Refresh'}
+                    <div className="inv_head_actions">
+                        <button type="button" className="inv_iconbtn" onClick={refresh} disabled={refreshing} title="Refresh" aria-label="Refresh OCR history">
+                            <RefreshCw size={17} className={refreshing ? "inv_spin" : undefined} />
                         </button>
-
-                        <button
-                            onClick={() => navigate('/purchase_invoices')}
-                            style={{
-                                background: '#4f46e5', color: 'white', fontWeight: 800, fontSize: '14px',
-                                padding: '12px 20px', borderRadius: '14px', border: 'none', cursor: 'pointer',
-                                boxShadow: '0 4px 16px rgba(79,70,229,0.25)', transition: 'transform 0.15s',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-                        >
-                            Purchase Dashboard →
+                        <button type="button" className="inv_btn" onClick={() => navigate("/purchase_invoices")}>Purchases</button>
+                        <button type="button" className="inv_btn primary" disabled={uploading} onClick={startUpload}>
+                            <Upload size={16} /> {uploading ? "Uploading…" : "Upload invoice"}
                         </button>
                     </div>
                 </div>
 
-                {!hasOcrFeature && accessStatus === 'succeeded' && (
-                    <div style={{
-                        background: '#fef3c7', border: '1.5px solid #fef3c7', color: '#92400e',
-                        padding: '14px 18px', borderRadius: '14px', marginBottom: '20px',
-                        fontSize: '14px', fontWeight: 600,
-                    }}>
-                        ⚠️ OCR invoice scanning is not part of your current plan. You can review past
-                        extractions below, but new uploads are disabled.{' '}
-                        <span onClick={() => navigate('/billing')} style={{ color: '#b45309', textDecoration: 'underline', cursor: 'pointer' }}>
-                            View plans
-                        </span>
+                <input ref={fileRef} type="file" accept="application/pdf,image/*" hidden onChange={(e) => upload(e.target.files?.[0])} />
+
+                {notice && (
+                    <div className={`inv_notice ${notice.type}`}>
+                        {notice.text}
+                        <button type="button" aria-label="Dismiss" onClick={() => setNotice(null)}>✕</button>
                     </div>
                 )}
 
-                {/* Upload area */}
-                <input
-                    ref={fileRef}
-                    type="file"
-                    id="ocr-upload"
-                    style={{ display: 'none' }}
-                    accept="application/pdf,image/*"
-                    onChange={(e) => upload(e.target.files?.[0])}
-                />
-                <div
-                    onClick={() => { if (!uploadBlocked) fileRef.current?.click(); }}
-                    onDragOver={(e) => { e.preventDefault(); if (!uploadBlocked) setDragOver(true); }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={onDrop}
-                    style={{
-                        background: dragOver ? '#eef2ff' : 'white',
-                        border: `2px dashed ${dragOver ? '#4f46e5' : '#cbd5e1'}`,
-                        borderRadius: '20px', padding: '32px 24px', marginBottom: '24px',
-                        textAlign: 'center', cursor: uploadBlocked ? 'not-allowed' : 'pointer',
-                        opacity: uploadBlocked && !uploading ? 0.65 : 1,
-                        transition: 'all 0.2s', animation: 'fadeUp 0.45s ease 0.05s both',
-                    }}
-                >
-                    {uploading ? (
-                        <>
-                            <div style={{ width: '34px', height: '34px', margin: '0 auto 12px', border: '3px solid #e0e7ff', borderTop: '3px solid #4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                            <div style={{ fontSize: '15px', fontWeight: 700, color: '#4f46e5' }}>Uploading and queuing extraction...</div>
-                        </>
-                    ) : (
-                        <>
-                            <div style={{ fontSize: '34px', marginBottom: '8px' }}>📄</div>
-                            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
-                                {dragOver ? 'Drop the file to upload' : 'Drop an invoice here, or click to browse'}
-                            </div>
-                            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
-                                PDF or image · one file at a time
-                                {dailyExhausted && ' · daily upload limit reached'}
-                                {monthlyExhausted && !dailyExhausted && ' · monthly scan quota reached'}
-                            </div>
-                        </>
-                    )}
-                </div>
-
-                {/* WhatsApp upload route */}
-                <div style={{
-                    background: 'linear-gradient(135deg, #dcfce7 0%, #dcfce7 100%)',
-                    border: '1.5px solid #dcfce7', borderRadius: '20px',
-                    padding: '20px 22px', marginBottom: '24px',
-                    display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
-                    animation: 'fadeUp 0.45s ease 0.08s both',
-                }}>
-                    <div style={{
-                        width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
-                        background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                            <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.08-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.48-1.75-1.65-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35z"/>
-                            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.13h-.01c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.36c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.23 8.24z"/>
-                        </svg>
+                {!hasOcrFeature && accessStatus === "succeeded" && (
+                    <div className="inv_warn" style={{ marginTop: 0, marginBottom: 16 }}>
+                        OCR invoice scanning is not part of your current plan. You can review past extractions below, but new uploads are
+                        disabled.{" "}
+                        <button type="button" className="inv_link" onClick={() => navigate("/billing")}>View plans</button>
                     </div>
+                )}
 
-                    <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-                        <div style={{ fontSize: '15px', fontWeight: 800, color: '#166534', marginBottom: '4px' }}>
-                            Or send your invoice on WhatsApp
-                        </div>
-                        <div style={{ fontSize: '13.5px', color: '#166534', fontWeight: 500, lineHeight: 1.5 }}>
-                            Send a PDF or photo of your invoice to{' '}
-                            <strong style={{ fontWeight: 800 }}>{WHATSAPP_NUMBER_DISPLAY}</strong>{' '}
-                            from your <strong style={{ fontWeight: 800 }}>registered mobile number</strong> — it will be
-                            scanned automatically and show up here.
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={copyWhatsappNumber}
-                            style={{
-                                padding: '10px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 800,
-                                border: '1.5px solid #dcfce7', background: 'white', color: '#166534', cursor: 'pointer',
-                            }}
-                        >
-                            {copiedNumber ? 'Copied!' : 'Copy number'}
-                        </button>
-                        <a
-                            href={`https://wa.me/${WHATSAPP_NUMBER_E164}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                                padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: 800,
-                                background: '#25D366', color: 'white', textDecoration: 'none',
-                                boxShadow: '0 4px 14px rgba(37,211,102,0.3)',
-                            }}
-                        >
-                            Open WhatsApp
-                        </a>
-                    </div>
-                </div>
-
-                {loading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
-                        <div style={{ width: '32px', height: '32px', border: '3px solid #e0e7ff', borderTop: '3px solid #4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                        <p style={{ marginLeft: '12px', color: '#4f46e5', fontWeight: 600 }}>Loading OCR data...</p>
-                    </div>
+                {!loaded ? (
+                    <div className="inv_loading">Loading OCR history…</div>
                 ) : (
                     <>
-                        {/* Usage */}
-                        <div style={{ display: 'flex', gap: '18px', marginBottom: '26px', flexWrap: 'wrap' }}>
-                            <StatCard
-                                icon="📅"
-                                label="Scans This Month"
-                                value={usage?.this_month ?? 0}
-                                sub={monthlyLabel}
-                                color="linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)"
-                                delay={0.05}
-                            />
-                            <StatCard
-                                icon="⚡"
-                                label="Uploads Today"
-                                value={`${usage?.today ?? 0} / ${usage?.daily_limit ?? 10}`}
-                                sub="Resets at midnight"
-                                color="linear-gradient(135deg, #b45309 0%, #b45309 100%)"
-                                delay={0.1}
-                            />
-                            <StatCard
-                                icon="✅"
-                                label="Completed"
-                                value={counts.completed || 0}
-                                sub={`${counts.processing || 0} processing · ${counts.failed || 0} failed`}
-                                color="linear-gradient(135deg, #16a34a 0%, #166534 100%)"
-                                delay={0.15}
-                            />
-                            <StatCard
-                                icon="🗂️"
-                                label="Total Scanned"
-                                value={usage?.total ?? 0}
-                                sub="All time, company-wide"
-                                color="linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)"
-                                delay={0.2}
-                            />
+                        {/* ── usage ── */}
+                        <div className="inv_kpis">
+                            {kpi("Scans this month", usage?.this_month ?? 0, monthlyLabel, monthlyExhausted ? "#dc2626" : undefined)}
+                            {kpi("Uploads today", `${usage?.today ?? 0} / ${usage?.daily_limit ?? 10}`, "Resets at midnight", dailyExhausted ? "#dc2626" : undefined)}
+                            {kpi("Completed", counts.completed || 0, `${counts.processing || 0} processing · ${counts.failed || 0} failed`, "#166534")}
+                            {kpi("Total scanned", totalAll, "All time, company-wide")}
                         </div>
 
-                        {/* History */}
-                        <div style={{
-                            background: 'white', borderRadius: '20px', padding: '24px',
-                            boxShadow: '0 2px 16px rgba(0,0,0,0.06)', animation: 'fadeUp 0.5s ease 0.25s both',
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '18px', flexWrap: 'wrap' }}>
-                                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                                    Recent OCR Extractions
-                                </h2>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                    {['all', 'completed', 'processing', 'failed'].map(key => (
-                                        <button
-                                            key={key}
-                                            onClick={() => setFilter(key)}
-                                            style={{
-                                                padding: '6px 14px', borderRadius: '999px', fontSize: '13px',
-                                                fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize',
-                                                border: `1.5px solid ${filter === key ? '#4f46e5' : '#e2e8f0'}`,
-                                                background: filter === key ? '#eef2ff' : 'white',
-                                                color: filter === key ? '#4f46e5' : '#64748b',
-                                                transition: 'all 0.15s',
-                                            }}
-                                        >
-                                            {key}{key !== 'all' && ` (${counts[key] || 0})`}
-                                        </button>
-                                    ))}
+                        {/* ── upload ── */}
+                        <div className="inv_card" style={{ marginBottom: 16 }}>
+                                            <div
+                                className={`inv_drop ${dragOver ? "over" : ""} ${blocked ? "blocked" : ""}`}
+                                role="button" tabIndex={0} aria-label="Upload an invoice"
+                                onClick={startUpload}
+                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startUpload(); } }}
+                                onDragOver={(e) => { e.preventDefault(); if (!blocked) setDragOver(true); }}
+                                onDragLeave={() => setDragOver(false)}
+                                onDrop={onDrop}
+                            >
+                                {uploading ? (
+                                    <>
+                                        <div className="ico"><RefreshCw size={22} className="inv_spin" /></div>
+                                        <div className="ttl">Uploading and starting extraction…</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="ico"><Upload size={22} /></div>
+                                        <div className="ttl">{dragOver ? "Drop the file to upload" : "Drop an invoice here, or click to browse"}</div>
+                                        <div className="sub">
+                                            PDF or image · one file at a time
+                                            {dailyExhausted && " · daily upload limit reached"}
+                                            {monthlyExhausted && !dailyExhausted && " · monthly scan quota reached"}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            <div className="inv_wa">
+                                <div className="txt">
+                                    <strong>Or send it on WhatsApp.</strong> Send a PDF or photo to <strong>{WHATSAPP_NUMBER_DISPLAY}</strong> from
+                                    your registered mobile number and it will be scanned automatically and show up here.
                                 </div>
+                                <button type="button" className="inv_btn" onClick={copyNumber}>{copied ? "Copied" : "Copy number"}</button>
+                                <a className="wa" href={`https://wa.me/${WHATSAPP_NUMBER_E164}`} target="_blank" rel="noopener noreferrer">Open WhatsApp</a>
+                            </div>
+                        </div>
+
+                        {/* ── history ── */}
+                        <div className="inv_card">
+                            <div className="inv_tabs" role="tablist" aria-label="Extraction status">
+                                {TABS.map((t) => (
+                                    <button key={t.key} type="button" role="tab" aria-selected={filter === t.key}
+                                        className={`inv_tab ${filter === t.key ? "on" : ""}`} onClick={() => setFilter(t.key)}>
+                                        {t.label}<em>{t.key === "all" ? totalAll : counts[t.key] || 0}</em>
+                                    </button>
+                                ))}
                             </div>
 
-                            {visibleJobs.length === 0 ? (
-                                <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '30px', marginBottom: '10px' }}>🔍</div>
-                                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                                        {filter === 'all' ? 'No invoices scanned yet' : `No ${filter} extractions`}
-                                    </h4>
-                                    <p style={{ fontSize: '14px', color: '#94a3b8' }}>
-                                        {filter === 'all'
-                                            ? 'Upload a PDF or image above to run your first extraction.'
-                                            : 'Try a different filter.'}
-                                    </p>
+                            {counts.processing > 0 && filter !== "completed" && filter !== "failed" && (
+                                <div className="inv_toolbar" style={{ justifyContent: "space-between" }}>
+                                    <span style={{ fontSize: 13, color: "#64748b" }}>
+                                        {counts.processing} bill{counts.processing === 1 ? " is" : "s are"} still being read.
+                                    </span>
+                                    <button type="button" className="inv_btn" disabled={checkingAll || !!busyJob} onClick={checkProcessing}>
+                                        <RefreshCw size={15} className={checkingAll ? "inv_spin" : undefined} />
+                                        {checkingAll ? "Checking…" : "Check processing"}
+                                    </button>
+                                </div>
+                            )}
+
+                            {jobs.length === 0 ? (
+                                <div className="inv_state">
+                                    <div className="ico"><ScanLine size={30} /></div>
+                                    {filter === "all" ? (
+                                        <>
+                                            <h3>Scan your first invoice</h3>
+                                            <p>Upload a PDF or image above, or send it on WhatsApp, to run your first extraction.</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h3>No {filter} extractions</h3>
+                                            <p>Try a different tab.</p>
+                                            <button type="button" className="inv_btn" onClick={() => setFilter("all")}>Show all</button>
+                                        </>
+                                    )}
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {visibleJobs.map(job => {
-                                        const open = expanded === job.id;
-                                        const ex = job.extracted || {};
-                                        return (
-                                            <div key={job.id} style={{
-                                                border: '1.5px solid #e2e8f0', borderRadius: '14px',
-                                                background: open ? '#f8fafc' : 'white', transition: 'all 0.15s',
-                                            }}>
-                                                <div
-                                                    onClick={() => setExpanded(open ? null : job.id)}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: '12px',
-                                                        padding: '14px 16px', cursor: 'pointer', flexWrap: 'wrap',
-                                                    }}
-                                                >
-                                                    <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                                                        <div title={job.file_name} style={{
-                                                            fontSize: '14px', fontWeight: 700, color: '#0f172a',
-                                                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                                        }}>
-                                                            {job.file_name}
-                                                        </div>
-                                                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
-                                                            {when(job.created_at)}
-                                                            {job.uploaded_by && ` · ${job.uploaded_by}`}
-                                                        </div>
-                                                    </div>
-
-                                                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', minWidth: '110px' }}>
-                                                        {ex.invoice_number || '—'}
-                                                    </div>
-                                                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', minWidth: '90px', textAlign: 'right' }}>
-                                                        {money(ex.total_amount)}
-                                                    </div>
-
-                                                    <StatePill state={job.state} status={job.status} />
-
-                                                    <span style={{
-                                                        fontSize: '12px', color: '#94a3b8',
-                                                        transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s',
-                                                    }}>▼</span>
-                                                </div>
-
-                                                {open && (
-                                                    <div style={{ padding: '0 16px 16px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
-                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                                                            {[
-                                                                ['Invoice Number', ex.invoice_number || '—'],
-                                                                ['Invoice Date', ex.date || '—'],
-                                                                ['Vendor', ex.vendor_name || (ex.vendor_id ? `#${ex.vendor_id}` : '—')],
-                                                                ['Total Amount', money(ex.total_amount)],
-                                                                ['GST Amount', money(ex.gst_amount)],
-                                                                ['Invoice Type', job.invoice_type || 'purchase'],
-                                                                ['Pipeline Status', job.status || '—'],
-                                                                ['Job ID', job.job_id || '—'],
-                                                            ].map(([label, value]) => (
-                                                                <div key={label}>
-                                                                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                                        {label}
-                                                                    </div>
-                                                                    <div title={String(value)} style={{
-                                                                        fontSize: '13.5px', fontWeight: 600, color: '#0f172a', marginTop: '3px',
-                                                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                                                    }}>
-                                                                        {value}
+                                <>
+                                    <div className="inv_table_wrap">
+                                        <table className="inv_table" style={{ minWidth: 860 }}>
+                                            <thead>
+                                                <tr>
+                                                    <th>File</th><th>Invoice</th><th>Vendor</th><th>Date</th>
+                                                    <th className="num">Amount</th><th>Status</th><th style={{ width: 40 }} />
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {jobs.map((job) => {
+                                                    const ex = job.extracted || {};
+                                                    const open = expanded === job.id;
+                                                    return [
+                                                        <tr key={job.id} onClick={() => setExpanded(open ? null : job.id)}>
+                                                            <td>
+                                                                <div className="inv_filecell">
+                                                                    <span className="ico"><FileText size={16} /></span>
+                                                                    <div style={{ minWidth: 0 }}>
+                                                                        <div className="nm" title={job.file_name}>{job.file_name}</div>
+                                                                        <div className="by">{when(job.created_at)}{job.uploaded_by ? ` · ${job.uploaded_by}` : ""}</div>
                                                                     </div>
                                                                 </div>
-                                                            ))}
-                                                        </div>
+                                                            </td>
+                                                            <td className="no">{ex.invoice_number || "—"}</td>
+                                                            <td>{ex.vendor_name || (ex.vendor_id ? `#${ex.vendor_id}` : "—")}</td>
+                                                            <td style={{ whiteSpace: "nowrap" }}>{shownDate(ex.date)}</td>
+                                                            <td className="num strong">{amount(ex.total_amount)}</td>
+                                                            <td><StatePill job={job} /></td>
+                                                            <td className="num"><ChevronDown size={16} className={`inv_chev ${open ? "open" : ""}`} /></td>
+                                                        </tr>,
+                                                        open && <tr key={`${job.id}-d`} className="inv_detail"><td colSpan={7}>{details(job)}</td></tr>,
+                                                    ];
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
 
-                                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                                            {job.file_url && (
-                                                                <a
-                                                                    href={job.file_url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    style={{
-                                                                        padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                                                                        border: '1.5px solid #e2e8f0', color: '#4f46e5', background: 'white',
-                                                                        textDecoration: 'none',
-                                                                    }}
-                                                                >
-                                                                    View original file
-                                                                </a>
-                                                            )}
-                                                            {job.state !== 'completed' && job.job_id && (
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); refreshJob(job); }}
-                                                                    disabled={busyJob === job.job_id}
-                                                                    style={{
-                                                                        padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                                                                        border: 'none', background: '#e0e7ff', color: '#4f46e5',
-                                                                        cursor: busyJob === job.job_id ? 'wait' : 'pointer',
-                                                                    }}
-                                                                >
-                                                                    {busyJob === job.job_id ? 'Checking...' : 'Check status'}
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                    <div className="inv_cards">
+                                        {jobs.map((job) => {
+                                            const ex = job.extracted || {};
+                                            const open = expanded === job.id;
+                                            return (
+                                                <div className="inv_inv_card" key={job.id} onClick={() => setExpanded(open ? null : job.id)}>
+                                                    <div className="top">
+                                                        <span className="inv_av"><FileText size={15} /></span>
+                                                        <div className="party" title={job.file_name}>{job.file_name}</div>
+                                                        <StatePill job={job} />
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                                    <div className="meta">
+                                                        <div>
+                                                            <div style={{ fontWeight: 600, color: "#4338ca", marginBottom: 2 }}>{ex.invoice_number || "No number"}</div>
+                                                            <div>{when(job.created_at)}</div>
+                                                        </div>
+                                                        <div className="amt">{amount(ex.total_amount)}</div>
+                                                    </div>
+                                                    {open && <div style={{ marginTop: 14 }} onClick={(e) => e.stopPropagation()}>{details(job)}</div>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="inv_foot">
+                                        <span className="summary">
+                                            {capped ? `Showing the latest ${jobs.length} of ${totalForTab}` : `Showing ${jobs.length} of ${totalForTab}`}
+                                        </span>
+                                        {canShowMore && (
+                                            <button type="button" className="inv_btn" onClick={() => setLimit((n) => Math.min(n + STEP, MAX_JOBS))}>Show more</button>
+                                        )}
+                                    </div>
+                                </>
                             )}
                         </div>
                     </>
                 )}
             </div>
-
-            <style>{`
-                @keyframes fadeUp {
-                    from { opacity: 0; transform: translateY(18px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to   { transform: rotate(360deg); }
-                }
-
-                .ocr-container { padding: 28px 24px 60px; }
-                .ocr-header {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 16px;
-                    flex-wrap: wrap;
-                }
-
-                @media (max-width: 768px) {
-                    .ocr-container { padding: 20px 16px 80px; }
-                    .ocr-header { flex-direction: column; align-items: flex-start; }
-                }
-            `}</style>
         </div>
     );
 };

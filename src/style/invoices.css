@@ -250,3 +250,30 @@ button.inv_kpi:hover { border-color: #c7d2fe; transform: translateY(-1px); }
 .inv_seg2 button.in.on { background: #dcfce7; border-color: #86efac; color: #166534; }
 .inv_seg2 button.out.on { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
 .inv_warn { margin-top: 10px; padding: 10px 14px; border-radius: 10px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 13px; }
+
+/* ── OCR invoices ── */
+.inv_drop {
+    margin: 16px 20px; padding: 28px 20px; text-align: center; cursor: pointer; background: white;
+    border: 2px dashed #cbd5e1; border-radius: 16px; transition: border-color 0.2s, background 0.2s;
+}
+.inv_drop:hover:not(.blocked) { border-color: #a5b4fc; }
+.inv_drop.over { border-color: #4f46e5; background: #eef2ff; }
+.inv_drop.blocked { cursor: not-allowed; opacity: 0.65; }
+.inv_drop .ico { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: #eef2ff; color: #4f46e5; margin-bottom: 12px; }
+.inv_drop .ttl { font-size: 15px; font-weight: 700; color: #0f172a; }
+.inv_drop .sub { font-size: 13px; color: #64748b; margin-top: 4px; }
+.inv_wa { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid #f1f5f9; }
+.inv_wa .txt { flex: 1 1 260px; min-width: 0; font-size: 13px; line-height: 1.5; color: #475569; }
+.inv_wa .txt strong { color: #0f172a; font-weight: 700; }
+.inv_wa a.wa { text-decoration: none; background: #25D366; color: white; border-radius: 12px; height: 40px; padding: 0 16px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 700; }
+.inv_detail td { background: #f8fafc; padding: 16px 20px !important; cursor: default; }
+.inv_detail_grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px 20px; margin: 0 0 14px; }
+.inv_detail_grid dt { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 2px; }
+.inv_detail_grid dd { margin: 0; font-size: 14px; font-weight: 600; color: #0f172a; overflow-wrap: anywhere; }
+.inv_detail_actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.inv_filecell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.inv_filecell .ico { width: 32px; height: 32px; border-radius: 10px; background: #eef2ff; color: #4338ca; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.inv_filecell .nm { font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv_filecell .by { font-size: 12px; color: #64748b; margin-top: 2px; }
+.inv_chev { transition: transform 0.15s; color: #94a3b8; }
+.inv_chev.open { transform: rotate(180deg); }
