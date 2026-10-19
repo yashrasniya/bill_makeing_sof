@@ -72,8 +72,13 @@ const ALL_PLACEHOLDERS = [
             { label: "Invoice Number", token: "{{ invoice.invoice_number }}", desc: "Unique identifier of the invoice" },
             { label: "Invoice Date", token: "{{ invoice.date }}", desc: "Date of issue" },
             { label: "Due Date", token: "{{ invoice.due_date }}", desc: "Payment due date" },
+            { label: "Place of Supply", token: "{{ invoice.place_of_supply }}", desc: "State the supply is made to, e.g. Maharashtra (27)" },
+            { label: "Payment Status", token: "{{ invoice.payment_status }}", desc: "Paid, Unpaid, Partially Paid or Overdue" },
+            { label: "Payment Method", token: "{{ invoice.payment_method }}", desc: "Cash, UPI, Bank Transfer and so on" },
             { label: "Total Final Amount", token: "{{ invoice.total_final_amount }}", desc: "Total amount including taxes" },
-            { label: "GST Final Amount", token: "{{ invoice.gst_final_amount }}", desc: "Total accumulated tax amount" }
+            { label: "GST Final Amount", token: "{{ invoice.gst_final_amount }}", desc: "Total accumulated tax amount" },
+            { label: "Notes", token: "{{ invoice.notes }}", desc: "Notes for the customer, from the invoice" },
+            { label: "Terms and Conditions", token: "{{ invoice.terms }}", desc: "Terms and conditions, from the invoice" }
         ]
     },
     {
@@ -852,6 +857,10 @@ const WeasyprintPreview = () => {
         'invoice.receiver_phone': '+91 98765 43210',
         'invoice.receiver_email': 'accounts@client.com',
         'invoice.payment_method': 'UPI',
+        'invoice.payment_status': 'Unpaid',
+        'invoice.place_of_supply': 'Maharashtra (27)',
+        'invoice.notes': 'Thank you for your business.',
+        'invoice.terms': 'Payment is due within 30 days. Goods once sold are not returnable.',
         'company.company_name': companyInfo?.company_name || 'Acme Corporation',
         'company.company_logo': companyInfo?.company_logo || 'https://via.placeholder.com/150',
         'company.company_address': companyInfo?.company_address || '123 Business Lane, Suite 100, Financial District',
