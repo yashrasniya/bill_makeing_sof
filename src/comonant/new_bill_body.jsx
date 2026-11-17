@@ -9,7 +9,7 @@ import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
 import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
 import BulkEditModal from "@/comonant/Bill/BulkEditModal";
-import { GST_STATES } from "@/constants/gst";
+import { isGstColumn, PLACE_OF_SUPPLY_STATES } from "@/constants/gst";
 
 /* Renders the cropped region of `imageSrc` onto an offscreen canvas and
    resolves a JPEG Blob — the standard react-easy-crop recipe. */
@@ -463,7 +463,7 @@ function NewBillBody({ id }) {
                         else total -= currentCalculatedVal;
                     }
                 } else {
-                    if (abc.value && item.input_title !== 'GST') {
+                    if (abc.value && !isGstColumn(item.input_title)) {
                         total *= parseFloat(abc.value);
                     }
                 }
@@ -483,9 +483,9 @@ function NewBillBody({ id }) {
         let gstAmount = 0;
         if (
             productProps.length > 0 &&
-            bill_body_items.some((o) => o.input_title === 'GST')
+            bill_body_items.some((o) => isGstColumn(o.input_title))
         ) {
-            const gstItem = bill_body_items.find((o) => o.input_title === 'GST');
+            const gstItem = bill_body_items.find((o) => isGstColumn(o.input_title));
             const gstProp = productProps.find(p => p.new_product_in_frontend?.id === gstItem.id);
             const gst = gstProp ? gstProp.value : 0;
             gstAmount = gst ? total * (parseFloat(gst) / 100) : 0;
@@ -696,7 +696,7 @@ function NewBillBody({ id }) {
         // Find IDs for Name, Rate, and GST fields based on bill_body_items
         const nameField = bill_body_items.find(item => item.input_title === 'Name of Product');
         const rateField = bill_body_items.find(item => item.input_title === 'Rate');
-        const gstField = bill_body_items.find(item => item.input_title === 'GST');
+        const gstField = bill_body_items.find(item => isGstColumn(item.input_title));
 
         if (nameField) {
             let nIndex = array.findIndex(s => +s.new_product_in_frontend.id === +nameField.id);
@@ -879,7 +879,7 @@ function NewBillBody({ id }) {
             setInlineInventoryId(match ? match.id : null);
             if (match) {
                 const rateItem = itemTitled('Rate');
-                const gstItem = itemTitled('GST');
+                const gstItem = bill_body_items.find((o) => isGstColumn(o.input_title));
                 if (rateItem && match.price !== undefined) next[rateItem.id] = String(match.price);
                 if (gstItem && match.gst_percentage !== undefined) next[gstItem.id] = String(match.gst_percentage);
             }
@@ -1021,7 +1021,7 @@ function NewBillBody({ id }) {
                     }
                 } else {
                     // multiply if not GST
-                    if (abc.value && item.input_title !== 'GST') {
+                    if (abc.value && !isGstColumn(item.input_title)) {
                         total *= parseFloat(abc.value);
                         currentCalculatedVal = abc.value;
                     }
@@ -1045,9 +1045,9 @@ function NewBillBody({ id }) {
         let gstAmount = 0;
         if (
             obj.product_properties.length > 0 &&
-            bill_body_items.some((o) => o.input_title === 'GST')
+            bill_body_items.some((o) => isGstColumn(o.input_title))
         ) {
-            const gstItem = bill_body_items.find((o) => o.input_title === 'GST');
+            const gstItem = bill_body_items.find((o) => isGstColumn(o.input_title));
             const gstProp = obj.product_properties.find(p => p.new_product_in_frontend.id === gstItem.id);
             const gst = gstProp ? gstProp.value : 0;
             gstAmount = gst ? total * (parseFloat(gst) / 100) : 0;
@@ -1693,7 +1693,7 @@ function NewBillBody({ id }) {
                                 }}
                             >
                                 <option value="">Same as customer's state</option>
-                                {GST_STATES.map((st) => (
+                                {PLACE_OF_SUPPLY_STATES.map((st) => (
                                     <option key={st.code} value={st.code}>{`${st.name} (${st.code})`}</option>
                                 ))}
                             </select>

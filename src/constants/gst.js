@@ -10,6 +10,12 @@ export const GST_STATES = [
   [38, 'Ladakh'], [97, 'Other Territory'],
 ].map(([code, name]) => ({ code, name }));
 
+/**
+ * Choices for an invoice's place of supply: every state plus 96 "Other Countries", the place of supply of an
+ * export. 96 is never a GSTIN prefix, so it stays out of GST_STATES (which GSTINs are parsed against).
+ */
+export const PLACE_OF_SUPPLY_STATES = [...GST_STATES, { code: 96, name: 'Other Countries' }];
+
 const GSTIN_RE = /^(\d{2})[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 export const normalizeGstin = (v) => String(v || '').replace(/\s+/g, '').toUpperCase();
@@ -24,3 +30,10 @@ export const stateByName = (name) => {
   const wanted = String(name || '').replace(/\s+/g, ' ').trim().toLowerCase().replace('&', 'and');
   return GST_STATES.find((s) => s.name.toLowerCase() === wanted) || null;
 };
+
+/**
+ * Whether a line-item column holds the GST rate. Mirrors invoice_api/gst.py `is_gst_column`, which the server
+ * recomputes totals with — so a column titled "GST %" or "Tax" is read as tax rather than multiplied into the total.
+ */
+const GST_COLUMN_KEYS = new Set(['gst', 'gstrate', 'gstpercent', 'gstpercentage', 'tax', 'taxrate', 'taxpercent', 'taxpercentage', 'igst']);
+export const isGstColumn = (title) => GST_COLUMN_KEYS.has(String(title || '').toLowerCase().replace(/[^a-z]/g, ''));

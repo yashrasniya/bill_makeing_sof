@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { isGstColumn } from "@/constants/gst";
 
 const formatHeaderTitle = (title) => {
     if (!title) return '';
@@ -54,7 +55,7 @@ const CollapsibleRowCard = ({
                     total = "error";
                 }
             } else {
-                if (abc.value && item.input_title !== "GST") {
+                if (abc.value && !isGstColumn(item.input_title)) {
                     total *= parseFloat(abc.value);
                     currentCalculatedVal = abc.value;
                 }
@@ -77,9 +78,9 @@ const CollapsibleRowCard = ({
     let gstAmount = 0;
     if (
         rowData.product_properties.length > 0 &&
-        billBodyItems.map((o) => o.input_title).indexOf("GST") !== -1
+        billBodyItems.some((o) => isGstColumn(o.input_title))
     ) {
-        const gstIndex = billBodyItems.map((o) => o.input_title).indexOf("GST");
+        const gstIndex = billBodyItems.findIndex((o) => isGstColumn(o.input_title));
         const gst = rowData.product_properties[gstIndex]?.value;
         gstAmount = gst ? total * (gst / 100) : 0;
     }

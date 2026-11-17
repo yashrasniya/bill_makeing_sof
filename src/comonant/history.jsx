@@ -7,11 +7,11 @@ import { ChevronLeft, ChevronRight, Download, FileText, MoreVertical, Plus, Tras
 import { clientToken } from "../axios";
 import PdfOpener from "@/utility/pdf_opener";
 import { day, money } from "@/utility/money";
-import { GST_STATES } from "@/constants/gst";
+import { PLACE_OF_SUPPLY_STATES } from "@/constants/gst";
 import { DueDate, Hint, Pill, dueNote, initials, isOpen } from "./invoiceBits";
 
 const partyOf = (obj) => (obj.invoice_type === "purchase" ? obj.vendor_name : obj.receiver_name) || "—";
-const stateOf = (code) => GST_STATES.find((s) => s.code === code)?.name || (code ? String(code) : "—");
+const stateOf = (code) => PLACE_OF_SUPPLY_STATES.find((s) => s.code === code)?.name || (code ? String(code) : "—");
 
 function RowMenu({ obj, canDelete, onDelete }) {
     const [open, setOpen] = useState(false);

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { clientToken } from "@/axios";
 import { fetchAccess } from "@/store/accessSlice";
-import { GST_STATES } from "@/constants/gst";
+import { PLACE_OF_SUPPLY_STATES } from "@/constants/gst";
 
 /* Same style helpers as UIConfig / UIConfigNumbering, kept in sync by hand
    (the house pattern). */
@@ -102,7 +102,7 @@ const UIConfigHeaderFields = ({ canManage, showToast }) => {
             );
         }
         const options = f.type === 'state'
-            ? GST_STATES.map((s) => ({ value: s.code, label: `${s.name} (${s.code})` }))
+            ? PLACE_OF_SUPPLY_STATES.map((s) => ({ value: s.code, label: `${s.name} (${s.code})` }))
             : f.options;
         return (
             <select
