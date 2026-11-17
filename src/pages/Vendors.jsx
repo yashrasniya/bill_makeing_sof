@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { Plus, Search, Store, Trash2 } from "lucide-react";
 import { clientToken } from "@/axios";
 import { INDIAN_STATES } from "@/constants/states";
+import { gstinError, withGstin } from "@/constants/gst";
 import { day, money, moneyShort } from "@/utility/money";
 import Navbar from "../comonant/navbar.jsx";
 import PageIcon from "../comonant/PageIcon";
@@ -82,7 +83,8 @@ export default function Vendors() {
 
     const save = () => {
         if (!form.name.trim()) { setFormError("Enter a vendor name."); return; }
-        if (form.gst_number && form.gst_number.length !== 15) { setFormError("A GST number has 15 characters."); return; }
+        const badGst = gstinError(form.gst_number);
+        if (badGst) { setFormError(badGst); return; }
         setSaving(true);
         setFormError("");
         const body = new FormData();
@@ -337,7 +339,10 @@ export default function Vendors() {
                             <div className="form_box" style={{ flexBasis: "48%" }}>
                                 GST number
                                 <input value={form.gst_number || ""} maxLength={15}
-                                    onChange={(e) => setField("gst_number", e.target.value.toUpperCase())} />
+                                    onChange={(e) => setForm((f) => withGstin(f, e.target.value, INDIAN_STATES))} />
+                                {form.gst_number?.length === 15 && gstinError(form.gst_number) && (
+                                    <small style={{ color: "#dc2626" }}>{gstinError(form.gst_number)}</small>
+                                )}
                             </div>
                             <div className="form_box" style={{ flexBasis: "48%" }}>
                                 State

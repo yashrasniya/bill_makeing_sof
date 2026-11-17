@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchUser } from "@/store/userSlice";
 import Navbar from "../comonant/navbar.jsx";
 import PageIcon from "../comonant/PageIcon";
-import { GST_STATES, stateFromGstin, stateByName } from "../constants/gst";
+import { GST_STATES, gstinError, stateFromGstin, stateByName } from "../constants/gst";
 import { Building2, Landmark, QrCode, ImageIcon, CheckCircle2, Save, Upload, RefreshCw, Undo2, Check } from "lucide-react";
 import "./CompanyForm.css";
 
@@ -14,7 +14,7 @@ import "./CompanyForm.css";
 const COMPANY_FIELDS = [
     { label: "Company Name", name: "company_name", type: "text", placeholder: "Acme Pvt. Ltd.", col: 2 },
     { label: "Company Address", name: "company_address", type: "text", placeholder: "123, MG Road, Bangalore", col: 2 },
-    { label: "GST Number", name: "company_gst_number", type: "text", placeholder: "22AAAAA0000A1Z5", optional: true, hint: "Leave blank if you are not GST-registered. Your state is filled in from it." },
+    { label: "GST Number", name: "company_gst_number", type: "text", placeholder: "22AAAAA0000A1ZC", optional: true, hint: "Leave blank if you are not GST-registered. Your state is filled in from it." },
     { label: "State", name: "state", type: "state" },
     { label: "State Code", name: "state_code", type: "statecode", optional: true },
     { label: "Company Email", name: "company_email_id", type: "email", placeholder: "info@acme.com" },
@@ -55,7 +55,7 @@ const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS];
 const UPI_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,254}@[a-zA-Z][a-zA-Z0-9]{1,63}$/;
 const RULES = {
     company_email_id: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? '' : 'Enter a valid email, e.g. info@acme.com.'),
-    company_gst_number: (v) => (/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(v.toUpperCase()) ? '' : 'GST number must be 15 characters, e.g. 22AAAAA0000A1Z5.'),
+    company_gst_number: (v) => (/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(v.toUpperCase()) ? (gstinError(v) || '') : 'GST number must be 15 characters, e.g. 22AAAAA0000A1ZC.'),
     company_phone: (v) => { const n = v.replace(/\D/g, '').length; return n >= 10 && n <= 13 ? '' : 'Enter a valid phone number with 10 to 13 digits.'; },
     ifsc_code: (v) => (/^[A-Z]{4}0[A-Z0-9]{6}$/.test(v.toUpperCase()) ? '' : 'IFSC is 11 characters, e.g. SBIN0001234.'),
     account_number: (v) => (/^\d{9,18}$/.test(v) ? '' : 'Account number is 9 to 18 digits.'),

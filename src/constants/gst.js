@@ -37,3 +37,50 @@ export const stateByName = (name) => {
  */
 const GST_COLUMN_KEYS = new Set(['gst', 'gstrate', 'gstpercent', 'gstpercentage', 'tax', 'taxrate', 'taxpercent', 'taxpercentage', 'igst']);
 export const isGstColumn = (title) => GST_COLUMN_KEYS.has(String(title || '').toLowerCase().replace(/[^a-z]/g, ''));
+
+const GSTIN_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/** The 15th (check) character of a GSTIN from its first 14. Mirrors accounts/gst_utils.gstin_check_char. */
+export function gstinCheckChar(first14) {
+  let total = 0;
+  for (let i = 0; i < 14; i += 1) {
+    const v = GSTIN_CHARS.indexOf(first14[i]) * (i % 2 ? 2 : 1);
+    total += Math.floor(v / 36) + (v % 36);
+  }
+  return GSTIN_CHARS[(36 - (total % 36)) % 36];
+}
+
+/** Why a GSTIN can't be saved, or null when it's fine (blank counts as fine: an unregistered party). */
+export function gstinError(raw) {
+  const gstin = normalizeGstin(raw);
+  if (!gstin) return null;
+  if (gstin.length !== 15) return 'A GST number has 15 characters.';
+  if (!stateFromGstin(gstin)) return 'Enter a valid GST number, e.g. 29ABCDE1234F1ZW.';
+  if (gstinCheckChar(gstin.slice(0, 14)) !== gstin[14]) return 'This GST number has a typo: its last character does not match the rest.';
+  return null;
+}
+
+const HSN_COLUMN_KEYS = new Set(['hsn', 'sac', 'hsncode', 'saccode', 'hsnsac', 'hsnsaccode', 'hsnorsac', 'hns', 'hnscode']);
+const UNIT_COLUMN_KEYS = new Set(['unit', 'units', 'uqc', 'uom']);
+const titleKey = (title) => String(title || '').toLowerCase().replace(/[^a-z]/g, '');
+/** Line-item column holding the HSN/SAC code. Mirrors invoice_api/gst.py `is_hsn_column`. */
+export const isHsnColumn = (title) => HSN_COLUMN_KEYS.has(titleKey(title));
+export const isUnitColumn = (title) => UNIT_COLUMN_KEYS.has(titleKey(title));
+
+/** Why an HSN/SAC code is malformed, or null (blank is fine). */
+export const hsnError = (raw) => {
+  const code = String(raw || '').replace(/\s+/g, '');
+  return !code || /^(\d{4}|\d{6}|\d{8})$/.test(code) ? null : 'HSN/SAC codes are 4, 6 or 8 digits (e.g. 8471 or 998314).';
+};
+
+/**
+ * A party form after typing `value` into its GST field: a complete, valid GSTIN also sets the state,
+ * because a business has one GST number per state. `states` is the form's own state list ({ name, code }).
+ */
+export function withGstin(form, value, states = GST_STATES) {
+  const gst_number = normalizeGstin(value);
+  const st = stateFromGstin(gst_number);
+  if (!st || gstinError(gst_number)) return { ...form, gst_number };
+  const local = states.find((s) => Number(s.code) === st.code);
+  return { ...form, gst_number, state: local ? local.name : st.name, state_code: st.code };
+}

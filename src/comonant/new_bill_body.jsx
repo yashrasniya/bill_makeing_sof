@@ -9,7 +9,7 @@ import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
 import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
 import BulkEditModal from "@/comonant/Bill/BulkEditModal";
-import { isGstColumn, PLACE_OF_SUPPLY_STATES } from "@/constants/gst";
+import { isGstColumn, isHsnColumn, isUnitColumn, PLACE_OF_SUPPLY_STATES } from "@/constants/gst";
 
 /* Renders the cropped region of `imageSrc` onto an offscreen canvas and
    resolves a JPEG Blob — the standard react-easy-crop recipe. */
@@ -723,6 +723,15 @@ function NewBillBody({ id }) {
             else array.push({ value: product.gst_percentage, new_product_in_frontend: { id: gstField.id } });
         }
 
+        // HSN/SAC and unit go to the bill's HSN / Unit columns when it has them
+        [[bill_body_items.find((o) => isHsnColumn(o.input_title)), product.hsn_code],
+         [bill_body_items.find((o) => isUnitColumn(o.input_title)), product.unit]].forEach(([field, value]) => {
+            if (!field || !value) return;
+            const i = array.findIndex(s => +s.new_product_in_frontend.id === +field.id);
+            if (i !== -1) array[i].value = value;
+            else array.push({ value, new_product_in_frontend: { id: field.id } });
+        });
+
         setSelectedInventoryProductId(product.id);
         setNewProduct({ ...new_product, product_properties: array });
     };
@@ -882,6 +891,10 @@ function NewBillBody({ id }) {
                 const gstItem = bill_body_items.find((o) => isGstColumn(o.input_title));
                 if (rateItem && match.price !== undefined) next[rateItem.id] = String(match.price);
                 if (gstItem && match.gst_percentage !== undefined) next[gstItem.id] = String(match.gst_percentage);
+                const hsnItem = bill_body_items.find((o) => isHsnColumn(o.input_title));
+                const unitItem = bill_body_items.find((o) => isUnitColumn(o.input_title));
+                if (hsnItem && match.hsn_code) next[hsnItem.id] = match.hsn_code;
+                if (unitItem && match.unit) next[unitItem.id] = match.unit;
             }
         }
         setInlineDraft(next);
@@ -1676,13 +1689,14 @@ function NewBillBody({ id }) {
                             label="Place of Supply"
                             htmlFor="place_of_supply"
                             basis={240}
-                            hint={posValue !== ''
+                            hint={(posValue !== ''
                                 ? "Overrides the customer's state for GST."
                                 : InvoiceData?.receiver_state_code
                                     ? `Using the customer's state: ${InvoiceData.receiver_state || ''} (${InvoiceData.receiver_state_code})`
                                     : InvoiceData?.receiver
                                         ? 'This customer has no state. Choose one so GST splits correctly.'
-                                        : "Defaults to the customer's state."}
+                                        : "Defaults to the customer's state.")
+                                + (canSplitGst ? (intraState ? ' · Intra-state: CGST + SGST' : ' · Inter-state: IGST') : '')}
                         >
                             <select
                                 id="place_of_supply"

@@ -4,10 +4,11 @@ import { clientToken } from "../../axios.js";
 import { day, money, moneyShort } from "@/utility/money";
 import { initials } from "../invoiceBits";
 import Modal from "../Modal";
+import { hsnError } from "@/constants/gst";
 import StockMovementModal from "./StockMovementModal";
 
 const EMPTY = {
-    sku: "", name: "", description: "", price: "", gst_percentage: 18, current_stock: 0,
+    sku: "", name: "", description: "", price: "", gst_percentage: 18, hsn_code: "", unit: "", current_stock: 0,
     reorder_level: 10, category: "", vendor: "",
 };
 const PAGE_SIZE = 25;
@@ -114,9 +115,12 @@ function ProductsTable({ addSignal = 0 }) {
         if (form.price === "" || Number(form.price) < 0) { setFormError("Enter a price."); return; }
         const gst = Number(form.gst_percentage);
         if (!(gst >= 0 && gst <= 100)) { setFormError("GST must be between 0 and 100."); return; }
+        const badHsn = hsnError(form.hsn_code);
+        if (badHsn) { setFormError(badHsn); return; }
         const payload = {
             sku: form.sku.trim(), name: form.name.trim(), description: form.description, price: form.price,
             gst_percentage: form.gst_percentage, reorder_level: form.reorder_level,
+            hsn_code: String(form.hsn_code || "").replace(/\s+/g, ""), unit: String(form.unit || "").trim(),
             category: form.category || null, vendor: form.vendor || null,
         };
         // stock is only set when creating; afterwards it changes through movements
@@ -273,6 +277,7 @@ function ProductsTable({ addSignal = 0 }) {
                                         <div><dt>Status</dt><dd><span className={`inv_stock ${stockState(current)}`}>{STOCK_LABEL[stockState(current)]}</span></dd></div>
                                         <div><dt>Reorder at</dt><dd>{current.reorder_level}</dd></div>
                                         <div><dt>GST</dt><dd>{Number(current.gst_percentage)}%</dd></div>
+                                        <div><dt>HSN / SAC</dt><dd>{current.hsn_code || "—"}{current.unit ? ` · ${current.unit}` : ""}</dd></div>
                                         <div><dt>Stock value</dt><dd>{money(Math.max(current.current_stock, 0) * (Number(current.price) || 0))}</dd></div>
                                         <div><dt>Category</dt><dd>{current.category_name || "—"}</dd></div>
                                         <div><dt>Vendor</dt><dd>{current.vendor_name || current.supplier_name || "—"}</dd></div>
@@ -339,6 +344,8 @@ function ProductsTable({ addSignal = 0 }) {
                         </div>
                         <div className="form_box" style={{ flexBasis: "30%" }}>Price (₹)<input type="number" step="0.01" min="0" value={form.price} onChange={(e) => setField("price", e.target.value)} /></div>
                         <div className="form_box" style={{ flexBasis: "30%" }}>GST (%)<input type="number" step="0.01" min="0" max="100" value={form.gst_percentage} onChange={(e) => setField("gst_percentage", e.target.value)} /></div>
+                        <div className="form_box" style={{ flexBasis: "30%" }}>HSN / SAC<input inputMode="numeric" maxLength={8} placeholder="e.g. 8471" value={form.hsn_code || ""} onChange={(e) => setField("hsn_code", e.target.value)} /></div>
+                        <div className="form_box" style={{ flexBasis: "30%" }}>Unit<input maxLength={8} placeholder="NOS, KGS, LTR" value={form.unit || ""} onChange={(e) => setField("unit", e.target.value.toUpperCase())} /></div>
                         <div className="form_box" style={{ flexBasis: "30%" }}>Reorder at<input type="number" min="0" value={form.reorder_level} onChange={(e) => setField("reorder_level", e.target.value)} /></div>
                         <div className="form_box" style={{ flexBasis: "100%" }}>
                             {form.id ? "Current stock" : "Opening stock"}

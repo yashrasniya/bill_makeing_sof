@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { INDIAN_STATES } from "@/constants/states";
+import { gstinError, withGstin } from "@/constants/gst";
 import { Plus, FileText, BookOpen, Trash2, Users } from "lucide-react";
 
 // Shared input focus handlers
@@ -198,6 +199,8 @@ function CompanysTable() {
     };
 
     const handelsave = (u = 'companies/') => {
+        const badGst = gstinError(company_data.gst_number);
+        if (badGst) { setErrorInfo(badGst); return; }
         const form = new FormData();
         Object.keys(company_data).forEach(k => form.append(k, company_data[k]));
         clientToken.post(u, form).then(response => {
@@ -901,7 +904,15 @@ function CompanysTable() {
                         <div className="pop-up-box_inputs">
                             {filed('Customer Name', 'name', '48%')}
                             {filed('Address', 'address', '48%')}
-                            {filed('GST Number', 'gst_number', '48%')}
+                            <div className="form_box" style={{ flexBasis: '48%' }}>
+                                GST Number
+                                <input id="gst_number" value={company_data.gst_number || ''} maxLength={15}
+                                    onFocus={onFocusIn} onBlur={onFocusOut}
+                                    onChange={e => set_company_data(withGstin(company_data, e.target.value, INDIAN_STATES))} />
+                                {company_data.gst_number?.length === 15 && gstinError(company_data.gst_number) && (
+                                    <small style={{ color: '#dc2626' }}>{gstinError(company_data.gst_number)}</small>
+                                )}
+                            </div>
                             <div className="form_box" style={{ flexBasis: '22%' }}>
                                 State
                                 <select
