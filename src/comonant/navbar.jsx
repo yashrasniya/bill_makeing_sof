@@ -100,7 +100,8 @@ function Navbar() {
                 { title: "Cashflow", link: "/cashflow" },
                 { title: "Sales Register", link: "/sales-register" },
                 { title: "Customer Ledger", link: "/customer-ledger" },
-                { title: "GST Summary", link: "/gst-summary" }
+                { title: "GST Summary", link: "/gst-summary" },
+                { title: "GSTR-1", link: "/gstr1" }
             ]
         },
         {

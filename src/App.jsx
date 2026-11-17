@@ -46,6 +46,7 @@ import PurchaseRegister from "./pages/PurchaseRegister";
 import CustomerLedger from "./pages/CustomerLedger";
 import SupplierLedger from "./pages/SupplierLedger";
 import GSTSummaryReport from "./pages/GSTSummaryReport";
+import Gstr1Report from "./pages/Gstr1Report";
 // Private route wrapper
 
 
@@ -449,6 +450,18 @@ function App() {
                         <RequireFeature feature="advanced_reports">
                             <RequirePermission permission="report.view">
                                 <GSTSummaryReport />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/gstr1"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <Gstr1Report />
                             </RequirePermission>
                         </RequireFeature>
                     </PrivateRoute>

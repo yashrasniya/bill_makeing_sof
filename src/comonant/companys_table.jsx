@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { INDIAN_STATES } from "@/constants/states";
-import { gstinError, withGstin } from "@/constants/gst";
+import { gstinError, treatmentChange, treatmentFor, TREATMENTS_WITH_GSTIN, TREATMENTS_WITHOUT_GSTIN, withGstin } from "@/constants/gst";
 import { Plus, FileText, BookOpen, Trash2, Users } from "lucide-react";
 
 // Shared input focus handlers
@@ -13,7 +13,7 @@ const onFocusOut = e => { e.target.style.borderColor = '#e2e8f0'; e.target.style
 
 const DEFAULT_FILTERS = { s: "", ordering: "-id", page_size: 10, state: "", has_gst: "" };
 
-const EMPTY = { name: '', address: '', gst_number: '', state: '', state_code: '', phone_number: '' };
+const EMPTY = { name: '', address: '', gst_number: '', state: '', state_code: '', phone_number: '', gst_treatment: '' };
 
 // same formatting as the Customer Ledger page, which sits one click away —
 // a rounded total here would read as a mismatch against the statement there
@@ -912,6 +912,16 @@ function CompanysTable() {
                                 {company_data.gst_number?.length === 15 && gstinError(company_data.gst_number) && (
                                     <small style={{ color: '#dc2626' }}>{gstinError(company_data.gst_number)}</small>
                                 )}
+                            </div>
+                            <div className="form_box" style={{ flexBasis: '48%' }}>
+                                GST treatment
+                                <select value={treatmentFor(company_data.gst_treatment, !!company_data.gst_number)}
+                                    onChange={e => set_company_data(treatmentChange(company_data, e.target.value))}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #e2e8f0',
+                                        outline: 'none', fontSize: '14px', color: '#0f172a', backgroundColor: '#f8fafc', marginTop: '4px' }}>
+                                    {(company_data.gst_number ? TREATMENTS_WITH_GSTIN : TREATMENTS_WITHOUT_GSTIN).map(t =>
+                                        <option key={t.value} value={t.value}>{t.label}</option>)}
+                                </select>
                             </div>
                             <div className="form_box" style={{ flexBasis: '22%' }}>
                                 State

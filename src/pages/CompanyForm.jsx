@@ -47,7 +47,16 @@ const UPI_FIELDS = [
 
 /* Line item images moved to UI Config -> Invoice Fields. The server no longer
    accepts it on this form, so it must not be sent from here. */
-const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS];
+/* Letter of Undertaking: exports and SEZ supplies go out without IGST under it.
+   Filed once per financial year on the GST portal; all three or none. */
+const LUT_FIELDS = [
+    { label: "LUT number (ARN)", name: "lut_number", type: "text", optional: true, col: 2, placeholder: "AD290326000001X",
+      hint: "Needed only if you export or supply to an SEZ without charging IGST." },
+    { label: "Valid from", name: "lut_valid_from", type: "date", optional: true },
+    { label: "Valid to", name: "lut_valid_to", type: "date", optional: true },
+];
+
+const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS, ...LUT_FIELDS];
 
 /* ─── validation ───
    Each rule returns an error string or '' and only runs on a non-empty value,
@@ -88,6 +97,9 @@ function validateAll(data) {
     if (data.show_upi_qr && !(data.upi_id || '').trim() && !errs.upi_id) {
         errs.upi_id = 'Add a UPI ID before turning on the invoice QR code.';
     }
+    const lut = [data.lut_number, data.lut_valid_from, data.lut_valid_to].map((v) => String(v || '').trim());
+    if (lut.some(Boolean) && !lut.every(Boolean)) errs.lut_number = 'Enter the LUT number and both dates it is valid for.';
+    else if (lut[1] && lut[2] && lut[2] < lut[1]) errs.lut_valid_to = "The end date can't be before the start date.";
     return errs;
 }
 
@@ -453,7 +465,7 @@ export default function CompanyForm() {
         const errs = { ...validateAll(formData) };
         if (fieldErrors.company_logo) errs.company_logo = fieldErrors.company_logo;
         setFieldErrors(errs);
-        const firstBad = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS].find((f) => errs[f.name]);
+        const firstBad = ALL_FIELDS.find((f) => errs[f.name]);
         if (firstBad) {
             setLoading(false);
             const el = document.getElementById(`cf-${firstBad.name}`);
@@ -695,6 +707,29 @@ export default function CompanyForm() {
                                     />
                                 ))}
                                 <UpiTestQr upiId={formData.upi_id} payeeName={formData.company_name} />
+                            </div>
+
+                            <div className="cf-divider" />
+
+                            {/* Exports / SEZ under LUT */}
+                            <div className="cf-grid cf-section">
+                                <SectionHeader title="Export / SEZ under LUT" icon={Landmark} />
+                                {LUT_FIELDS.map(f => (
+                                    <Field
+                                        key={f.name}
+                                        field={f}
+                                        value={formData[f.name]}
+                                        logoPreview={logoPreview}
+                                        onChange={handleChange}
+                                        onBlur={handleBlur}
+                                        error={fieldErrors[f.name]}
+                                        gstState={gstState}
+                                        stateCode={formData.state_code}
+                                        logoFile={null}
+                                        canUndoLogo={false}
+                                        onUndoLogo={undoLogo}
+                                    />
+                                ))}
                             </div>
 
                             {/* Submit */}

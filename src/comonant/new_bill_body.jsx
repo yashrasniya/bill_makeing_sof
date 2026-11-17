@@ -384,7 +384,7 @@ function NewBillBody({ id }) {
         // Keys that must be sent even when empty, so they can be cleared.
         // Only on update: omitting invoice_number on create is what asks the
         // server to auto-generate one.
-        const alwaysSend = url === 'invoice/' ? [] : ['invoice_number', 'due_date', 'place_of_supply', 'customer_notes', 'terms']
+        const alwaysSend = url === 'invoice/' ? [] : ['invoice_number', 'due_date', 'place_of_supply', 'customer_notes', 'terms', 'reverse_charge']
         Object.keys(InvoiceData).map((obj) => {
 
             if (('products' !== obj) && (InvoiceData[obj] || alwaysSend.includes(obj))) {
@@ -1071,7 +1071,8 @@ function NewBillBody({ id }) {
         }
 
         // update totals (assuming grandTotal & grandGstTotal are state/outer scope)
-        grandTotal += total + gstAmount + extraCal;
+        // reverse charge: the recipient pays the GST, so it isn't in the amount due
+        grandTotal += total + (InvoiceData?.reverse_charge ? 0 : gstAmount) + extraCal;
         grandGstTotal = grandGstTotal + gstAmount;
         grandSubtotal += total;
         grandAdjustments += extraCal;
@@ -1714,6 +1715,27 @@ function NewBillBody({ id }) {
                         </HeaderField>
                     )}
 
+                    <HeaderField
+                        label="Reverse charge"
+                        htmlFor="reverse_charge"
+                        basis={150}
+                        hint={InvoiceData?.reverse_charge
+                            ? (isSale ? 'Your customer pays the GST; the total leaves it out.' : 'You pay this GST to the government and claim it as credit.')
+                            : 'Only for services notified under reverse charge.'}
+                    >
+                        <select
+                            id="reverse_charge"
+                            value={InvoiceData?.reverse_charge ? 'yes' : 'no'}
+                            onChange={(e) => {
+                                setInvoiceData({ ...InvoiceData, reverse_charge: e.target.value === 'yes' });
+                                setRefresh(r => !r);
+                            }}
+                        >
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </HeaderField>
+
                     {showField('payment_status') && (
                     <HeaderField label="Payment Status" htmlFor="payment_status" basis={140}>
                         <select
@@ -2026,6 +2048,12 @@ function NewBillBody({ id }) {
                             <div className="summary-row">
                                 <span>Other adjustments</span>
                                 <span>{grandAdjustments < 0 ? '−' : ''}{formatINR(Math.abs(grandAdjustments))}</span>
+                            </div>
+                        )}
+                        {InvoiceData?.reverse_charge && (
+                            <div className="summary-row">
+                                <span>GST payable by the recipient (reverse charge)</span>
+                                <span>{formatINR(grandGstTotal)}</span>
                             </div>
                         )}
                         <div className="summary-total">

@@ -4,11 +4,11 @@ import { clientToken } from "../../axios.js";
 import { day, money, moneyShort } from "@/utility/money";
 import { initials } from "../invoiceBits";
 import Modal from "../Modal";
-import { hsnError } from "@/constants/gst";
+import { hsnError, ZERO_RATE_CATEGORIES } from "@/constants/gst";
 import StockMovementModal from "./StockMovementModal";
 
 const EMPTY = {
-    sku: "", name: "", description: "", price: "", gst_percentage: 18, hsn_code: "", unit: "", current_stock: 0,
+    sku: "", name: "", description: "", price: "", gst_percentage: 18, hsn_code: "", unit: "", tax_category: "taxable", current_stock: 0,
     reorder_level: 10, category: "", vendor: "",
 };
 const PAGE_SIZE = 25;
@@ -121,6 +121,8 @@ function ProductsTable({ addSignal = 0 }) {
             sku: form.sku.trim(), name: form.name.trim(), description: form.description, price: form.price,
             gst_percentage: form.gst_percentage, reorder_level: form.reorder_level,
             hsn_code: String(form.hsn_code || "").replace(/\s+/g, ""), unit: String(form.unit || "").trim(),
+            // only a 0% item can be nil-rated / exempt / non-GST
+            tax_category: Number(form.gst_percentage) === 0 && form.tax_category !== "taxable" ? form.tax_category : (Number(form.gst_percentage) === 0 ? "nil" : "taxable"),
             category: form.category || null, vendor: form.vendor || null,
         };
         // stock is only set when creating; afterwards it changes through movements
@@ -346,6 +348,13 @@ function ProductsTable({ addSignal = 0 }) {
                         <div className="form_box" style={{ flexBasis: "30%" }}>GST (%)<input type="number" step="0.01" min="0" max="100" value={form.gst_percentage} onChange={(e) => setField("gst_percentage", e.target.value)} /></div>
                         <div className="form_box" style={{ flexBasis: "30%" }}>HSN / SAC<input inputMode="numeric" maxLength={8} placeholder="e.g. 8471" value={form.hsn_code || ""} onChange={(e) => setField("hsn_code", e.target.value)} /></div>
                         <div className="form_box" style={{ flexBasis: "30%" }}>Unit<input maxLength={8} placeholder="NOS, KGS, LTR" value={form.unit || ""} onChange={(e) => setField("unit", e.target.value.toUpperCase())} /></div>
+                        {String(form.gst_percentage) !== "" && Number(form.gst_percentage) === 0 && (
+                            <div className="form_box" style={{ flexBasis: "30%" }}>0% supply type
+                                <select value={form.tax_category === "taxable" ? "nil" : form.tax_category} onChange={(e) => setField("tax_category", e.target.value)}>
+                                    {ZERO_RATE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                </select>
+                            </div>
+                        )}
                         <div className="form_box" style={{ flexBasis: "30%" }}>Reorder at<input type="number" min="0" value={form.reorder_level} onChange={(e) => setField("reorder_level", e.target.value)} /></div>
                         <div className="form_box" style={{ flexBasis: "100%" }}>
                             {form.id ? "Current stock" : "Opening stock"}

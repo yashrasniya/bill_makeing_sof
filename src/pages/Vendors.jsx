@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { Plus, Search, Store, Trash2 } from "lucide-react";
 import { clientToken } from "@/axios";
 import { INDIAN_STATES } from "@/constants/states";
-import { gstinError, withGstin } from "@/constants/gst";
+import { gstinError, treatmentChange, treatmentFor, TREATMENTS_WITH_GSTIN, TREATMENTS_WITHOUT_GSTIN, withGstin } from "@/constants/gst";
 import { day, money, moneyShort } from "@/utility/money";
 import Navbar from "../comonant/navbar.jsx";
 import PageIcon from "../comonant/PageIcon";
@@ -12,7 +12,7 @@ import { initials } from "../comonant/invoiceBits";
 import "../style/invoices.css";
 import "../style/Companys.css";
 
-const EMPTY = { name: "", phone_number: "", email: "", address: "", gst_number: "", state: "", state_code: "" };
+const EMPTY = { name: "", phone_number: "", email: "", address: "", gst_number: "", state: "", state_code: "", gst_treatment: "" };
 
 // what we owe a vendor: amber while we owe them (red is kept for overdue),
 // green if we've paid ahead
@@ -88,7 +88,7 @@ export default function Vendors() {
         setSaving(true);
         setFormError("");
         const body = new FormData();
-        ["name", "phone_number", "email", "address", "gst_number", "state", "state_code"]
+        ["name", "phone_number", "email", "address", "gst_number", "state", "state_code", "gst_treatment"]
             .forEach((k) => body.append(k, form[k] ?? "")); // empty values are sent too, so a field can be cleared
         clientToken.post(form.id ? `vendors/${form.id}/` : "vendors/", body)
             .then((res) => {
@@ -343,6 +343,16 @@ export default function Vendors() {
                                 {form.gst_number?.length === 15 && gstinError(form.gst_number) && (
                                     <small style={{ color: "#dc2626" }}>{gstinError(form.gst_number)}</small>
                                 )}
+                            </div>
+                            <div className="form_box" style={{ flexBasis: "48%" }}>
+                                GST treatment
+                                <select value={treatmentFor(form.gst_treatment, !!form.gst_number)}
+                                    onChange={(e) => setForm((f) => treatmentChange(f, e.target.value))}
+                                    style={{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "1.5px solid #e2e8f0",
+                                        outline: "none", fontSize: 14, color: "#0f172a", background: "#f8fafc", marginTop: 4 }}>
+                                    {(form.gst_number ? TREATMENTS_WITH_GSTIN : TREATMENTS_WITHOUT_GSTIN).map((t) =>
+                                        <option key={t.value} value={t.value}>{t.label}</option>)}
+                                </select>
                             </div>
                             <div className="form_box" style={{ flexBasis: "48%" }}>
                                 State

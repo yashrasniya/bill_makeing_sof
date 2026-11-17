@@ -80,7 +80,31 @@ export const hsnError = (raw) => {
 export function withGstin(form, value, states = GST_STATES) {
   const gst_number = normalizeGstin(value);
   const st = stateFromGstin(gst_number);
-  if (!st || gstinError(gst_number)) return { ...form, gst_number };
+  const gst_treatment = treatmentFor(form.gst_treatment, !!gst_number);
+  if (!st || gstinError(gst_number)) return { ...form, gst_number, gst_treatment };
   const local = states.find((s) => Number(s.code) === st.code);
-  return { ...form, gst_number, state: local ? local.name : st.name, state_code: st.code };
+  return { ...form, gst_number, gst_treatment, state: local ? local.name : st.name, state_code: st.code };
+}
+
+/** How GST applies to a customer/vendor. Mirrors companies.models.GST_TREATMENT_CHOICES. */
+export const TREATMENTS_WITH_GSTIN = [
+  { value: 'registered', label: 'Registered business (regular)' }, { value: 'composition', label: 'Registered business (composition)' },
+  { value: 'sez', label: 'Special Economic Zone (SEZ)' }, { value: 'deemed_export', label: 'Deemed export' },
+];
+export const TREATMENTS_WITHOUT_GSTIN = [
+  { value: 'unregistered', label: 'Unregistered business' }, { value: 'consumer', label: 'Consumer' },
+  { value: 'overseas', label: 'Overseas' },
+];
+/** Keep a treatment consistent with whether there is a GSTIN, the same rule the server applies. */
+export function treatmentFor(current, hasGstin) {
+  const ok = (hasGstin ? TREATMENTS_WITH_GSTIN : TREATMENTS_WITHOUT_GSTIN).some((t) => t.value === current);
+  return ok ? current : hasGstin ? 'registered' : 'unregistered';
+}
+export const ZERO_RATE_CATEGORIES = [
+  { value: 'nil', label: 'Nil-rated' }, { value: 'exempt', label: 'Exempt' }, { value: 'non_gst', label: 'Non-GST' },
+];
+
+/** A GST-treatment <select> for party forms; overseas also moves the party to state 96. */
+export function treatmentChange(form, value) {
+  return { ...form, gst_treatment: value, ...(value === 'overseas' ? { state: 'Other Countries', state_code: 96 } : {}) };
 }
