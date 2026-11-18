@@ -27,7 +27,8 @@ import {
     ShoppingCart,
     Shield,
     CreditCard,
-    BarChart3
+    BarChart3,
+    Truck
 } from "lucide-react";
 
 function Navbar() {
@@ -89,6 +90,7 @@ function Navbar() {
     let navItems = [
         { title: "Dashboard", link: "/home", icon: <LayoutDashboard size={20} /> },
         { title: "Invoices", link: "/bill_list", icon: <FileText size={20} />, permission: "invoice.view" },
+        { title: "E-way Bills", link: "/eway-bills", icon: <Truck size={20} />, feature: "eway_bill", permission: "invoice.view" },
         { title: "Customers", link: "/Customers", icon: <Users size={20} />, permission: "customer.manage" },
         { title: "Inventory", link: "/inventory", icon: <Package size={20} />, feature: "inventory", permission: "inventory.manage" },
         {
@@ -101,7 +103,9 @@ function Navbar() {
                 { title: "Sales Register", link: "/sales-register" },
                 { title: "Customer Ledger", link: "/customer-ledger" },
                 { title: "GST Summary", link: "/gst-summary" },
-                { title: "GSTR-1", link: "/gstr1" }
+                { title: "GSTR-1", link: "/gstr1" },
+                { title: "GSTR-3B", link: "/gstr3b" },
+                { title: "GSTR-9", link: "/gstr9" }
             ]
         },
         {

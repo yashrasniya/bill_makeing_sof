@@ -28,7 +28,7 @@ export default function InviteAccept() {
     const accept = async () => {
         setError(""); setSubmitting(true);
         try {
-            const payload = info.existing_account ? {} : form;
+            const payload = info.existing_account ? { password: form.password } : form;
             await clientToken.post(`invites/${token}/accept/`, payload);
             await dispatch(fetchUser());
             navigate("/home", { replace: true });
@@ -65,9 +65,15 @@ export default function InviteAccept() {
                         <p style={{ color: "#64748b", fontSize: 13, marginBottom: 20 }}>
                             You've been invited as <b>{info.email}</b>.
                             {info.existing_account
-                                ? " Your existing account will be added to this company."
+                                ? " Enter your existing account password to add it to this company."
                                 : " Create your account to join."}
                         </p>
+
+                        {info.existing_account && (
+                            <input style={inputStyle} placeholder="Your existing account password" type="password"
+                                value={form.password}
+                                onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                        )}
 
                         {!info.existing_account && (
                             <>
@@ -91,7 +97,7 @@ export default function InviteAccept() {
                         {error && <p style={{ color: "#ef4444", fontSize: 13 }}>{error}</p>}
                         <button
                             onClick={accept}
-                            disabled={submitting || (!info.existing_account && (!form.username || form.password.length < 8))}
+                            disabled={submitting || (info.existing_account ? !form.password : (!form.username || form.password.length < 8))}
                             style={{
                                 width: "100%", background: "#4f46e5", color: "#fff", border: "none",
                                 borderRadius: 8, padding: "12px", fontSize: 14, fontWeight: 600,

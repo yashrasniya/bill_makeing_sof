@@ -9,7 +9,7 @@ import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import CustomerDropdown from "@/comonant/customer_pop";
 import CollapsibleRowCard from "@/comonant/Bill/CollapsibleRowCard";
 import BulkEditModal from "@/comonant/Bill/BulkEditModal";
-import { isGstColumn, isHsnColumn, isUnitColumn, PLACE_OF_SUPPLY_STATES } from "@/constants/gst";
+import { isGstColumn, isHsnColumn, isUnitColumn, ITC_OPTIONS, lineGstRate, lineTaxCategory, PLACE_OF_SUPPLY_STATES, ZERO_RATE_CATEGORIES } from "@/constants/gst";
 
 /* Renders the cropped region of `imageSrc` onto an offscreen canvas and
    resolves a JPEG Blob — the standard react-easy-crop recipe. */
@@ -532,6 +532,8 @@ function NewBillBody({ id }) {
                 productUpdateForm.append('gst_amount', totals.gst_amount)
                 productUpdateForm.append('total_amount', totals.total_amount)
                 productUpdateForm.append('image_id', new_product.image?.id ?? '')
+                productUpdateForm.append('tax_category', lineTaxCategory(new_product, bill_body_items))
+                productUpdateForm.append('itc_eligibility', isSale ? '' : (new_product.itc_eligibility || ''))
                 return clientToken.post(`product/${new_product.id}/update/`, productUpdateForm)
             }).then(() => {
                 setNewProduct(JSON.parse(JSON.stringify(newDataFormat)))
@@ -564,6 +566,9 @@ function NewBillBody({ id }) {
             form.append('gst_amount', totals.gst_amount)
             form.append('total_amount', totals.total_amount)
             form.append('image_id', product.image?.id ?? '')
+            // GSTR-1 Table 8 category of a 0% line, and a purchase line's own input-credit choice
+            form.append('tax_category', lineTaxCategory(product, bill_body_items))
+            form.append('itc_eligibility', isSale ? '' : (product.itc_eligibility || ''))
 
             // Helper: ensure we have an invoice ID before adding products.
             // On a brand-new invoice the auto-save may not have fired yet,
@@ -733,7 +738,8 @@ function NewBillBody({ id }) {
         });
 
         setSelectedInventoryProductId(product.id);
-        setNewProduct({ ...new_product, product_properties: array });
+        // a 0% item brings its nil-rated / exempt / non-GST category
+        setNewProduct({ ...new_product, product_properties: array, tax_category: product.tax_category || 'taxable' });
     };
 
     const loadProductImages = (url = 'product-images/') => {
@@ -913,8 +919,9 @@ function NewBillBody({ id }) {
             return;
         }
         setInlineBusy(true);
+        const picked = inventoryProducts.find((p) => p.id === inlineInventoryId);
         Promise.resolve(handelSave(null, false, {
-            product: { product_properties: inlineProperties() },
+            product: { product_properties: inlineProperties(), tax_category: picked?.tax_category || 'taxable' },
             inventoryId: inlineInventoryId,
         })).then((added) => {
             if (added === true) {
@@ -1588,6 +1595,38 @@ function NewBillBody({ id }) {
                             })}
                         </div>
 
+                        {(lineGstRate(new_product?.product_properties, bill_body_items) === 0 || !isSale) && (
+                            <div className="bill_modal_grid" style={{ marginTop: 12 }}>
+                                {lineGstRate(new_product?.product_properties, bill_body_items) === 0 && (
+                                    <div className="form_box" style={{ gridColumn: 'span 1' }}>
+                                        <label htmlFor="line_tax_category">0% supply type</label>
+                                        <select
+                                            id="line_tax_category"
+                                            className="bill_modal_select"
+                                            value={new_product?.tax_category && new_product.tax_category !== 'taxable' ? new_product.tax_category : 'nil'}
+                                            onChange={(e) => setNewProduct({ ...new_product, tax_category: e.target.value })}
+                                        >
+                                            {ZERO_RATE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                {!isSale && (
+                                    <div className="form_box" style={{ gridColumn: 'span 1' }}>
+                                        <label htmlFor="line_itc">Input credit for this item</label>
+                                        <select
+                                            id="line_itc"
+                                            className="bill_modal_select"
+                                            value={new_product?.itc_eligibility || ''}
+                                            onChange={(e) => setNewProduct({ ...new_product, itc_eligibility: e.target.value })}
+                                        >
+                                            <option value="">Same as the bill</option>
+                                            {ITC_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="bill_modal_footer">
                             {update && (
                                 <button
@@ -1735,6 +1774,31 @@ function NewBillBody({ id }) {
                             <option value="yes">Yes</option>
                         </select>
                     </HeaderField>
+
+                    {!isSale && (
+                        <HeaderField
+                            label="Input tax credit"
+                            htmlFor="itc_eligibility"
+                            basis={170}
+                            hint={{
+                                blocked: 'Never claimable (s.17(5)): cars, food and drinks, personal use.',
+                                reversal: "Claim later, e.g. the supplier hasn't paid the tax yet.",
+                            }[InvoiceData?.itc_eligibility] || 'The GST on this bill is claimed as input credit.'}
+                        >
+                            <select
+                                id="itc_eligibility"
+                                value={InvoiceData?.itc_eligibility || 'eligible'}
+                                onChange={(e) => {
+                                    setInvoiceData({ ...InvoiceData, itc_eligibility: e.target.value });
+                                    setRefresh(r => !r);
+                                }}
+                            >
+                                <option value="eligible">Claim credit</option>
+                                <option value="blocked">Blocked (s.17(5))</option>
+                                <option value="reversal">Not yet</option>
+                            </select>
+                        </HeaderField>
+                    )}
 
                     {showField('payment_status') && (
                     <HeaderField label="Payment Status" htmlFor="payment_status" basis={140}>

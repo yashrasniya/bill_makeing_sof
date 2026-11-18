@@ -5,6 +5,7 @@ import { clientToken } from "@/axios";
 import { ArrowLeft, Pencil, FileText, Trash2 } from "lucide-react";
 import ExportDropdown from "@/comonant/Bill/ExportDropdown";
 import PdfOpener from "@/utility/pdf_opener";
+import EwayBillPanel from "@/comonant/Bill/EwayBillPanel";
 
 const card = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24 };
 const btn = {
@@ -19,7 +20,8 @@ const td = { padding: "10px 12px", fontSize: 13, color: "#0f172a", borderBottom:
 export default function InvoiceViewPage() {
     const { invoice_id } = useParams();
     const navigate = useNavigate();
-    const { permissions, status: accessStatus } = useSelector((s) => s.access);
+    const { permissions, features, status: accessStatus } = useSelector((s) => s.access);
+    const hasEway = accessStatus === "succeeded" && features.includes("eway_bill");
     const canEdit = accessStatus !== "succeeded" || permissions.includes("invoice.update");
     const canDelete = accessStatus === "succeeded" && permissions.includes("invoice.delete");
 
@@ -377,6 +379,9 @@ export default function InvoiceViewPage() {
                             </p>
                         )}
                     </div>
+                )}
+                {invoice && invoice.invoice_type !== "purchase" && hasEway && (
+                    <EwayBillPanel invoiceId={Number(invoice_id)} canEdit={permissions.includes("invoice.update")} />
                 )}
             </div>
         </div>

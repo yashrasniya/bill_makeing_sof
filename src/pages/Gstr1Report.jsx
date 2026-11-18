@@ -62,6 +62,9 @@ export default function Gstr1Report() {
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
+  // quarterly filer's quarter: B2B of the first two months was sent in the IFF unless this is on
+  const [includeIff, setIncludeIff] = useState(false);
+  const iffParam = includeIff ? { include_iff: 1 } : {};
 
   useEffect(() => {
     let alive = true;
@@ -70,7 +73,7 @@ export default function Gstr1Report() {
       setError(null);
       setDownloadError(null);
       try {
-        const res = await clientToken.get('/gstr1/', { params: { period } });
+        const res = await clientToken.get('/gstr1/', { params: { period, ...iffParam } });
         if (alive) setData(res.data);
       } catch (err) {
         if (alive) {
@@ -82,7 +85,8 @@ export default function Gstr1Report() {
       }
     })();
     return () => { alive = false; };
-  }, [period]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- iffParam follows includeIff
+  }, [period, includeIff]);
 
   const d = data;
   const errors = useMemo(() => (d?.issues || []).filter(i => i.level === 'error'), [d]);
@@ -94,12 +98,12 @@ export default function Gstr1Report() {
     setDownloadError(null);
     try {
       const res = await clientToken.get('/gstr1/', {
-        params: { period, download: 1 }, responseType: 'blob',
+        params: { period, download: 1, ...iffParam }, responseType: 'blob',
       });
       const url = URL.createObjectURL(new Blob([res.data], { type: 'application/json' }));
       const a = document.createElement('a');
       a.href = url;
-      a.download = `GSTR1_${d.gstin || 'NA'}_${d.fp}.json`;
+      a.download = `${(d.return_type || 'GSTR-1').replace('-', '')}_${d.gstin || 'NA'}_${d.fp}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -127,7 +131,9 @@ export default function Gstr1Report() {
               <div className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center text-white bg-gradient-to-br from-indigo-600 to-violet-600 shadow-[0_4px_14px_rgba(79,70,229,0.25)]">
                 <FileCheck2 size={20} />
               </div>
-              <h1 className="text-[22px] font-bold tracking-tight text-slate-900">GSTR-1</h1>
+              <h1 className="text-[22px] font-bold tracking-tight text-slate-900">
+                {d?.return_type === 'IFF' ? 'IFF (GSTR-1)' : 'GSTR-1'}
+              </h1>
             </div>
             <p className="mt-1 text-[13px] text-slate-500">
               Outward supplies return: table totals, problems to fix, and the file to upload on the GST portal.
@@ -141,7 +147,7 @@ export default function Gstr1Report() {
               title={d.ready_to_file ? '' : 'Fix the errors below first'}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
             >
-              <Download size={16} /> {downloading ? 'Preparing…' : 'Download GSTR-1 JSON'}
+              <Download size={16} /> {downloading ? 'Preparing…' : `Download ${d.return_type || 'GSTR-1'} JSON`}
             </button>
           )}
         </div>
@@ -186,6 +192,19 @@ export default function Gstr1Report() {
           </div>
         ) : !d ? null : (
           <div className="space-y-6">
+
+            {d.return_type === 'IFF' && (
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-6 py-4 text-sm text-indigo-900">
+                You file quarterly, so this month is the <strong>IFF</strong> (Invoice Furnishing Facility): B2B
+                invoices and their notes only. B2C sales go in the quarterly GSTR-1.
+              </div>
+            )}
+            {d.filing_frequency === 'quarterly' && period.endsWith('quarter') && (
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm text-slate-700">
+                <input type="checkbox" checked={includeIff} onChange={(e) => setIncludeIff(e.target.checked)} />
+                Include B2B invoices of the quarter's first two months (only if you didn't upload them in the IFF)
+              </label>
+            )}
 
             {/* ── Status ── */}
             <div className={`rounded-2xl border-2 px-6 py-4 flex items-center gap-3 bg-white ${

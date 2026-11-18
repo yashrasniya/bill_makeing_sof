@@ -17,6 +17,8 @@ const COMPANY_FIELDS = [
     { label: "GST Number", name: "company_gst_number", type: "text", placeholder: "22AAAAA0000A1ZC", optional: true, hint: "Leave blank if you are not GST-registered. Your state is filled in from it." },
     { label: "State", name: "state", type: "state" },
     { label: "State Code", name: "state_code", type: "statecode", optional: true },
+    { label: "City", name: "city", type: "text", placeholder: "Bengaluru", optional: true },
+    { label: "PIN Code", name: "pincode", type: "text", placeholder: "560001", optional: true, hint: "The dispatch-from PIN on e-way bills." },
     { label: "Company Email", name: "company_email_id", type: "email", placeholder: "info@acme.com" },
     { label: "Company Phone", name: "company_phone", type: "tel", placeholder: "+91 98765 43210", optional: true },
     { label: "Company Logo", name: "company_logo", type: "file", col: 2 },
@@ -56,7 +58,15 @@ const LUT_FIELDS = [
     { label: "Valid to", name: "lut_valid_to", type: "date", optional: true },
 ];
 
-const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS, ...LUT_FIELDS];
+/* GSTR-1 / 3B filing frequency: quarterly (QRMP) filers get the IFF for the
+   first two months of a quarter and a quarterly GSTR-1. */
+const FILING_FIELDS = [
+    { label: "GST return filing", name: "gst_filing_frequency", type: "select", optional: true, col: 2,
+      options: [["monthly", "Monthly"], ["quarterly", "Quarterly (QRMP scheme)"]],
+      hint: "Quarterly if you opted into QRMP (turnover up to ₹5 crore). Decides whether GSTR-1 shows the IFF." },
+];
+
+const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS, ...LUT_FIELDS, ...FILING_FIELDS];
 
 /* ─── validation ───
    Each rule returns an error string or '' and only runs on a non-empty value,
@@ -68,6 +78,7 @@ const RULES = {
     company_phone: (v) => { const n = v.replace(/\D/g, '').length; return n >= 10 && n <= 13 ? '' : 'Enter a valid phone number with 10 to 13 digits.'; },
     ifsc_code: (v) => (/^[A-Z]{4}0[A-Z0-9]{6}$/.test(v.toUpperCase()) ? '' : 'IFSC is 11 characters, e.g. SBIN0001234.'),
     account_number: (v) => (/^\d{9,18}$/.test(v) ? '' : 'Account number is 9 to 18 digits.'),
+    pincode: (v) => (/^[1-9]\d{5}$/.test(v) ? '' : 'A PIN code is 6 digits.'),
     upi_id: (v) => (UPI_RE.test(v) ? '' : 'Enter a valid UPI ID in the form name@bank, e.g. acme@okaxis.'),
 };
 /* A comparable picture of the form, used to tell whether anything changed since the last load or save. */
@@ -277,6 +288,24 @@ function Field({ field, value, logoPreview, onChange, onBlur, error, logoFile, c
                     tabIndex={-1}
                 />
                 <p className="cf-hint">Filled in automatically.</p>
+            </div>
+        );
+    }
+
+    if (field.type === 'select') {
+        return (
+            <div className={`cf-field field-span-${field.col || 1}`}>
+                <label className="cf-label" htmlFor={`cf-${field.name}`}>{field.label}</label>
+                <select
+                    id={`cf-${field.name}`}
+                    className="cf-input cf-select"
+                    name={field.name}
+                    value={value || field.options[0][0]}
+                    onChange={onChange}
+                >
+                    {field.options.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+                </select>
+                {field.hint && <p className="cf-hint">{field.hint}</p>}
             </div>
         );
     }
@@ -713,8 +742,8 @@ export default function CompanyForm() {
 
                             {/* Exports / SEZ under LUT */}
                             <div className="cf-grid cf-section">
-                                <SectionHeader title="Export / SEZ under LUT" icon={Landmark} />
-                                {LUT_FIELDS.map(f => (
+                                <SectionHeader title="GST filing, export / SEZ under LUT" icon={Landmark} />
+                                {[...FILING_FIELDS, ...LUT_FIELDS].map(f => (
                                     <Field
                                         key={f.name}
                                         field={f}

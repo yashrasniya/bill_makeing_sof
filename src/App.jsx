@@ -6,47 +6,53 @@ import { LandingPage } from './pages/landing.jsx';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { CompanyS } from "./pages/company's.jsx";
 import { NewBill } from "./pages/new_bill";
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { clientToken } from "./axios.js";
 import Loader from './Loader';
-import ThanksPage from "./pages/thanks_page";
 import Bill_list from "./pages/bill_list";
-import TemplateDesign from "./pages/template_design";
 import Navbar from "./comonant/navbar";
 import SignUp from "@/pages/signup";
 import CompanyForm from "@/pages/CompanyForm";
-import ChooseTemplate from "@/pages/ChooseTemplate";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser, logoutUser } from "./store/userSlice";
 import { fetchAccess, clearAccess } from "./store/accessSlice";
-import AccessControl from "@/pages/AccessControl";
-import PlatformAdmin from "@/pages/PlatformAdmin";
-import Billing from "@/pages/Billing";
-import InviteAccept from "@/pages/InviteAccept";
-import InvoiceViewPage from "@/pages/InvoiceViewPage";
-import AdminGlobalTemplatesList from './pages/AdminGlobalTemplatesList';
-import AdminGlobalTemplateEdit from './pages/AdminGlobalTemplateEdit';
-import Profile from "./pages/profile";
-import InvoiceTemplateEditor from "@/pages/InvoiceTemplateEditor";
-import TablePage from "@/pages/templates_list";
-import TemplatesList from "@/pages/templates_list";
-import UIConfig from "@/pages/UIConfig";
-import InventoryPage from "./pages/inventory";
-import AvailableTemplates from "./pages/AvailableTemplates";
-import PrivacyPolicy from "./pages/privacy";
-import WeasyprintPreview from "./pages/WeasyprintPreview";
-import PurchaseInvoices from "./pages/PurchaseInvoices";
-import OcrInvoices from "./pages/OcrInvoices";
-import Vendors from "./pages/Vendors";
-import WhatsAppSettings from "./pages/WhatsAppSettings";
-import WhatsAppTemplates from "./pages/WhatsAppTemplates";
-import Reports from "./pages/reports";
-import SalesRegister from "./pages/SalesRegister";
-import PurchaseRegister from "./pages/PurchaseRegister";
-import CustomerLedger from "./pages/CustomerLedger";
-import SupplierLedger from "./pages/SupplierLedger";
-import GSTSummaryReport from "./pages/GSTSummaryReport";
-import Gstr1Report from "./pages/Gstr1Report";
+
+// Pages outside the core billing flow load on demand, keeping the main bundle
+// small (and under the PWA precache limit of 2 MiB per file).
+const ThanksPage = lazy(() => import("./pages/thanks_page"));
+const TemplateDesign = lazy(() => import("./pages/template_design"));
+const ChooseTemplate = lazy(() => import("@/pages/ChooseTemplate"));
+const AccessControl = lazy(() => import("@/pages/AccessControl"));
+const PlatformAdmin = lazy(() => import("@/pages/PlatformAdmin"));
+const Billing = lazy(() => import("@/pages/Billing"));
+const InviteAccept = lazy(() => import("@/pages/InviteAccept"));
+const InvoiceViewPage = lazy(() => import("@/pages/InvoiceViewPage"));
+const AdminGlobalTemplatesList = lazy(() => import("./pages/AdminGlobalTemplatesList"));
+const AdminGlobalTemplateEdit = lazy(() => import("./pages/AdminGlobalTemplateEdit"));
+const Profile = lazy(() => import("./pages/profile"));
+const InvoiceTemplateEditor = lazy(() => import("@/pages/InvoiceTemplateEditor"));
+const TablePage = lazy(() => import("@/pages/templates_list"));
+const TemplatesList = lazy(() => import("@/pages/templates_list"));
+const UIConfig = lazy(() => import("@/pages/UIConfig"));
+const InventoryPage = lazy(() => import("./pages/inventory"));
+const AvailableTemplates = lazy(() => import("./pages/AvailableTemplates"));
+const PrivacyPolicy = lazy(() => import("./pages/privacy"));
+const WeasyprintPreview = lazy(() => import("./pages/WeasyprintPreview"));
+const PurchaseInvoices = lazy(() => import("./pages/PurchaseInvoices"));
+const OcrInvoices = lazy(() => import("./pages/OcrInvoices"));
+const Vendors = lazy(() => import("./pages/Vendors"));
+const WhatsAppSettings = lazy(() => import("./pages/WhatsAppSettings"));
+const WhatsAppTemplates = lazy(() => import("./pages/WhatsAppTemplates"));
+const Reports = lazy(() => import("./pages/reports"));
+const SalesRegister = lazy(() => import("./pages/SalesRegister"));
+const PurchaseRegister = lazy(() => import("./pages/PurchaseRegister"));
+const CustomerLedger = lazy(() => import("./pages/CustomerLedger"));
+const SupplierLedger = lazy(() => import("./pages/SupplierLedger"));
+const GSTSummaryReport = lazy(() => import("./pages/GSTSummaryReport"));
+const Gstr1Report = lazy(() => import("./pages/Gstr1Report"));
+const EwayBills = lazy(() => import("./pages/EwayBills"));
+const Gstr3bReport = lazy(() => import("./pages/Gstr3bReport"));
+const Gstr9Report = lazy(() => import("./pages/Gstr9Report"));
 // Private route wrapper
 
 
@@ -151,6 +157,7 @@ function App() {
         return children;
     }
     return (
+        <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
         <Routes>
             {/* Public routes */}
             <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <Navigate to="/SignUp" replace />} />
@@ -456,12 +463,48 @@ function App() {
                 }
             />
             <Route
+                path="/eway-bills"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="eway_bill">
+                            <RequirePermission permission="invoice.view">
+                                <EwayBills />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
                 path="/gstr1"
                 element={
                     <PrivateRoute isLogin={isLogin}>
                         <RequireFeature feature="advanced_reports">
                             <RequirePermission permission="report.view">
                                 <Gstr1Report />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/gstr3b"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <Gstr3bReport />
+                            </RequirePermission>
+                        </RequireFeature>
+                    </PrivateRoute>
+                }
+            />
+            <Route
+                path="/gstr9"
+                element={
+                    <PrivateRoute isLogin={isLogin}>
+                        <RequireFeature feature="advanced_reports">
+                            <RequirePermission permission="report.view">
+                                <Gstr9Report />
                             </RequirePermission>
                         </RequireFeature>
                     </PrivateRoute>
@@ -502,6 +545,7 @@ function App() {
                 element={<LogOut />}
             />
         </Routes>
+        </Suspense>
     );
 }
 

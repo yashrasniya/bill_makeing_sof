@@ -104,6 +104,27 @@ export const ZERO_RATE_CATEGORIES = [
   { value: 'nil', label: 'Nil-rated' }, { value: 'exempt', label: 'Exempt' }, { value: 'non_gst', label: 'Non-GST' },
 ];
 
+/** Input tax credit on a purchase (GSTR-3B Table 4). Mirrors invoice.models.ITC_CHOICES. */
+export const ITC_OPTIONS = [
+  { value: 'eligible', label: 'Claim credit' }, { value: 'blocked', label: 'Blocked (s.17(5))' },
+  { value: 'reversal', label: 'Not yet' },
+];
+
+/** A bill line's GST rate as a number, or null when its GST cell is empty or missing. */
+export function lineGstRate(properties, columns) {
+  const col = (columns || []).find((c) => isGstColumn(c.input_title));
+  if (!col) return null;
+  const raw = (properties || []).find((p) => +p.new_product_in_frontend?.id === +col.id)?.value;
+  return raw === undefined || raw === null || String(raw).trim() === '' || isNaN(raw) ? null : Number(raw);
+}
+
+/** What to save as a line's tax_category: only a 0% line can be nil-rated / exempt / non-GST. */
+export function lineTaxCategory(line, columns) {
+  const zero = lineGstRate(line?.product_properties, columns) === 0;
+  const chosen = line?.tax_category;
+  return zero && chosen && chosen !== 'taxable' ? chosen : 'taxable';
+}
+
 /** A GST-treatment <select> for party forms; overseas also moves the party to state 96. */
 export function treatmentChange(form, value) {
   return { ...form, gst_treatment: value, ...(value === 'overseas' ? { state: 'Other Countries', state_code: 96 } : {}) };
