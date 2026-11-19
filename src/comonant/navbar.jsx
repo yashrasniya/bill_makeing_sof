@@ -20,7 +20,6 @@ import {
     LogOut,
     ChevronLeft,
     ChevronDown,
-    ChevronRight,
     Menu,
     Home,
     Plus,
@@ -99,13 +98,13 @@ function Navbar() {
             feature: "advanced_reports",
             permission: "report.view",
             subItems: [
-                { title: "Cashflow", link: "/cashflow" },
-                { title: "Sales Register", link: "/sales-register" },
-                { title: "Customer Ledger", link: "/customer-ledger" },
-                { title: "GST Summary", link: "/gst-summary" },
-                { title: "GSTR-1", link: "/gstr1" },
-                { title: "GSTR-3B", link: "/gstr3b" },
-                { title: "GSTR-9", link: "/gstr9" }
+                { title: "Cashflow", link: "/cashflow", group: "Business" },
+                { title: "Sales Register", link: "/sales-register", group: "Business" },
+                { title: "Customer Ledger", link: "/customer-ledger", group: "Business" },
+                { title: "GST Summary", link: "/gst-summary", group: "GST Returns", hint: "Tax collected, by rate and type" },
+                { title: "GSTR-1", link: "/gstr1", group: "GST Returns", hint: "GSTR-1 – outward supplies" },
+                { title: "GSTR-3B", link: "/gstr3b", group: "GST Returns", hint: "GSTR-3B – monthly summary return" },
+                { title: "GSTR-9", link: "/gstr9", group: "GST Returns", hint: "GSTR-9 – annual return" }
             ]
         },
         {
@@ -159,46 +158,62 @@ function Navbar() {
     const accountName = userInfo?.name || userInfo?.username || "Account";
     const [avatarFailed, setAvatarFailed] = useState(false);
 
-    const renderNavItem = (item, i) => (
-                <div key={i}>
-                    <div
-                        className={`nav-item ${!item.subItems && location.pathname === item.link ? 'active' : ''}`}
-                        onClick={() => item.subItems ? toggleMenu(item.title) : handleNavigate(item.link)}
-                        title={!isExpanded ? item.title : ""}
-                    >
-                        <div className="nav-icon">{item.icon}</div>
-                        {isExpanded && <span className="nav-text">{item.title}</span>}
-                        {isExpanded && item.subItems && (
-                            <div style={{ marginLeft: 'auto', color: '#64748b' }}>
-                                {openMenus[item.title] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                            </div>
-                        )}
-                    </div>
-                    
-                    {/* Render sub items if expanded and menu is open */}
-                    {isExpanded && item.subItems && openMenus[item.title] && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '38px', marginTop: '4px', marginBottom: '8px' }}>
-                            {item.subItems.map((sub, j) => (
-                                <div 
-                                    key={j}
-                                    onClick={() => handleNavigate(sub.link)}
-                                    style={{
-                                        padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
-                                        fontSize: '13px', color: location.pathname === sub.link ? '#4f46e5' : '#64748b',
-                                        background: location.pathname === sub.link ? '#eef2ff' : 'transparent',
-                                        fontWeight: location.pathname === sub.link ? '600' : '500',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseEnter={e => { if (location.pathname !== sub.link) { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.background = '#f8fafc'; } }}
-                                    onMouseLeave={e => { if (location.pathname !== sub.link) { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'transparent'; } }}
-                                >
-                                    {sub.title}
-                                </div>
-                            ))}
-                        </div>
+    // Open the submenu that holds the current page (never auto-closes one the user opened).
+    const activeParent = [...navItems, ...settingsItems]
+        .find(item => item.subItems?.some(sub => sub.link === location.pathname))?.title;
+    useEffect(() => {
+        if (activeParent) setOpenMenus(prev => prev[activeParent] ? prev : { ...prev, [activeParent]: true });
+    }, [activeParent]);
+
+    const renderNavItem = (item, i) => {
+        const isOpen = !!openMenus[item.title];
+        const hasActiveChild = item.title === activeParent;
+        const rowClass = item.subItems
+            ? (hasActiveChild ? (isExpanded ? 'has-active-child' : 'active') : '')
+            : (location.pathname === item.link ? 'active' : '');
+        return (
+            <div key={i}>
+                <div
+                    className={`nav-item ${rowClass}`}
+                    onClick={() => item.subItems ? toggleMenu(item.title) : handleNavigate(item.link)}
+                    title={!isExpanded ? item.title : ""}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={item.subItems ? isOpen : undefined}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+                >
+                    <div className="nav-icon">{item.icon}</div>
+                    {isExpanded && <span className="nav-text">{item.title}</span>}
+                    {isExpanded && item.subItems && (
+                        <ChevronDown size={16} className={`nav-chevron ${isOpen ? 'open' : ''}`} />
                     )}
                 </div>
-    );
+
+                {isExpanded && item.subItems && isOpen && (
+                    <div className="nav-submenu">
+                        {item.subItems.map((sub, j) => {
+                            const showGroup = sub.group && sub.group !== item.subItems[j - 1]?.group;
+                            const active = location.pathname === sub.link;
+                            return (
+                                <div key={j} style={{ display: 'contents' }}>
+                                    {showGroup && <p className="nav-subgroup">{sub.group}</p>}
+                                    <button
+                                        type="button"
+                                        className={`nav-subitem ${active ? 'active' : ''}`}
+                                        onClick={() => handleNavigate(sub.link)}
+                                        title={sub.hint || ""}
+                                        aria-current={active ? 'page' : undefined}
+                                    >
+                                        {sub.title}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <>
