@@ -345,7 +345,10 @@ function NewBillBody({ id }) {
     useEffect(() => {
         // Already in sync (e.g. the server just sent us an auto-generated
         // number) -- re-saving would fire a redundant second POST.
-        if (InvoiceData.invoice_number === invoiceNumber) return;
+        if ((InvoiceData.invoice_number ?? "") === invoiceNumber) return;
+        // Editing an existing invoice that hasn't loaded yet: the empty local
+        // number is not the user's, and saving it would wipe the real one.
+        if (id && !InvoiceData.id) return;
         const handler = setTimeout(() => {
             // Debounced update (runs only after 500ms pause)
             setInvoiceData((prev) => ({ ...prev, invoice_number: invoiceNumber }));
@@ -384,7 +387,11 @@ function NewBillBody({ id }) {
         // Keys that must be sent even when empty, so they can be cleared.
         // Only on update: omitting invoice_number on create is what asks the
         // server to auto-generate one.
-        const alwaysSend = url === 'invoice/' ? [] : ['invoice_number', 'due_date', 'place_of_supply', 'customer_notes', 'terms', 'reverse_charge']
+        // Also not before an existing invoice has loaded: the first request on
+        // /bill/:id only fetches it, and sending blanks then would clear the
+        // saved number, due date, notes and terms.
+        const invoiceLoaded = !id || !!InvoiceData.id
+        const alwaysSend = (url === 'invoice/' || !invoiceLoaded) ? [] : ['invoice_number', 'due_date', 'place_of_supply', 'customer_notes', 'terms', 'reverse_charge']
         Object.keys(InvoiceData).map((obj) => {
 
             if (('products' !== obj) && (InvoiceData[obj] || alwaysSend.includes(obj))) {
