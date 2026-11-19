@@ -20,8 +20,9 @@ const td = { padding: "10px 12px", fontSize: 13, color: "#0f172a", borderBottom:
 export default function InvoiceViewPage() {
     const { invoice_id } = useParams();
     const navigate = useNavigate();
-    const { permissions, features, status: accessStatus } = useSelector((s) => s.access);
-    const hasEway = accessStatus === "succeeded" && features.includes("eway_bill");
+    const { permissions, features, status: accessStatus, ewayBillEnabled } = useSelector((s) => s.access);
+    // plan allows it and the company hasn't switched e-way bills off in My company
+    const hasEway = accessStatus === "succeeded" && features.includes("eway_bill") && ewayBillEnabled;
     const canEdit = accessStatus !== "succeeded" || permissions.includes("invoice.update");
     const canDelete = accessStatus === "succeeded" && permissions.includes("invoice.delete");
 

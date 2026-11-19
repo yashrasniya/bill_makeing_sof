@@ -1,0 +1,76 @@
+/* Free-plan upgrade banner (comonant/UpgradeBanner.jsx). Tokens: style/tokens.css */
+.upgrade-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2100; /* above the sidebar (1000, 2000 on phones) */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px 8px 16px;
+    background: var(--brand-gradient, linear-gradient(135deg, #4f46e5, #7c3aed));
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(49, 46, 129, 0.25);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.upgrade-banner__inner {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+}
+
+.upgrade-banner__icon { flex-shrink: 0; opacity: 0.9; }
+
+.upgrade-banner__text { margin: 0; text-align: center; }
+.upgrade-banner__text strong { font-weight: 700; }
+
+.upgrade-banner__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: var(--radius-pill, 999px);
+    background: #fff;
+    color: var(--brand-dark, #4338ca);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.upgrade-banner__cta:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+.upgrade-banner__cta:focus-visible,
+.upgrade-banner__close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.upgrade-banner__close {
+    flex-shrink: 0;
+    display: flex;
+    padding: 6px;
+    border: 0;
+    border-radius: var(--radius-sm, 8px);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+}
+.upgrade-banner__close:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
+
+/* Push the page and the fixed sidebar below the banner while it shows. */
+html.has-upgrade-banner body { padding-top: var(--upgrade-banner-h, 44px); }
+html.has-upgrade-banner .sidebar,
+html.has-upgrade-banner .sidebar-overlay {
+    top: var(--upgrade-banner-h, 44px);
+    height: calc(100vh - var(--upgrade-banner-h, 44px));
+}
+
+@media (max-width: 768px) {
+    .upgrade-banner { font-size: 13px; padding: 8px 8px 8px 12px; }
+    .upgrade-banner__icon { display: none; }
+}

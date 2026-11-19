@@ -40,6 +40,8 @@ const initialState = {
     // plan allows) — off by default even when the plan includes the
     // matching feature.
     lineItemImagesEnabled: false,
+    // opt-out rather than opt-in: on unless the company hid e-way bills
+    ewayBillEnabled: true,
     status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
     // when the currently-applied payload was requested (for guard 2)
     appliedAt: 0,
@@ -75,6 +77,7 @@ const accessSlice = createSlice({
                 state.isTenantAdmin = !!action.payload.is_tenant_admin;
                 state.isProductOwner = !!action.payload.is_product_owner;
                 state.lineItemImagesEnabled = !!action.payload.line_item_images_enabled;
+                state.ewayBillEnabled = action.payload.eway_bill_enabled !== false;
             })
             .addCase(fetchAccess.rejected, (state) => {
                 // Deliberately leaves permissions/features intact: a failed

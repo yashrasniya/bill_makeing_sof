@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { clientToken } from "@/axios";
-import { AlertTriangle, CheckCircle2, Download, Info, Truck, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, Download, Info, Truck, XCircle } from "lucide-react";
 import { GST_STATES } from "@/constants/gst";
 
 /**
@@ -10,6 +10,9 @@ import { GST_STATES } from "@/constants/gst";
  * problems the server found, downloads the portal's bulk-upload JSON, and
  * takes the 12-digit number back once the user has generated it on
  * ewaybillgst.gov.in. Rules and checks live on the server (invoice/eway.py).
+ *
+ * Collapsible: the status line always shows; the form starts open only when
+ * the invoice needs an e-way bill that isn't generated yet.
  */
 
 const MODES = [[1, "Road"], [2, "Rail"], [3, "Air"], [4, "Ship"]];
@@ -78,6 +81,7 @@ export default function EwayBillPanel({ invoiceId, canEdit }) {
     const [error, setError] = useState("");
     const [busy, setBusy] = useState("");
     const [denied, setDenied] = useState(false);
+    const [open, setOpen] = useState(null); // null = decide from the verdict
 
     useEffect(() => {
         clientToken.get(`eway/${invoiceId}/`)
@@ -151,15 +155,20 @@ export default function EwayBillPanel({ invoiceId, canEdit }) {
     const off = !canEdit || generated;
     const tone = generated ? "border-emerald-300" : v.needed ? "border-amber-300" : "border-slate-200";
     const StatusIcon = generated ? CheckCircle2 : v.needed ? AlertTriangle : Info;
+    const expanded = open ?? (v.needed && !generated);
+    const bodyId = `eway-body-${invoiceId}`;
 
     return (
         <div className="rounded-xl border border-slate-200 bg-white p-6 mt-4 text-slate-900">
-            <div className="flex items-center gap-2 mb-4">
+            <button type="button" onClick={() => setOpen(!expanded)} aria-expanded={expanded} aria-controls={bodyId}
+                className="flex w-full items-center gap-2 mb-4 text-left">
                 <Truck size={18} className="text-indigo-600" />
-                <h2 className="text-base font-bold">E-way bill</h2>
-            </div>
+                <h2 className="text-base font-bold flex-1">E-way bill</h2>
+                <span className="text-xs font-semibold text-slate-500">{expanded ? "Hide details" : "Show details"}</span>
+                <ChevronDown size={18} className={`text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </button>
 
-            <div className={`flex items-start gap-3 rounded-xl border-2 ${tone} p-3 mb-4`}>
+            <div className={`flex items-start gap-3 rounded-xl border-2 ${tone} p-3 ${expanded ? "mb-4" : ""}`}>
                 <StatusIcon size={20} className={generated ? "text-emerald-600" : v.needed ? "text-amber-600" : "text-slate-400"} />
                 <div>
                     <p className="text-sm font-bold">
@@ -173,6 +182,8 @@ export default function EwayBillPanel({ invoiceId, canEdit }) {
                 </div>
             </div>
 
+            {expanded && (
+            <div id={bodyId}>
             {!generated && data.issues.length > 0 && (
                 <ul className="mb-4 space-y-1.5">
                     {[...errors, ...warnings].map((i, n) => (
@@ -276,6 +287,8 @@ export default function EwayBillPanel({ invoiceId, canEdit }) {
                     </button>
                 )}
             </div>
+            </div>
+            )}
         </div>
     );
 }

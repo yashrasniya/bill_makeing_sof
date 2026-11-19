@@ -7,7 +7,8 @@ import { fetchUser } from "@/store/userSlice";
 import Navbar from "../comonant/navbar.jsx";
 import PageIcon from "../comonant/PageIcon";
 import { GST_STATES, gstinError, stateFromGstin, stateByName } from "../constants/gst";
-import { Building2, Landmark, QrCode, ImageIcon, CheckCircle2, Save, Upload, RefreshCw, Undo2, Check } from "lucide-react";
+import { Building2, Landmark, QrCode, ImageIcon, CheckCircle2, Save, Upload, RefreshCw, Undo2, Check, Truck } from "lucide-react";
+import { fetchAccess } from "@/store/accessSlice";
 import "./CompanyForm.css";
 
 /* ─── field definitions ─── */
@@ -66,7 +67,18 @@ const FILING_FIELDS = [
       hint: "Quarterly if you opted into QRMP (turnover up to ₹5 crore). Decides whether GSTR-1 shows the IFF." },
 ];
 
-const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS, ...LUT_FIELDS, ...FILING_FIELDS];
+/* Not every business moves goods over ₹50,000: switching this off hides the
+   e-way bill card on invoices and the E-way Bills menu item. `defaultOn`: a
+   company that never saved the box (onboarding) keeps it on. */
+const EWAY_FIELDS = [
+    { label: "Use e-way bills", name: "enable_eway_bill", type: "checkbox", optional: true, col: 2, defaultOn: true,
+      hint: "Turn off to hide e-way bills from invoices and the menu. Saved e-way bills are kept." },
+];
+
+const ALL_FIELDS = [...COMPANY_FIELDS, ...BANK_FIELDS, ...UPI_FIELDS, ...LUT_FIELDS, ...FILING_FIELDS, ...EWAY_FIELDS];
+
+/* A checkbox's value, falling back to its default when the company has none saved yet. */
+const checked = (field, data) => (data[field.name] == null ? !!field.defaultOn : !!data[field.name]);
 
 /* ─── validation ───
    Each rule returns an error string or '' and only runs on a non-empty value,
@@ -85,7 +97,7 @@ const RULES = {
 const snapshot = (data) => JSON.stringify(ALL_FIELDS.map((f) => {
     const v = data[f.name];
     if (f.type === 'file') return v instanceof File ? `file:${v.name}:${v.size}` : '';
-    if (f.type === 'checkbox') return !!v;
+    if (f.type === 'checkbox') return checked(f, data);
     return v == null ? '' : String(v).trim();
 }));
 
@@ -318,7 +330,7 @@ function Field({ field, value, logoPreview, onChange, onBlur, error, logoFile, c
                         id={`cf-${field.name}`}
                         type="checkbox"
                         name={field.name}
-                        checked={!!value}
+                        checked={value == null ? !!field.defaultOn : !!value}
                         onChange={onChange}
                     />
                     <span className="cf-check__label">{field.label}</span>
@@ -368,6 +380,7 @@ export default function CompanyForm() {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { userInfo } = useSelector((state) => state.user);
+    const planHasEway = useSelector((state) => state.access.features.includes('eway_bill'));
 
     /* Fetch company data on mount:
        - If is_varified === true  → pre-fill form fields + show Navbar
@@ -507,7 +520,7 @@ export default function CompanyForm() {
             if (field.type === "checkbox") {
                 // Always sent: the POST is a full update, so omitting an
                 // unticked box would leave the old value in place.
-                data.append(field.name, formData[field.name] ? "true" : "false");
+                data.append(field.name, checked(field, formData) ? "true" : "false");
             } else if (formData[field.name]) {
                 if (field.type === "file") {
                     if (formData[field.name] instanceof File) data.append(field.name, formData[field.name]);
@@ -535,6 +548,8 @@ export default function CompanyForm() {
                     setBaseline(snapshot(saved));
                     setFieldErrors({});
                     setJustSaved(true);
+                    // menus and the invoice page read the e-way bill switch from access
+                    dispatch(fetchAccess());
                 }
             })
             .catch((err) => {
@@ -760,6 +775,19 @@ export default function CompanyForm() {
                                     />
                                 ))}
                             </div>
+
+                            {showNavbar && planHasEway && (
+                                <>
+                                    <div className="cf-divider" />
+                                    <div className="cf-grid cf-section">
+                                        <SectionHeader title="E-way bills" icon={Truck} />
+                                        {EWAY_FIELDS.map(f => (
+                                            <Field key={f.name} field={f} value={formData[f.name]} onChange={handleChange}
+                                                onBlur={handleBlur} error={fieldErrors[f.name]} />
+                                        ))}
+                                    </div>
+                                </>
+                            )}
 
                             {/* Submit */}
                             <button type="submit" className="cf-submit" disabled={loading}>

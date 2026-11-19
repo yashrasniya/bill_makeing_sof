@@ -11,6 +11,7 @@ import { clientToken } from "./axios.js";
 import Loader from './Loader';
 import Bill_list from "./pages/bill_list";
 import Navbar from "./comonant/navbar";
+import UpgradeBanner from "./comonant/UpgradeBanner";
 import SignUp from "@/pages/signup";
 import CompanyForm from "@/pages/CompanyForm";
 import { useDispatch, useSelector } from "react-redux";
@@ -158,6 +159,7 @@ function App() {
     }
     return (
         <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+        <UpgradeBanner />
         <Routes>
             {/* Public routes */}
             <Route path="/" element={isLogin ? <Navigate to="/home" replace /> : <Navigate to="/SignUp" replace />} />

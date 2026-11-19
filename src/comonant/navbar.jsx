@@ -32,17 +32,19 @@ import {
 
 function Navbar() {
     const { userInfo } = useSelector((state) => state.user);
-    const { isTenantAdmin, isProductOwner, features, permissions, status: accessStatus } = useSelector((state) => state.access);
+    const { isTenantAdmin, isProductOwner, features, permissions, status: accessStatus, ewayBillEnabled } = useSelector((state) => state.access);
 
     // Plan-based feature gating and permission gating. While access info is
     // still loading we show everything to avoid a menu flash; once loaded,
     // items whose feature is not in the plan, or whose permission the user
-    // lacks, are hidden.
+    // lacks, are hidden. `toggle` names a company opt-out switch (My company settings).
+    const toggles = { eway_bill: ewayBillEnabled };
     const hasFeature = (code) => accessStatus === 'succeeded' && features.includes(code);
     const hasPermission = (code) => accessStatus === 'succeeded' && permissions.includes(code);
     const itemVisible = (item) =>
         (!item.feature || hasFeature(item.feature)) &&
-        (!item.permission || hasPermission(item.permission));
+        (!item.permission || hasPermission(item.permission)) &&
+        (!item.toggle || toggles[item.toggle] !== false);
     const navigate = useNavigate();
     const location = useLocation();
     const [isExpanded, setIsExpanded] = useState(window.innerWidth > 768);
@@ -89,7 +91,7 @@ function Navbar() {
     let navItems = [
         { title: "Dashboard", link: "/home", icon: <LayoutDashboard size={20} /> },
         { title: "Invoices", link: "/bill_list", icon: <FileText size={20} />, permission: "invoice.view" },
-        { title: "E-way Bills", link: "/eway-bills", icon: <Truck size={20} />, feature: "eway_bill", permission: "invoice.view" },
+        { title: "E-way Bills", link: "/eway-bills", icon: <Truck size={20} />, feature: "eway_bill", toggle: "eway_bill", permission: "invoice.view" },
         { title: "Customers", link: "/Customers", icon: <Users size={20} />, permission: "customer.manage" },
         { title: "Inventory", link: "/inventory", icon: <Package size={20} />, feature: "inventory", permission: "inventory.manage" },
         {

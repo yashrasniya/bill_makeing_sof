@@ -10,6 +10,7 @@ import Navbar from "../comonant/navbar.jsx";
 import PageIcon from "../comonant/PageIcon";
 import { VerifyEmailBanner, FirstRunChecklist, SkeletonKpis } from "../comonant/FirstRun.jsx";
 import { Pill, initials } from "../comonant/invoiceBits";
+import PlanBanner from "../comonant/PlanBanner";
 import "../style/invoices.css";
 
 const RANGES = [
@@ -216,6 +217,7 @@ function Home() {
                 </div>
 
                 <VerifyEmailBanner />
+                <PlanBanner />
 
                 {/* ── first run: setup checklist and placeholder numbers ── */}
                 {isNewUser && (
