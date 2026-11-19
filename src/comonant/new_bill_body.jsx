@@ -1109,25 +1109,22 @@ function NewBillBody({ id }) {
                     </td>
                 )}
 
-                {obj.product_properties
-                    .sort(
-                        (a, b) =>
-                            a.new_product_in_frontend.id - b.new_product_in_frontend.id
-                    )
-                    .map((headObj, idx) =>
-                        headObj.new_product_in_frontend.is_show ? (
-                            <td key={idx} onClick={handelOpen}
-                                className={isNumericColumn(headObj.new_product_in_frontend) ? 'num-col' : undefined}>
-                                {headObj.new_product_in_frontend.show_calculated_value 
-                                    ? (parseFloat(calculatedValues[headObj.new_product_in_frontend.id]) || 0).toFixed(2)
-                                    : headObj.new_product_in_frontend.input_title?.toLowerCase() === 'gst'
-                                        ? formatGstPercent(headObj.value)
-                                        : headObj.value}
-                            </td>
-                        ) : (
-                            ''
-                        )
-                    )}
+                {visibleItems.map((col) => {
+                    const prop = obj.product_properties.find(
+                        (p) => +p.new_product_in_frontend.id === +col.id
+                    );
+                    const field = prop ? prop.new_product_in_frontend : col;
+                    return (
+                        <td key={col.id} onClick={handelOpen}
+                            className={isNumericColumn(field) ? 'num-col' : undefined}>
+                            {field.show_calculated_value
+                                ? (parseFloat(calculatedValues[field.id]) || 0).toFixed(2)
+                                : field.input_title?.toLowerCase() === 'gst'
+                                    ? formatGstPercent(prop?.value)
+                                    : (prop?.value ?? '')}
+                        </td>
+                    );
+                })}
 
                 <td className="num-col" onClick={handelOpen}>{parseFloat(gstAmount).toFixed(2)}</td>
                 <td className="num-col" onClick={handelOpen}>
