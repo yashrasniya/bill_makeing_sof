@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Children, Fragment, cloneElement, isValidElement, useCallback, useEffect, useState } from "react";
 import { clientToken } from "@/axios";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -98,8 +98,31 @@ export function Notice({ children }) {
     return children ? <p className="pa-notice" role="status">{children}</p> : null;
 }
 
+/**
+ * Give every <td> a data-label from its column header, so on phones the CSS can
+ * show each row as a stacked card ("Plan  Pro"). Walks into Fragments; cells that
+ * span several columns (expanded detail rows) are left as they are.
+ */
+function labelRows(children, labels) {
+    return Children.map(children, (row) => {
+        if (!isValidElement(row)) return row;
+        if (row.type === Fragment) return <Fragment key={row.key}>{labelRows(row.props.children, labels)}</Fragment>;
+        if (row.type !== "tr") return row;
+        let col = 0;
+        const cells = Children.map(row.props.children, (cell) => {
+            if (!isValidElement(cell) || cell.type !== "td") return cell;
+            const span = Number(cell.props.colSpan) || 1;
+            const label = span === 1 ? labels[col] : undefined;
+            col += span;
+            return label === undefined ? cell : cloneElement(cell, { "data-label": label });
+        });
+        return cloneElement(row, {}, cells);
+    });
+}
+
 /** Table with loading / empty states. `columns` = [{label, className}] */
 export function Table({ columns, loading, empty = "Nothing here yet.", children, rowCount }) {
+    const labels = columns.map((c) => (typeof c.label === "string" ? c.label : ""));
     return (
         <div className="pa-table-wrap">
             <table className="pa-table">
@@ -111,7 +134,7 @@ export function Table({ columns, loading, empty = "Nothing here yet.", children,
                         <tr><td colSpan={columns.length} className="pa-loading">Loading…</td></tr>
                     ) : rowCount === 0 ? (
                         <tr><td colSpan={columns.length} className="pa-empty">{empty}</td></tr>
-                    ) : children}
+                    ) : labelRows(children, labels)}
                 </tbody>
             </table>
         </div>

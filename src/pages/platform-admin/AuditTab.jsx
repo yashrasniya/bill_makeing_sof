@@ -97,7 +97,7 @@ export default function AuditTab({ preset, goTo }) {
                 {q.rows.map((l) => (
                     <Fragment key={l.id}>
                         <tr className={`click ${open === l.id ? "sel" : ""}`} onClick={() => setOpen(open === l.id ? null : l.id)}>
-                            <td style={{ width: 20 }}>{open === l.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</td>
+                            <td className="pa-chev" style={{ width: 20 }}>{open === l.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</td>
                             <td className="pa-muted" style={{ whiteSpace: "nowrap" }}>{when(l.timestamp)}</td>
                             <td>{l.user_name || <span className="pa-muted">system</span>}</td>
                             <td>{l.company_name || (l.company ? `#${l.company}` : <span className="pa-muted">platform</span>)}</td>

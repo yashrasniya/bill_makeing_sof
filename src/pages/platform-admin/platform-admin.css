@@ -158,3 +158,78 @@ textarea.pa-input { height: auto; padding: 10px 12px; font-family: ui-monospace,
 .pa-diff .changed { background: var(--warning-bg); }
 .pa-diff .old { color: var(--danger-strong); }
 .pa-diff .new { color: var(--success); }
+
+/* ── Phones ─────────────────────────────────────────────────────────────
+   Tables turn into stacked cards (labels come from data-label, set by
+   <Table>), filters go two per row, and the page clears the fixed bottom bar. */
+@media (max-width: 640px) {
+  .pa-wrap { padding: 16px 16px calc(88px + env(safe-area-inset-bottom, 0px)); }
+  .pa-head { margin-bottom: 14px; }
+  .pa-head h2 { font-size: 18px; }
+  .pa-head-icon { width: 38px; height: 38px; }
+
+  /* tab strip scrolls edge to edge, without a scrollbar */
+  .pa-tabs { margin: 0 -16px 14px; padding: 0 16px 2px; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .pa-tabs::-webkit-scrollbar { display: none; }
+  .pa-tab { scroll-snap-align: start; }
+
+  .pa-card { padding: 16px; border-radius: var(--radius-lg); }
+  .pa-card-head > .pa-row { width: 100%; }
+
+  /* 16px stops iOS Safari zooming in when a field gets focus */
+  .pa-input, .pa-select { font-size: 16px; height: 42px; }
+  textarea.pa-input { font-size: 14px; }
+  .pa-btn { height: 38px; }
+  .pa-btn.icon { width: 38px; }
+  .pa-btn.sm { height: 34px; }
+  .pa-btn.sm.icon { width: 34px; }
+
+  .pa-filters { display: grid; grid-template-columns: 1fr 1fr; }
+  .pa-filters > .pa-search { grid-column: 1 / -1; }
+  .pa-filters > .pa-select, .pa-filters > .pa-input { width: 100%; }
+  .pa-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .pa-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .pa-kpi { padding: 12px; }
+  .pa-kpi-value { font-size: 19px; }
+  .pa-feature-list { grid-template-columns: minmax(0, 1fr); }
+  .pa-bar-row { grid-template-columns: minmax(70px, 110px) 1fr 32px; }
+
+  /* tables as cards */
+  .pa-table-wrap { overflow: visible; margin: 0; }
+  .pa-table, .pa-table tbody, .pa-table tr, .pa-table td { display: block; width: 100%; box-sizing: border-box; }
+  .pa-table { min-width: 0 !important; }
+  .pa-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .pa-table tr { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 6px 12px; margin-bottom: 10px; background: var(--surface); }
+  .pa-table tr.sel { border-color: var(--tint-300); background: var(--tint-50); }
+  .pa-table tr.sel td, .pa-table tr.click:hover td { background: transparent; }
+  .pa-table td { display: grid; grid-template-columns: minmax(84px, 38%) minmax(0, 1fr); gap: 10px; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid var(--divider); text-align: left; white-space: normal; word-break: break-word; }
+  .pa-table td:last-child { border-bottom: 0; }
+  .pa-table td::before { content: attr(data-label); font-size: 11px; font-weight: 600; color: var(--text-muted); }
+  .pa-table td.num { text-align: right; }
+  .pa-table td.wrap-cell { max-width: none; }
+  /* cells with no header (actions, the audit arrow) and full-width cells drop the label column */
+  .pa-table td[data-label=""], .pa-table td:not([data-label]) { display: block; }
+  .pa-table td[data-label=""]::before, .pa-table td:not([data-label])::before { content: none; }
+  .pa-table td.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; padding-top: 10px; }
+  .pa-table .actions > * + * { margin-left: 0; }
+  .pa-table td.pa-chev { display: none; }
+  .pa-table td.pa-loading, .pa-table td.pa-empty { text-align: center; }
+  .pa-table tr:has(> td.pa-loading:only-child), .pa-table tr:has(> td.pa-empty:only-child) { border: 0; }
+
+  .pa-pager { justify-content: center; text-align: center; }
+
+  /* drawer and dialogs */
+  .pa-drawer { width: 100vw; padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .pa-drawer-head h3 { font-size: 17px; }
+  .pa-kv { flex-wrap: wrap; }
+  .pa-modal-back { place-items: end center; padding: 0; }
+  .pa-modal { width: 100%; border-radius: var(--radius-modal) var(--radius-modal) 0 0;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .pa-modal-foot > .pa-btn { flex: 1; }
+
+  /* plan-change diff: label on its own line, old/new side by side */
+  .pa-diff { grid-template-columns: 1fr 1fr; }
+  .pa-diff > div:nth-child(3n + 1) { grid-column: 1 / -1; background: var(--page-bg); font-family: var(--font); font-weight: 600; }
+  .pa-limit-row { grid-template-columns: minmax(0, 1fr) 90px 34px; }
+}
